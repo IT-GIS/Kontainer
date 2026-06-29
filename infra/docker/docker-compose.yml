@@ -1,0 +1,118 @@
+﻿services:
+  web:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+    environment:
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME}
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: ../..
+      dockerfile: services/api/Dockerfile
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_NAME: gift-survey-api
+      APP_PORT: 8080
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-gift:gift_password@tcp(mysql:3306)/kontainer_db?parseTime=true&charset=utf8mb4&loc=Local}
+      REDIS_ADDR: redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_TTL_MINUTES: ${JWT_ACCESS_TTL_MINUTES:-60}
+      JWT_REFRESH_TTL_DAYS: ${JWT_REFRESH_TTL_DAYS:-14}
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: ${S3_BUCKET:-gift-survey}
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-10}
+      WEB_ALLOWED_ORIGINS: http://localhost:${WEB_PORT:-3000}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: services/worker/Dockerfile
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-gift:gift_password@tcp(mysql:3306)/kontainer_db?parseTime=true&charset=utf8mb4&loc=Local}
+      REDIS_ADDR: redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: ${S3_BUCKET:-gift-survey}
+      PDF_RENDER_TIMEOUT_SECONDS: ${PDF_RENDER_TIMEOUT_SECONDS:-120}
+      IMAGE_PROCESSING_ENABLED: "true"
+      NOTIFICATION_QUEUE_ENABLED: "true"
+    depends_on:
+      - api
+      - redis
+      - minio
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-kontainer_db}
+      MYSQL_USER: ${MYSQL_USER:-gift}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-gift_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ../../services/api/migrations/0001_foundation.up.sql:/docker-entrypoint-initdb.d/0001_foundation.sql:ro
+      - ../../services/api/migrations/0002_auth_audit.up.sql:/docker-entrypoint-initdb.d/0002_auth_audit.sql:ro
+      - ../../services/api/migrations/0003_dev_superadmin.up.sql:/docker-entrypoint-initdb.d/0003_dev_superadmin.sql:ro
+      - ../../services/api/migrations/0004_masterdata_permissions.up.sql:/docker-entrypoint-initdb.d/0004_masterdata_permissions.sql:ro
+      - ../../services/api/migrations/0005_jobs_assignments.up.sql:/docker-entrypoint-initdb.d/0005_jobs_assignments.sql:ro
+      - ../../services/api/migrations/0006_surveys_mvp.up.sql:/docker-entrypoint-initdb.d/0006_surveys_mvp.sql:ro
+      - ../../services/api/migrations/0007_reviews_reports.up.sql:/docker-entrypoint-initdb.d/0007_reviews_reports.sql:ro
+      - ../../services/api/migrations/0008_finance.up.sql:/docker-entrypoint-initdb.d/0008_finance.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio:RELEASE.2024-06-22T05-26-45Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "8088:80"
+    volumes:
+      - ../nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - web
+      - api
+
+volumes:
+  mysql-data:
+  minio-data:
+
+
+
+
