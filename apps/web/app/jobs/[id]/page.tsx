@@ -2,8 +2,8 @@
 
 import { PackagePlus, Send, Upload } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AppShell } from "@/components/layout/app-shell";
 import { DataTable } from "@/components/ui/data-table";
@@ -28,6 +28,7 @@ export default function JobDetailPage() {
 
 function JobDetailContent() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const jobID = params.id;
   const { accessToken, user } = useAuth();
   const [job, setJob] = useState<JobDetail | null>(null);
@@ -41,6 +42,7 @@ function JobDetailContent() {
   const [containerTypes, setContainerTypes] = useState<OptionItem[]>([]);
   const [surveyors, setSurveyors] = useState<OptionItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const assignmentOpened = useRef(false);
 
   const canAddContainer = can(user, "job_containers.create.all");
   const canImport = can(user, "job_containers.import.all");
@@ -63,6 +65,13 @@ function JobDetailContent() {
       loadOptions(accessToken, "/master/surveyors", "name", "surveyor_code")
     ]).then(([types, people]) => { setContainerTypes(types); setSurveyors(people); }).catch(() => undefined);
   }, [accessToken]);
+  useEffect(() => {
+    if (!assignmentOpened.current && job && canAssign && searchParams.get("action") === "assign") {
+      assignmentOpened.current = true;
+      setActiveTab("Containers");
+      setAssignDialog(true);
+    }
+  }, [canAssign, job, searchParams]);
 
   async function addContainer() {
     if (!accessToken) return;

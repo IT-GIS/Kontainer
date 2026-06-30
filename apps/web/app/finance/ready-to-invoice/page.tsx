@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/hooks/use-auth";
 import { apiData, apiPaginated, buildQuery } from "@/lib/api-client";
+import { can } from "@/lib/permissions";
 import type { ReadyInvoice } from "@/types/finance";
 
 const initialInvoiceForm = { unit_price: "", payment_term_days: "30", taxable: true };
@@ -26,7 +27,8 @@ export default function ReadyToInvoicePage() {
 }
 
 function ReadyContent() {
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
+  const canCreateInvoice = can(user, "finance.invoice.create.all");
   const [rows, setRows] = useState<ReadyInvoice[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [page, setPage] = useState(1);
@@ -56,6 +58,7 @@ function ReadyContent() {
   }, [loadRows]);
 
   function openCreateDialog() {
+    if (!canCreateInvoice) return;
     if (selectedRows.length === 0) {
       setError("Pilih minimal satu report untuk dibuat invoice.");
       return;
@@ -70,7 +73,7 @@ function ReadyContent() {
   }
 
   async function createInvoice() {
-    if (!accessToken || selectedRows.length === 0) return;
+    if (!accessToken || !canCreateInvoice || selectedRows.length === 0) return;
     const first = selectedRows[0];
     const unitPrice = Number(invoiceForm.unit_price);
     const paymentTermDays = Number(invoiceForm.payment_term_days);
@@ -107,7 +110,7 @@ function ReadyContent() {
 
   return (
     <div className="page-stack">
-      <PageHeader title="Ready to Invoice" description="Report approved/generated yang belum ditagih." action={{ label: "Create Invoice", icon: FilePlus2, onClick: openCreateDialog }} />
+      <PageHeader title="Ready to Invoice" description="Report approved/generated yang belum ditagih." action={canCreateInvoice ? { label: "Create Invoice", icon: FilePlus2, onClick: openCreateDialog } : undefined} />
       <div className="toolbar">
         <label className="search-box">
           <Search size={17} />
@@ -129,7 +132,7 @@ function ReadyContent() {
           { key: "status", header: "Status", render: (row) => <StatusBadge tone="success">{row.status.toUpperCase()}</StatusBadge> }
         ]}
       />
-      <FormDialog title="Create Invoice" open={dialogOpen} onClose={() => setDialogOpen(false)} onSubmit={createInvoice} submitLabel="Create Invoice" isSubmitting={isSubmitting}>
+      <FormDialog title="Create Invoice" open={canCreateInvoice && dialogOpen} onClose={() => setDialogOpen(false)} onSubmit={createInvoice} submitLabel="Create Invoice" isSubmitting={isSubmitting}>
         <div className="form-grid">
           <label className="field">
             <span>Unit Price</span>

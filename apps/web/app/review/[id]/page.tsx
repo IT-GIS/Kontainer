@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/hooks/use-auth";
 import { apiData } from "@/lib/api-client";
+import { can } from "@/lib/permissions";
 import type { ReviewDetail } from "@/types/reviews";
 
 const tabs = ["Summary", "General Info", "Checklist", "Damage", "Photos", "Log"] as const;
@@ -23,7 +24,7 @@ export default function ReviewDetailPage() {
 function ReviewDetailContent() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
   const [review, setReview] = useState<ReviewDetail | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("Summary");
   const [dialog, setDialog] = useState<"revision" | "approve" | "reject" | null>(null);
@@ -67,16 +68,17 @@ function ReviewDetailContent() {
   }
 
   if (!review) return <div className="center-screen">Memuat review...</div>;
-  const canDecide = review.status === "submitted";
+  const canManageReview = can(user, "reviews.manage.all");
+  const canDecide = canManageReview && review.status === "submitted";
 
   return (
     <div className="page-stack">
       <PageHeader title={`Review Survey: ${review.survey_no}`} description={`Container: ${review.container_no} - ${review.customer_name}`} />
-      <div className="job-actions">
+      {canManageReview ? <div className="job-actions">
         <button className="secondary-button" disabled={!canDecide} onClick={() => setDialog("revision")}><RotateCcw size={17} /><span>Need Revision</span></button>
         <button className="secondary-button" disabled={!canDecide} onClick={() => setDialog("reject")}><X size={17} /><span>Reject</span></button>
         <button className="primary-button" disabled={!canDecide} onClick={() => setDialog("approve")}><Check size={17} /><span>Approve</span></button>
-      </div>
+      </div> : null}
       {error ? <div className="alert alert-danger">{error}</div> : null}
       <div className="tab-list">{tabs.map((tab) => <button className={activeTab === tab ? "tab-active" : ""} key={tab} onClick={() => setActiveTab(tab)}>{tab}</button>)}</div>
       {activeTab === "Summary" ? <Summary review={review} /> : null}
@@ -86,7 +88,7 @@ function ReviewDetailContent() {
       {activeTab === "Photos" ? <Photos rows={review.photos ?? []} /> : null}
       {activeTab === "Log" ? <Log rows={review.approval_history ?? []} /> : null}
 
-      <FormDialog title={dialogTitle(dialog)} open={dialog !== null} onClose={() => setDialog(null)} onSubmit={submitAction} isSubmitting={isSubmitting} submitLabel={dialog === "approve" ? "Approve" : "Submit"}>
+      <FormDialog title={dialogTitle(dialog)} open={canManageReview && dialog !== null} onClose={() => setDialog(null)} onSubmit={submitAction} isSubmitting={isSubmitting} submitLabel={dialog === "approve" ? "Approve" : "Submit"}>
         <div className="form-grid">
           {dialog === "approve" ? <label className="field"><span>Final Result</span><select value={finalResult} onChange={(event) => setFinalResult(event.target.value)}><option value="sound">Sound</option><option value="damage">Damage</option><option value="cargo_worthy">Cargo Worthy</option><option value="not_cargo_worthy">Not Cargo Worthy</option></select></label> : null}
           <label className="field form-span-2"><span>{dialog === "revision" ? "Revision Note" : dialog === "reject" ? "Rejection Reason" : "Approval Note"}</span><textarea rows={4} value={note} onChange={(event) => setNote(event.target.value)} /></label>

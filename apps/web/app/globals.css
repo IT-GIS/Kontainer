@@ -1285,17 +1285,80 @@ pre {
   color: #fff;
 }
 
+.nav-workspace {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.42);
+  padding-bottom: 12px;
+}
+
+.nav-workspace:last-child {
+  border-bottom: 0;
+}
+
+.nav-group {
+  display: grid;
+  gap: 3px;
+}
+
+.nav-group-trigger {
+  align-items: center;
+  background: transparent;
+  border-radius: 16px;
+  color: rgba(23, 33, 47, 0.72);
+  cursor: pointer;
+  display: flex;
+  gap: 9px;
+  min-height: 40px;
+  padding: 10px 12px;
+  text-align: left;
+  transition: background 160ms ease, color 160ms ease;
+  width: 100%;
+}
+
+.nav-group-trigger:hover,
+.nav-group-active > .nav-group-trigger {
+  background: rgba(255, 255, 255, 0.36);
+  color: #17212f;
+}
+
+.nav-group-chevron {
+  margin-left: auto;
+  transition: transform 160ms ease;
+}
+
+.nav-group-chevron-open {
+  transform: rotate(180deg);
+}
+
+.nav-submenu {
+  display: grid;
+  gap: 3px;
+  padding-left: 14px;
+}
+
+.source-sidebar .nav-sublink {
+  border-radius: 13px;
+  min-height: 36px;
+  padding-block: 8px;
+}
+
 .source-app-layout-collapsed .source-sidebar-brand,
 .source-app-layout-collapsed .source-sidebar .nav-section p,
 .source-app-layout-collapsed .source-sidebar .nav-link span,
+.source-app-layout-collapsed .source-sidebar .nav-group-trigger span,
+.source-app-layout-collapsed .source-sidebar .nav-group-chevron,
 .source-app-layout-collapsed .source-logout-button span {
   display: none;
 }
 
 .source-app-layout-collapsed .source-sidebar-head,
 .source-app-layout-collapsed .source-sidebar .nav-link,
+.source-app-layout-collapsed .source-sidebar .nav-group-trigger,
 .source-app-layout-collapsed .source-logout-button {
   justify-content: center;
+}
+
+.source-app-layout-collapsed .source-sidebar .nav-submenu {
+  padding-left: 0;
 }
 
 .source-sidebar-footer {
@@ -1531,14 +1594,25 @@ pre {
   .source-app-layout-collapsed .source-sidebar-brand,
   .source-app-layout-collapsed .source-sidebar .nav-section p,
   .source-app-layout-collapsed .source-sidebar .nav-link span,
+  .source-app-layout-collapsed .source-sidebar .nav-group-trigger span,
+  .source-app-layout-collapsed .source-sidebar .nav-group-chevron,
   .source-app-layout-collapsed .source-logout-button span {
     display: block;
   }
 
   .source-app-layout-collapsed .source-sidebar-head,
   .source-app-layout-collapsed .source-sidebar .nav-link,
+  .source-app-layout-collapsed .source-sidebar .nav-group-trigger,
   .source-app-layout-collapsed .source-logout-button {
     justify-content: flex-start;
+  }
+
+  .source-app-layout-collapsed .source-sidebar .nav-group-chevron {
+    margin-left: auto;
+  }
+
+  .source-app-layout-collapsed .source-sidebar .nav-submenu {
+    padding-left: 14px;
   }
 }
 

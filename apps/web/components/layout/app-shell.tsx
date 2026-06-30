@@ -1,13 +1,19 @@
-﻿"use client";
+"use client";
 
-import { Bell, ChevronLeft, ChevronRight, LogOut, Menu, ShieldCheck, X } from "lucide-react";
+import {
+  Bell, ChevronDown, ChevronLeft, ChevronRight, LogOut, Menu, ShieldCheck, X
+} from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { navigationItems } from "@/constants/navigation";
+import {
+  navigationWorkspaces, type NavigationGroup, type NavigationLink
+} from "@/constants/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { canAny } from "@/lib/permissions";
-import type { CurrentUser } from "@/types/auth";
+import {
+  activeNavigationID, navigationLabel, visibleNavigation
+} from "@/lib/navigation";
+import type { CurrentUser, RoleCode } from "@/types/auth";
 
 type AppShellProps = {
   title: string;
@@ -17,17 +23,62 @@ type AppShellProps = {
 export function AppShell({ title, children }: AppShellProps) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const visibleItems = useMemo(() => navigationItems.filter((item) => canAny(user, item.permissions)), [user]);
-  const sections = ["Main", "Master", "Operations", "System"] as const;
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const workspaces = useMemo(() => visibleNavigation(navigationWorkspaces, user), [user]);
+  const activeID = useMemo(
+    () => activeNavigationID(workspaces, pathname, searchParams),
+    [pathname, searchParams, workspaces]
+  );
   const initials = (user?.name ?? "GIFT User")
     .split(" ")
     .map((part) => part[0])
     .slice(0, 2)
     .join("")
     .toUpperCase();
-  const role = user?.roles[0] ?? "user";
+  const roleSummary = user?.roles.map(roleLabel).join(" / ") ?? "User";
+
+  function renderLink(item: NavigationLink, nested = false) {
+    const Icon = item.icon;
+    const active = item.id === activeID;
+    const label = navigationLabel(item, user);
+    return (
+      <Link
+        className={`nav-link ${nested ? "nav-sublink" : ""} ${active ? "nav-link-active" : ""}`}
+        href={item.href}
+        key={item.id}
+        onClick={() => setIsOpen(false)}
+        title={collapsed ? label : undefined}
+      >
+        <Icon size={nested ? 15 : 17} />
+        <span>{label}</span>
+      </Link>
+    );
+  }
+
+  function renderGroup(item: NavigationGroup) {
+    const Icon = item.icon;
+    const groupActive = item.children.some((child) => child.id === activeID);
+    const expanded = expandedGroups[item.id] ?? groupActive;
+    return (
+      <div className={`nav-group ${groupActive ? "nav-group-active" : ""}`} key={item.id}>
+        <button
+          className="nav-group-trigger"
+          type="button"
+          aria-expanded={expanded}
+          onClick={() => setExpandedGroups((current) => ({ ...current, [item.id]: !expanded }))}
+          title={collapsed ? item.label : undefined}
+        >
+          <Icon size={17} />
+          <span>{item.label}</span>
+          <ChevronDown className={`nav-group-chevron ${expanded ? "nav-group-chevron-open" : ""}`} size={15} />
+        </button>
+        {expanded ? <div className="nav-submenu">{item.children.map((child) => renderLink(child, true))}</div> : null}
+      </div>
+    );
+  }
 
   return (
     <div className={`app-layout source-app-layout ${collapsed ? "source-app-layout-collapsed" : ""}`}>
@@ -53,31 +104,12 @@ export function AppShell({ title, children }: AppShellProps) {
         </button>
 
         <nav className="sidebar-nav source-sidebar-nav">
-          {sections.map((section) => {
-            const items = visibleItems.filter((item) => item.section === section);
-            if (items.length === 0) return null;
-            return (
-              <div className="nav-section" key={section}>
-                <p>{section}</p>
-                {items.map((item) => {
-                  const Icon = item.icon;
-                  const active = pathname === item.href || pathname.startsWith(item.href + "/");
-                  return (
-                    <Link
-                      className={`nav-link ${active ? "nav-link-active" : ""}`}
-                      href={item.href}
-                      key={item.href}
-                      onClick={() => setIsOpen(false)}
-                      title={collapsed ? item.label : undefined}
-                    >
-                      <Icon size={17} />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            );
-          })}
+          {workspaces.map((workspace) => (
+            <div className="nav-section nav-workspace" key={workspace.id}>
+              <p>{workspace.label}</p>
+              {workspace.items.map((item) => item.kind === "group" ? renderGroup(item) : renderLink(item))}
+            </div>
+          ))}
         </nav>
 
         <div className="source-sidebar-footer">
@@ -98,7 +130,7 @@ export function AppShell({ title, children }: AppShellProps) {
             <p>Selamat datang kembali, kelola inspeksi &amp; sertifikasi kontainer Anda.</p>
           </div>
           <div className="topbar-actions source-profile-actions">
-            <span className="source-role-badge">{roleLabel(role)}</span>
+            <span className="source-role-badge">{roleSummary}</span>
             <button className="source-notification-button" type="button" title="Notifikasi"><Bell size={17} /></button>
             <div className="source-profile">
               <div className="source-avatar">{initials}</div>
@@ -117,11 +149,11 @@ export function AppShell({ title, children }: AppShellProps) {
 
 function dashboardSubtitle(user: CurrentUser | null) {
   if (!user) return "Protected workspace";
-  return `${user.name} - ${user.roles.join(", ")}`;
+  return `${user.name} - ${user.roles.map(roleLabel).join(", ")}`;
 }
 
-function roleLabel(role: string) {
-  const labels: Record<string, string> = {
+function roleLabel(role: RoleCode) {
+  const labels: Record<RoleCode, string> = {
     super_admin: "Super Admin",
     admin: "Admin",
     surveyor: "Surveyor",
@@ -129,5 +161,5 @@ function roleLabel(role: string) {
     finance: "Finance",
     management: "Management"
   };
-  return labels[role] ?? role;
+  return labels[role];
 }

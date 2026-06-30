@@ -15,7 +15,7 @@ export default function FinanceDashboardPage() {
 }
 
 function FinanceDashboardContent() {
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
   const [data, setData] = useState<FinanceDashboard | null>(null);
   const [error, setError] = useState<string | null>(null);
   const loadData = useCallback(async () => {
@@ -33,7 +33,8 @@ function FinanceDashboardContent() {
     ["Overdue", data?.overdue_count ?? 0, WalletCards],
     ["Outstanding", money(data?.outstanding_amount ?? 0), WalletCards]
   ] as const;
-  return <div className="page-stack"><PageHeader title="Dashboard Finance" description="Invoice, payment, outstanding, dan readiness billing." />{error ? <div className="alert alert-danger">{error}</div> : null}<section className="metric-grid">{metrics.map(([label, value, Icon]) => <div className="metric-tile metric-rich" key={label}><Icon size={20} /><p>{label}</p><strong>{value}</strong></div>)}</section><section className="workspace-panel"><div className="job-actions"><Link className="primary-button" href="/finance/ready-to-invoice"><span>Ready to Invoice</span></Link><Link className="secondary-button" href="/finance/invoices"><span>Invoice List</span></Link><Link className="secondary-button" href="/finance/price-list"><span>Price List</span></Link><Link className="secondary-button" href="/finance/outstanding"><span>Outstanding</span></Link><Link className="secondary-button" href="/finance/customers"><span>Rekap Customer</span></Link></div></section></div>;
+  const operational = Boolean(user?.roles.includes("finance") || user?.roles.includes("super_admin"));
+  return <div className="page-stack"><PageHeader title="Dashboard Finance" description="Invoice, payment, outstanding, dan readiness billing." />{error ? <div className="alert alert-danger">{error}</div> : null}<section className="metric-grid">{metrics.map(([label, value, Icon]) => <div className="metric-tile metric-rich" key={label}><Icon size={20} /><p>{label}</p><strong>{value}</strong></div>)}</section><section className="workspace-panel"><div className="job-actions">{operational ? <><Link className="primary-button" href="/finance/ready-to-invoice"><span>Ready to Invoice</span></Link><Link className="secondary-button" href="/finance/invoices"><span>Invoice List</span></Link><Link className="secondary-button" href="/finance/price-list"><span>Price List</span></Link><Link className="secondary-button" href="/finance/outstanding"><span>Outstanding</span></Link></> : null}<Link className="secondary-button" href="/finance/customers"><span>Rekap Customer</span></Link></div></section></div>;
 }
 function money(value: number) { return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value); }
 

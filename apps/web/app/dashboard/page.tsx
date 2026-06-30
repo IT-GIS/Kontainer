@@ -26,7 +26,7 @@ export default function DashboardPage() {
 
 function DashboardContent() {
   const { user } = useAuth();
-  const role = user?.roles[0] ?? "admin";
+  const roles = user?.roles ?? [];
 
   return (
     <div className="page-stack source-dashboard-stack">
@@ -52,35 +52,43 @@ function DashboardContent() {
 
       <section className="workspace-panel source-dashboard-note">
         <div className="source-note-head">
-          <h2>{dashboardTitle(role)}</h2>
+          <h2>{dashboardTitle(roles)}</h2>
           <StatusBadge tone="success">MVP READY</StatusBadge>
         </div>
-        <p>{dashboardCopy(role)}</p>
+        <p>{dashboardCopy(roles)}</p>
       </section>
     </div>
   );
 }
 
-function dashboardTitle(role: string) {
+function dashboardTitle(roles: string[]) {
+  if (roles.includes("super_admin")) return "System Control Overview";
+  if (roles.length > 1) return "Multi-workspace Overview";
   const titles: Record<string, string> = {
-    super_admin: "System Control Overview",
     admin: "Operational Dashboard",
     surveyor: "Dashboard Surveyor",
     supervisor: "Dashboard Review",
     finance: "Dashboard Finance",
     management: "Dashboard Management"
   };
-  return titles[role] ?? "Dashboard";
+  const role = roles.find((item) => titles[item]);
+  return role ? titles[role] : "Dashboard";
 }
 
-function dashboardCopy(role: string) {
+function dashboardCopy(roles: string[]) {
+  if (roles.includes("super_admin")) {
+    return "User, permission, master data, and system configuration workspace.";
+  }
+  if (roles.length > 1) {
+    return `Workspace aktif: ${roles.map((role) => role.replaceAll("_", " ")).join(", ")}.`;
+  }
   const copies: Record<string, string> = {
-    super_admin: "User, permission, master data, and system configuration workspace.",
     admin: "Job order, assignment, master data, and operational monitoring workspace.",
     surveyor: "Assigned job and survey progress workspace for the web MVP flow.",
     supervisor: "Pending review, approval, revision, and report readiness workspace.",
     finance: "Ready-to-invoice, price list, invoice, payment, and outstanding workspace.",
     management: "Read-only recap, dashboard, report archive, and finance summary workspace."
   };
-  return copies[role] ?? "Role-based dashboard workspace.";
+  const role = roles.find((item) => copies[item]);
+  return role ? copies[role] : "Role-based dashboard workspace.";
 }
