@@ -360,9 +360,9 @@ func (r Repository) Damages(ctx context.Context, surveyID uuid.UUID, actor Actor
 	rows, err := r.pool.Query(ctx, `
 		SELECT sd.id, sd.damage_no, sd.face, sd.internal_location,
 		       cl.code AS cedex_location_code,
-		       cc.id AS component_id, cc.code AS component_code, cc.name AS component_name,
-		       cd.id AS damage_code_id, cd.code AS damage_code, cd.name AS damage_name,
-		       cr.code AS repair_code, cr.name AS repair_name,
+		       cc.id AS component_id, cc.code AS component_code, cc.component_name AS component_name,
+		       cd.id AS damage_code_id, cd.code AS damage_code, cd.damage_name AS damage_name,
+		       cr.code AS repair_code, cr.repair_name AS repair_name,
 		       sd.severity, sd.quantity, sd.length_value AS length, sd.width_value AS width, sd.depth_value AS depth,
 		       sd.unit, sd.is_repair_required, sd.is_cargo_worthy_impact, sd.remark,
 		       COUNT(sp.id) AS photo_count

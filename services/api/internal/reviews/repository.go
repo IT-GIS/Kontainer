@@ -65,8 +65,8 @@ func (r Repository) Detail(ctx context.Context, surveyID uuid.UUID) (map[string]
 	general, _ := r.queryOne(ctx, `SELECT *, id AS id, survey_id AS survey_id FROM survey_general_infos WHERE survey_id=$1`, surveyID)
 	checklist, _ := r.queryRows(ctx, `SELECT id, item_code AS item_key, item_label, response_value AS value, response_text AS note, is_required, is_critical, display_order FROM survey_checklist_responses WHERE survey_id=$1 ORDER BY display_order, item_code`, surveyID)
 	damages, _ := r.queryRows(ctx, `
-		SELECT sd.id, sd.damage_no, sd.face, sd.internal_location, cc.code AS component_code, cc.name AS component_name,
-		       cd.code AS damage_code, cd.name AS damage_name, cr.code AS repair_code, cr.name AS repair_name,
+		SELECT sd.id, sd.damage_no, sd.face, sd.internal_location, cc.code AS component_code, cc.component_name AS component_name,
+		       cd.code AS damage_code, cd.damage_name AS damage_name, cr.code AS repair_code, cr.repair_name AS repair_name,
 		       sd.severity, sd.quantity, sd.length_value AS length, sd.width_value AS width, sd.depth_value AS depth,
 		       sd.unit, sd.is_repair_required, sd.is_cargo_worthy_impact, sd.remark,
 		       COUNT(sp.id) AS photo_count

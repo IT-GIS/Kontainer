@@ -14,7 +14,7 @@ import (
 
 func (r Repository) surveyorID(ctx context.Context, userID uuid.UUID) (uuid.UUID, error) {
 	var id uuid.UUID
-	err := r.pool.QueryRow(ctx, `SELECT id FROM surveyor_profiles WHERE user_id=$1 AND is_active=true AND deleted_at IS NULL LIMIT 1`, userID).Scan(&id)
+	err := r.pool.QueryRow(ctx, `SELECT id FROM surveyor_profiles WHERE user_id=$1 AND status='active' AND deleted_at IS NULL LIMIT 1`, userID).Scan(&id)
 	if err != nil {
 		if errors.Is(err, database.ErrNoRows) {
 			return uuid.Nil, ErrForbidden
@@ -128,7 +128,7 @@ func (r Repository) resolveCEDEXLocation(ctx context.Context, tx database.Tx, in
 		return nil, nil
 	}
 	var id uuid.UUID
-	err := tx.QueryRow(ctx, `SELECT id FROM cedex_locations WHERE LOWER(code)=LOWER($1) AND deleted_at IS NULL LIMIT 1`, input.CEDEXLocationCode).Scan(&id)
+	err := tx.QueryRow(ctx, `SELECT id FROM cedex_locations WHERE LOWER(code)=LOWER($1) AND status='active' LIMIT 1`, input.CEDEXLocationCode).Scan(&id)
 	if err != nil {
 		if errors.Is(err, database.ErrNoRows) {
 			return nil, ErrInvalidInput
