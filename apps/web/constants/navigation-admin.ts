@@ -67,10 +67,10 @@ export const adminWorkspace: NavigationWorkspace = {
       n("Report Version", "/reports/versions", FileClock, ["admin", "supervisor"], ["reports.version.all"])
     ]),
     g("Setting", Settings, admin, [
-      n("User Management", "/settings/users", UserCog, admin, ["users.manage.all"]),
-      n("Role & Permission", "/settings/roles", ShieldCheck, admin, ["roles.manage.all"]),
-      n("Company Profile", "/settings/company-profile", Building2, admin, ["company_profiles.manage.all"]),
-      n("Numbering Setting", "/settings/numbering", ListChecks, admin, ["numbering_settings.manage.all"]),
+      n("User Management", "/settings/users", UserCog, admin, ["users.view.all", "users.manage.all"]),
+      n("Role & Permission", "/settings/roles", ShieldCheck, admin, ["roles.view.all", "roles.manage.all"]),
+      n("Company Profile", "/settings/company-profile", Building2, admin, ["company_profiles.view.all", "company_profiles.manage.all"]),
+      n("Numbering Setting", "/settings/numbering", ListChecks, admin, ["numbering_settings.view.all", "numbering_settings.manage.all"]),
       n("Audit Log", "/settings/audit-log", BarChart3, admin, ["audit.view.all"]),
       n("Data Bootstrap", "/settings/data-bootstrap", Database, admin, ["checklist_templates.view.all"])
     ])

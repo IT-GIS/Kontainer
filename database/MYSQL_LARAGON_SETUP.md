@@ -2,6 +2,18 @@
 
 Import `database/kontainer_db.sql` melalui phpMyAdmin. Akun development: `superadmin@gift.local` / `password`.
 
+## Patch permission sidebar tiga workspace
+
+Setelah mengimpor database utama, jalankan `database/patches/0009_navigation_permissions.sql`
+melalui phpMyAdmin untuk database yang sudah terlanjur dibuat sebelum struktur sidebar
+Admin, Surveyor, dan Finance diterapkan. Patch ini memakai `INSERT IGNORE` dan normalisasi
+role permission yang idempotent, sehingga aman dijalankan ulang.
+
+Urutan import:
+
+1. `database/kontainer_db.sql`
+2. `database/patches/0009_navigation_permissions.sql`
+
 ## Query lengkap
 
 ```sql
