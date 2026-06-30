@@ -1,7 +1,8 @@
 import {
-  BarChart3, BookOpenCheck, Boxes, Building2, CheckCircle2, ClipboardCheck,
+  Activity, BarChart3, BookOpenCheck, Boxes, Building2, CheckCircle2, ClipboardCheck,
   ClipboardList, Clock3, Container, Database, FileClock, FilePlus2, FileText,
-  Gauge, Layers, ListChecks, MapPin, PackageCheck, RotateCcw, Settings,
+  Gauge, Layers, ListChecks, MapPin, PackageCheck, RotateCcw, ScanSearch, Send,
+  Settings,
   ShieldCheck, Tags, Truck, Upload, UserCog, UserRoundCheck, UsersRound, Wrench
 } from "lucide-react";
 import type {
@@ -52,6 +53,13 @@ export const adminWorkspace: NavigationWorkspace = {
       n("Assign Surveyor", "/jobs/assign", UserRoundCheck, admin, ["assignments.assign.all", "assignments.manage.all"], [
         { path: "/jobs/assign" }, { path: "/jobs/:id", mode: "pattern", query: { action: "assign" } }
       ])
+    ]),
+    g("Monitoring Survey", ScanSearch, admin, [
+      n("All Survey", "/monitoring/surveys", ClipboardCheck, admin, ["reviews.view.all"]),
+      n("In Progress", "/monitoring/surveys/in-progress", Activity, admin, ["reviews.view.all"]),
+      n("Submitted", "/monitoring/surveys/submitted", Send, admin, ["reviews.view.all"]),
+      n("Need Revision", "/monitoring/surveys/need-revision", RotateCcw, admin, ["reviews.view.all"]),
+      n("Approved", "/monitoring/surveys/approved", CheckCircle2, admin, ["reviews.view.all"])
     ]),
     g("Review", ShieldCheck, reviewer, [
       n("Pending Review", "/review/pending", Clock3, reviewer, ["reviews.view.all", "reviews.manage.all"], [

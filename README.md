@@ -45,10 +45,14 @@ npm run dev:web
 
 6. Buka `http://localhost:3000`.
 
-Akun development:
+Akun development memakai password `password`:
 
-- Email: `superadmin@gift.local`
-- Password: `password`
+- `superadmin@gift.local`
+- `admin@gift.local`
+- `surveyor@gift.local`
+- `supervisor@gift.local`
+- `finance@gift.local`
+- `management@gift.local`
 
 Dokumentasi query lengkap tersedia di `database/MYSQL_LARAGON_SETUP.md`.
 

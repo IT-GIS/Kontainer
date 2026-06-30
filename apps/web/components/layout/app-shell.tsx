@@ -86,8 +86,8 @@ export function AppShell({ title, children }: AppShellProps) {
         <div className="sidebar-head source-sidebar-head">
           <div className="source-shell-mark"><ShieldCheck size={20} /></div>
           <div className="source-sidebar-brand">
-            <strong>PT. Global Inspeksi Forensik Teknik</strong>
-            <span>Dashboard Internal</span>
+            <strong>PT. Global Inspeksi Sertifikasi</strong>
+            <span>Container Survey Management</span>
           </div>
           <button className="icon-button sidebar-close" onClick={() => setIsOpen(false)} title="Tutup menu">
             <X size={18} />
