@@ -3,7 +3,7 @@ import { Providers } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Container Survey Management System",
+  title: "Sistem Kelayakan Peti Kemas Terintegrasi",
   description: "Web MVP for container survey operations, review, reports, and finance."
 };
 

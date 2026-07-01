@@ -43,8 +43,8 @@ function LoginForm() {
         <header className="source-login-heading">
           <Image className="source-login-logo" src="/images/gift-logo.png" alt="GIFT Logo" width={72} height={72} priority />
           <div>
-            <h1 id="login-title">PT. Global Inspeksi Forensik Teknik</h1>
-            <p>Container</p>
+            <h1 id="login-title">Sistem Kelayakan Peti Kemas Terintegrasi</h1>
+            <p>PT. Global Inspeksi Sertifikasi</p>
           </div>
         </header>
 

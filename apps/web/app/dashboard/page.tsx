@@ -3,7 +3,6 @@
 import { ClipboardList, FileCheck2, PackageOpen, ReceiptText, ShieldCheck } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AppShell } from "@/components/layout/app-shell";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/hooks/use-auth";
 
 const metrics = [
@@ -53,7 +52,6 @@ function DashboardContent() {
       <section className="workspace-panel source-dashboard-note">
         <div className="source-note-head">
           <h2>{dashboardTitle(roles)}</h2>
-          <StatusBadge tone="success">MVP READY</StatusBadge>
         </div>
         <p>{dashboardCopy(roles)}</p>
       </section>
