@@ -67,11 +67,41 @@ func surveyWhere(params ListParams, status string) (string, []any) {
 		args = append(args, params.SurveyTypeID)
 		clauses = append(clauses, fmt.Sprintf("s.survey_type_id=$%d", len(args)))
 	}
+	if params.SurveyorID != "" {
+		args = append(args, params.SurveyorID)
+		clauses = append(clauses, fmt.Sprintf("s.surveyor_id=$%d", len(args)))
+	}
+	if params.LocationID != "" {
+		args = append(args, params.LocationID)
+		clauses = append(clauses, fmt.Sprintf("jo.location_id=$%d", len(args)))
+	}
+	dateExpression := surveyDateExpression(status)
+	if from, ok := parseFilterDate(params.DateFrom); ok && from != nil {
+		args = append(args, *from)
+		clauses = append(clauses, fmt.Sprintf("%s >= $%d", dateExpression, len(args)))
+	}
+	if to, ok := parseFilterDate(params.DateTo); ok && to != nil {
+		args = append(args, to.AddDate(0, 0, 1))
+		clauses = append(clauses, fmt.Sprintf("%s < $%d", dateExpression, len(args)))
+	}
 	if params.Search != "" {
 		args = append(args, "%"+strings.TrimSpace(params.Search)+"%")
 		clauses = append(clauses, fmt.Sprintf("(s.survey_no LIKE $%d OR jc.container_no LIKE $%d OR jo.job_order_no LIKE $%d OR c.customer_name LIKE $%d OR sp.full_name LIKE $%d)", len(args), len(args), len(args), len(args), len(args)))
 	}
 	return "WHERE " + strings.Join(clauses, " AND "), args
+}
+
+func surveyDateExpression(status string) string {
+	switch normalizeSurveyListStatus(status) {
+	case "draft":
+		return "COALESCE(s.started_at, s.created_at)"
+	case "submitted", "need_revision", "rejected":
+		return "COALESCE(s.submitted_at, s.created_at)"
+	case "approved":
+		return "COALESCE(s.approved_at, s.created_at)"
+	default:
+		return "s.created_at"
+	}
 }
 
 func normalizeSurveyListStatus(status string) string {
@@ -92,6 +122,10 @@ func reportWhere(params ListParams) (string, []any) {
 	if params.CustomerID != "" {
 		args = append(args, params.CustomerID)
 		clauses = append(clauses, fmt.Sprintf("r.customer_id=$%d", len(args)))
+	}
+	if params.JobOrderID != "" {
+		args = append(args, params.JobOrderID)
+		clauses = append(clauses, fmt.Sprintf("r.job_order_id=$%d", len(args)))
 	}
 	if params.Search != "" {
 		args = append(args, "%"+strings.TrimSpace(params.Search)+"%")

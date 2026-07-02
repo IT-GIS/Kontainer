@@ -8,6 +8,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/hooks/use-auth";
 import { apiPaginated, buildQuery } from "@/lib/api-client";
+import { loadOptions } from "@/lib/options";
+import type { OptionItem } from "@/types/jobs";
 import type { SurveyListItem } from "@/types/surveys";
 
 type StatusOption = { label: string; value: string };
@@ -27,6 +29,12 @@ export function SurveyListPage({ title, description, endpoint, fixedStatus = "",
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState(fixedStatus || statusOptions[0]?.value || "");
+  const [surveyorID, setSurveyorID] = useState("");
+  const [locationID, setLocationID] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [surveyors, setSurveyors] = useState<OptionItem[]>([]);
+  const [locations, setLocations] = useState<OptionItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +44,7 @@ export function SurveyListPage({ title, description, endpoint, fixedStatus = "",
     setError(null);
     try {
       const result = await apiPaginated<SurveyListItem>(
-        `${endpoint}${buildQuery({ page, per_page: 10, search, status: fixedStatus || status })}`,
+        `${endpoint}${buildQuery({ page, per_page: 10, search, status: fixedStatus || status, surveyor_id: surveyorID, location_id: locationID, date_from: dateFrom, date_to: dateTo })}`,
         { accessToken }
       );
       setRows(result.rows);
@@ -46,7 +54,15 @@ export function SurveyListPage({ title, description, endpoint, fixedStatus = "",
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken, endpoint, fixedStatus, page, search, status]);
+  }, [accessToken, dateFrom, dateTo, endpoint, fixedStatus, locationID, page, search, status, surveyorID]);
+
+  useEffect(() => {
+    if (!accessToken || endpoint !== "/surveys/monitoring") return;
+    void Promise.all([
+      loadOptions(accessToken, "/master/surveyors", "name", "surveyor_code"),
+      loadOptions(accessToken, "/master/locations", "location_name", "location_code")
+    ]).then(([people, places]) => { setSurveyors(people); setLocations(places); }).catch(() => undefined);
+  }, [accessToken, endpoint]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadRows(), 0);
@@ -67,6 +83,14 @@ export function SurveyListPage({ title, description, endpoint, fixedStatus = "",
           </select>
         ) : null}
       </div>
+      {endpoint === "/surveys/monitoring" ? (
+        <div className="monitoring-filter-toolbar">
+          <label className="field"><span>Surveyor</span><select value={surveyorID} onChange={(event) => { setPage(1); setSurveyorID(event.target.value); }}><option value="">All Surveyors</option>{surveyors.map((item) => <option key={item.id} value={item.id}>{item.code ? `${item.code} - ${item.label}` : item.label}</option>)}</select></label>
+          <label className="field"><span>Location</span><select value={locationID} onChange={(event) => { setPage(1); setLocationID(event.target.value); }}><option value="">All Locations</option>{locations.map((item) => <option key={item.id} value={item.id}>{item.code ? `${item.code} - ${item.label}` : item.label}</option>)}</select></label>
+          <label className="field"><span>Date From</span><input type="date" max={dateTo || undefined} value={dateFrom} onChange={(event) => { setPage(1); setDateFrom(event.target.value); }} /></label>
+          <label className="field"><span>Date To</span><input type="date" min={dateFrom || undefined} value={dateTo} onChange={(event) => { setPage(1); setDateTo(event.target.value); }} /></label>
+        </div>
+      ) : null}
       {error ? <div className="alert alert-danger">{error}</div> : null}
       <DataTable
         rows={rows}

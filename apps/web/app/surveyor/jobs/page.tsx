@@ -62,11 +62,13 @@ function SurveyorJobsContent() {
         onPageChange={setPage}
         columns={[
           { key: "job_order_no", header: "Job No", render: (row) => <Link className="text-link" href={`/surveyor/jobs/${row.id}`}>{row.job_order_no}</Link> },
+          { key: "assignment_no", header: "Assignment", render: (row) => row.assignment_no ?? "-" },
           { key: "customer", header: "Customer", render: (row) => row.customer_name },
           { key: "location", header: "Location", render: (row) => row.location_name },
           { key: "survey_type", header: "Survey Type", render: (row) => row.survey_type_name },
           { key: "progress", header: "Progress", render: (row) => `${row.completed_containers ?? 0}/${row.total_containers ?? 0}` },
           { key: "deadline", header: "Deadline", render: (row) => row.deadline ?? "-" },
+          { key: "instruction", header: "Instruction", render: (row) => row.assignment_instruction ?? "-" },
           { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "assigned" ? "warning" : "success"}>{row.status.toUpperCase()}</StatusBadge> }
         ]}
       />

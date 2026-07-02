@@ -114,6 +114,16 @@ a:focus-visible {
   display: flex;
 }
 
+.monitoring-filter-toolbar {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  padding: 12px;
+}
+
 .login-heading {
   gap: 12px;
 }
@@ -631,6 +641,10 @@ a:focus-visible {
   }
 
   .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .monitoring-filter-toolbar {
     grid-template-columns: 1fr;
   }
 

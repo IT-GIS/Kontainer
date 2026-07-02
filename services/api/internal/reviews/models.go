@@ -28,6 +28,11 @@ type ListParams struct {
 	Status       string
 	CustomerID   string
 	SurveyTypeID string
+	SurveyorID   string
+	LocationID   string
+	DateFrom     string
+	DateTo       string
+	JobOrderID   string
 }
 
 type PaginationMeta struct {

@@ -295,22 +295,27 @@ func (r Repository) GenerateReport(ctx context.Context, surveyID uuid.UUID, inpu
 }
 
 func (r Repository) ValidateQR(ctx context.Context, token string) (map[string]any, error) {
-	return r.queryOne(ctx, `
+	return r.queryOne(ctx, validateQRQuery, token)
+}
+
+const validateQRQuery = `
 		SELECT r.report_no, r.current_version_no AS revision_no, jc.container_no, c.customer_name,
-		       s.approved_at::date AS survey_date, CASE WHEN r.status <> 'void' THEN 'valid' ELSE 'void' END AS status,
+		       DATE(s.approved_at) AS survey_date, CASE WHEN r.status <> 'void' THEN 'valid' ELSE 'void' END AS status,
 		       sp.full_name AS surveyor_name, u.name AS approver_name
 		FROM reports r
 		JOIN surveys s ON s.id=r.survey_id
 		JOIN job_containers jc ON jc.id=s.job_container_id
 		JOIN customers c ON c.id=r.customer_id
 		JOIN surveyor_profiles sp ON sp.id=s.surveyor_id
-		LEFT JOIN LATERAL (
-		  SELECT reviewer_id FROM survey_approvals sa WHERE sa.survey_id=s.id AND sa.decision='approved' ORDER BY reviewed_at DESC LIMIT 1
-		) approver ON true
-		LEFT JOIN users u ON u.id=approver.reviewer_id
+		LEFT JOIN users u ON u.id = (
+		  SELECT sa.reviewer_id
+		  FROM survey_approvals sa
+		  WHERE sa.survey_id=s.id AND sa.decision='approved'
+		  ORDER BY sa.reviewed_at DESC, sa.id DESC
+		  LIMIT 1
+		)
 		WHERE r.qr_token=$1 AND r.validated_publicly=true
-	`, token)
-}
+	`
 
 func (r Repository) createReportTx(ctx context.Context, tx database.Tx, surveyID uuid.UUID, base map[string]any, actor Actor, reportType string) (map[string]any, error) {
 	existing, err := scanRow(tx.QueryRow(ctx, `SELECT id, report_no, status FROM reports WHERE survey_id=$1 AND status <> 'void' LIMIT 1`, surveyID), []string{"id", "report_no", "status"})

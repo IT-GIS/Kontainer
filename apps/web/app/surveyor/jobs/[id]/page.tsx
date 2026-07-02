@@ -70,9 +70,11 @@ function SurveyorJobDetailContent() {
       {error ? <div className="alert alert-danger">{error}</div> : null}
       <section className="workspace-panel detail-grid">
         <div><span>Status</span><strong><StatusBadge tone={job.status === "assigned" ? "warning" : "success"}>{job.status.toUpperCase()}</StatusBadge></strong></div>
+        <div><span>Assignment No</span><strong>{job.assignment_no ?? "-"}</strong></div>
         <div><span>Job Date</span><strong>{job.job_date ?? "-"}</strong></div>
         <div><span>Deadline</span><strong>{job.deadline ?? "-"}</strong></div>
-        <div><span>Instruction</span><strong>{job.instruction ?? "-"}</strong></div>
+        <div><span>Assignment Period</span><strong>{job.assignment_start_date ?? "-"} - {job.assignment_due_date ?? "-"}</strong></div>
+        <div><span>Instruction</span><strong>{job.assignment_instruction ?? "-"}</strong></div>
       </section>
       <section className="workspace-panel">
         <div className="section-title-row">

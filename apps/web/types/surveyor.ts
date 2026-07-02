@@ -17,6 +17,10 @@ export type SurveyorJob = {
   completed_containers: number;
   status: string;
   deadline?: string | null;
+  assignment_no?: string | null;
+  assignment_start_date?: string | null;
+  assignment_due_date?: string | null;
+  assignment_instruction?: string | null;
 };
 
 export type SurveyorContainer = {

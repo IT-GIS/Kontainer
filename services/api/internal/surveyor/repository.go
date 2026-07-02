@@ -63,7 +63,11 @@ func (r Repository) ListJobs(ctx context.Context, params ListParams, actor Actor
 		SELECT jo.id, jo.job_order_no, c.customer_name, l.location_name, st.name AS survey_type_name,
 		       COUNT(DISTINCT jc.id) AS total_containers,
 		       COUNT(DISTINCT CASE WHEN COALESCE(s.status, jc.status) IN ('submitted','approved','report_generated') THEN jc.id END) AS completed_containers,
-		       jo.status, jo.deadline
+		       jo.status, jo.deadline,
+		       latest_assignment.assignment_no,
+		       latest_assignment.start_date AS assignment_start_date,
+		       latest_assignment.due_date AS assignment_due_date,
+		       COALESCE(NULLIF(TRIM(latest_assignment.instruction), ''), jo.instruction) AS assignment_instruction
 		FROM job_orders jo
 		JOIN customers c ON c.id = jo.customer_id
 		JOIN locations l ON l.id = jo.location_id
@@ -72,8 +76,19 @@ func (r Repository) ListJobs(ctx context.Context, params ListParams, actor Actor
 		JOIN assignment_containers ac ON ac.assignment_id = a.id AND ac.unassigned_at IS NULL
 		JOIN job_containers jc ON jc.id = ac.job_container_id AND jc.deleted_at IS NULL
 		LEFT JOIN surveys s ON s.job_container_id = jc.id AND s.deleted_at IS NULL
+		LEFT JOIN assignments latest_assignment ON latest_assignment.id = (
+		  SELECT a2.id
+		  FROM assignments a2
+		  WHERE a2.job_order_id = jo.id AND a2.surveyor_id = $1
+		    AND EXISTS (
+		      SELECT 1 FROM assignment_containers ac2
+		      WHERE ac2.assignment_id = a2.id AND ac2.unassigned_at IS NULL
+		    )
+		  ORDER BY a2.assigned_at DESC, a2.id DESC
+		  LIMIT 1
+		)
 		%s
-		GROUP BY jo.id, c.id, l.id, st.id
+		GROUP BY jo.id, c.id, l.id, st.id, latest_assignment.id
 		ORDER BY jo.deadline IS NULL, jo.deadline, jo.created_at DESC
 		LIMIT $%d OFFSET $%d
 	`, where, len(args)-1, len(args)), args...)
@@ -99,11 +114,26 @@ func (r Repository) GetJob(ctx context.Context, jobID uuid.UUID, actor Actor) (m
 	}
 	item, err := r.queryOne(ctx, `
 		SELECT jo.id, jo.job_order_no, jo.job_date, jo.status, jo.priority, jo.deadline, jo.instruction,
-		       c.customer_name, l.location_name, st.name AS survey_type_name
+		       c.customer_name, l.location_name, st.name AS survey_type_name,
+		       latest_assignment.assignment_no,
+		       latest_assignment.start_date AS assignment_start_date,
+		       latest_assignment.due_date AS assignment_due_date,
+		       COALESCE(NULLIF(TRIM(latest_assignment.instruction), ''), jo.instruction) AS assignment_instruction
 		FROM job_orders jo
 		JOIN customers c ON c.id = jo.customer_id
 		JOIN locations l ON l.id = jo.location_id
 		JOIN survey_types st ON st.id = jo.survey_type_id
+		LEFT JOIN assignments latest_assignment ON latest_assignment.id = (
+		  SELECT a2.id
+		  FROM assignments a2
+		  WHERE a2.job_order_id = jo.id AND a2.surveyor_id = $2
+		    AND EXISTS (
+		      SELECT 1 FROM assignment_containers ac2
+		      WHERE ac2.assignment_id = a2.id AND ac2.unassigned_at IS NULL
+		    )
+		  ORDER BY a2.assigned_at DESC, a2.id DESC
+		  LIMIT 1
+		)
 		WHERE jo.id=$1 AND jo.deleted_at IS NULL
 		  AND EXISTS (
 		    SELECT 1 FROM assignments a

@@ -219,7 +219,12 @@ func (h Handler) writeError(c *gin.Context, err error) {
 func listParams(c *gin.Context) ListParams {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "20"))
-	return ListParams{Page: page, PerPage: perPage, Search: c.Query("search"), Status: c.Query("status"), CustomerID: c.Query("customer_id"), SurveyTypeID: c.Query("survey_type_id")}
+	return ListParams{
+		Page: page, PerPage: perPage, Search: c.Query("search"), Status: c.Query("status"),
+		CustomerID: c.Query("customer_id"), SurveyTypeID: c.Query("survey_type_id"),
+		SurveyorID: c.Query("surveyor_id"), LocationID: c.Query("location_id"),
+		DateFrom: c.Query("date_from"), DateTo: c.Query("date_to"), JobOrderID: c.Query("job_order_id"),
+	}
 }
 
 func parseID(c *gin.Context) (uuid.UUID, bool) {

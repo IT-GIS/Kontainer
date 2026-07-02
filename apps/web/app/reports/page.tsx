@@ -2,7 +2,8 @@
 
 import { Download, Search } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AppShell } from "@/components/layout/app-shell";
 import { DataTable } from "@/components/ui/data-table";
@@ -15,10 +16,12 @@ import type { ReportSummary } from "@/types/reviews";
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api/v1";
 
 export default function ReportsPage() {
-  return <ProtectedRoute><AppShell title="Report Archive"><ReportsContent /></AppShell></ProtectedRoute>;
+  return <ProtectedRoute><AppShell title="Report Archive"><Suspense fallback={<div className="center-screen">Memuat report...</div>}><ReportsContent /></Suspense></AppShell></ProtectedRoute>;
 }
 
 function ReportsContent() {
+  const searchParams = useSearchParams();
+  const jobOrderID = searchParams.get("job_order_id") ?? "";
   const { accessToken } = useAuth();
   const [rows, setRows] = useState<ReportSummary[]>([]);
   const [page, setPage] = useState(1);
@@ -31,13 +34,13 @@ function ReportsContent() {
     if (!accessToken) return;
     setError(null);
     try {
-      const result = await apiPaginated<ReportSummary>(`/reports${buildQuery({ page, per_page: 10, search, status })}`, { accessToken });
+      const result = await apiPaginated<ReportSummary>(`/reports${buildQuery({ page, per_page: 10, search, status, job_order_id: jobOrderID })}`, { accessToken });
       setRows(result.rows);
       setTotalPages(Number(result.meta.total_pages ?? 1));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mengambil report.");
     }
-  }, [accessToken, page, search, status]);
+  }, [accessToken, jobOrderID, page, search, status]);
 
   useEffect(() => { const timer = window.setTimeout(() => void loadRows(), 0); return () => window.clearTimeout(timer); }, [loadRows]);
 

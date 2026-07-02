@@ -3,6 +3,7 @@ package reviews
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -20,7 +21,7 @@ func (s *Service) Pending(ctx context.Context, params ListParams) (ListResult, e
 }
 
 func (s *Service) Monitoring(ctx context.Context, params ListParams) (ListResult, error) {
-	if !validMonitoringStatus(params.Status) {
+	if !validMonitoringStatus(params.Status) || !validMonitoringFilters(params) {
 		return ListResult{}, ErrInvalidInput
 	}
 	return s.repo.Monitoring(ctx, params)
@@ -43,6 +44,30 @@ func validMonitoringStatus(status string) bool {
 	default:
 		return false
 	}
+}
+
+func validMonitoringFilters(params ListParams) bool {
+	for _, value := range []string{params.SurveyorID, params.LocationID} {
+		if value != "" {
+			if _, err := uuid.Parse(value); err != nil {
+				return false
+			}
+		}
+	}
+	from, fromOK := parseFilterDate(params.DateFrom)
+	to, toOK := parseFilterDate(params.DateTo)
+	if !fromOK || !toOK {
+		return false
+	}
+	return from == nil || to == nil || !to.Before(*from)
+}
+
+func parseFilterDate(value string) (*time.Time, bool) {
+	if strings.TrimSpace(value) == "" {
+		return nil, true
+	}
+	parsed, err := time.Parse("2006-01-02", value)
+	return &parsed, err == nil
 }
 
 func (s *Service) Detail(ctx context.Context, surveyID uuid.UUID) (map[string]any, error) {
@@ -71,6 +96,11 @@ func (s *Service) Reject(ctx context.Context, surveyID uuid.UUID, input RejectIn
 }
 
 func (s *Service) ListReports(ctx context.Context, params ListParams) (ListResult, error) {
+	if params.JobOrderID != "" {
+		if _, err := uuid.Parse(params.JobOrderID); err != nil {
+			return ListResult{}, ErrInvalidInput
+		}
+	}
 	return s.repo.ListReports(ctx, params)
 }
 

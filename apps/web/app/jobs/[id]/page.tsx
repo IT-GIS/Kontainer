@@ -137,7 +137,7 @@ function JobDetailContent() {
       {activeTab === "Containers" ? <Containers containers={job.containers ?? []} selected={selectedContainers} onSelected={setSelectedContainers} /> : null}
       {activeTab === "Assignment" ? <Assignments rows={job.assignments ?? []} /> : null}
       {activeTab === "Survey Progress" ? <Progress containers={job.containers ?? []} /> : null}
-      {activeTab === "Reports" ? <section className="workspace-panel"><h2>Reports</h2><p className="muted-text">Report records will appear after supervisor approval in Prompt 9.</p></section> : null}
+      {activeTab === "Reports" ? <section className="workspace-panel"><div className="section-title-row"><div><h2>Reports</h2><p className="muted-text">Lihat report yang sudah dibuat untuk job order ini.</p></div><Link className="primary-button" href={`/reports?job_order_id=${jobID}`}>Open Report Archive</Link></div></section> : null}
       {activeTab === "Timeline" ? <Timeline rows={job.timeline ?? []} /> : null}
 
       <FormDialog title="Add Container" open={containerDialog} onClose={() => setContainerDialog(false)} onSubmit={addContainer} isSubmitting={isSubmitting} submitLabel="Add">
@@ -194,7 +194,7 @@ function Containers({ containers, selected, onSelected }: { containers: JobConta
 }
 
 function Assignments({ rows }: { rows: AssignmentSummary[] }) { return <DataTable rows={rows} columns={[{ key: "assignment_no", header: "Assignment No", render: (r) => r.assignment_no }, { key: "surveyor", header: "Surveyor", render: (r) => r.surveyor_name }, { key: "period", header: "Period", render: (r) => `${r.start_date ?? "-"} - ${r.due_date ?? "-"}` }, { key: "instruction", header: "Instruction", render: (r) => r.instruction ?? "-" }, { key: "containers", header: "Containers", render: (r) => r.total_containers }, { key: "status", header: "Status", render: (r) => <StatusBadge tone="success">{r.status.toUpperCase()}</StatusBadge> }]} />; }
-function Progress({ containers }: { containers: JobContainer[] }) { return <section className="metric-grid">{["not_started","assigned","in_progress","submitted","approved"].map((status) => <div className="metric-tile" key={status}><p>{status}</p><strong>{containers.filter((c) => c.status === status).length}</strong></div>)}</section>; }
+function Progress({ containers }: { containers: JobContainer[] }) { return <section className="metric-grid">{["not_started","assigned","in_progress","submitted","need_revision","rejected","approved","reported"].map((status) => <div className="metric-tile" key={status}><p>{status}</p><strong>{containers.filter((c) => c.status === status).length}</strong></div>)}</section>; }
 function Timeline({ rows }: { rows: JobEvent[] }) { return <section className="workspace-panel timeline-list">{rows.length === 0 ? <p className="muted-text">Timeline kosong.</p> : rows.map((row) => <div key={row.id}><strong>{row.event_title}</strong><p>{row.description}</p><span>{row.actor ?? "System"} - {row.created_at}</span></div>)}</section>; }
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="field"><span>{label}</span>{children}</label>; }
 function Select({ value, options, onChange }: { value: string; options: OptionItem[]; onChange: (value: string) => void }) { return <select value={value} onChange={(e) => onChange(e.target.value)}><option value="">Select</option>{options.map((item) => <option key={item.id} value={item.id}>{item.code ? `${item.code} - ${item.label}` : item.label}</option>)}</select>; }
