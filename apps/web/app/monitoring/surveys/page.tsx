@@ -1,5 +1,5 @@
-import { NavigationPlaceholderPage } from "@/components/navigation/navigation-placeholder-page";
+import { redirect } from "next/navigation";
 
 export default function AllSurveysPage() {
-  return <NavigationPlaceholderPage title="All Survey" backHref="/dashboard" backLabel="Kembali ke Dashboard Admin" />;
+  redirect("/surveys/monitoring");
 }

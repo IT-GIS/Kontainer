@@ -18,6 +18,7 @@ export type NavigationLink = {
   href: string;
   icon: LucideIcon;
   roles: RoleCode[];
+  exactRoles?: RoleCode[];
   permissions: string[];
   matches?: NavigationRouteMatch[];
 };

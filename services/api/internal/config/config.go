@@ -19,7 +19,11 @@ type Config struct {
 	AccessTTL         time.Duration
 	RefreshTTL        time.Duration
 	S3Endpoint        string
+	S3AccessKey       string
+	S3SecretKey       string
 	S3Bucket          string
+	S3Region          string
+	S3UseSSL          bool
 	MaxUploadBytes    int64
 	WorkerEnabled     bool
 	AllowedWebOrigins []string
@@ -38,7 +42,11 @@ func Load() Config {
 		AccessTTL:         time.Duration(getenvInt("JWT_ACCESS_TTL_MINUTES", 60)) * time.Minute,
 		RefreshTTL:        time.Duration(getenvInt("JWT_REFRESH_TTL_DAYS", 14)) * 24 * time.Hour,
 		S3Endpoint:        getenv("S3_ENDPOINT", "http://localhost:9000"),
+		S3AccessKey:       getenv("S3_ACCESS_KEY", "minioadmin"),
+		S3SecretKey:       getenv("S3_SECRET_KEY", "minioadmin"),
 		S3Bucket:          getenv("S3_BUCKET", "gift-survey"),
+		S3Region:          getenv("S3_REGION", "us-east-1"),
+		S3UseSSL:          getenvBool("S3_USE_SSL", false),
 		MaxUploadBytes:    int64(getenvInt("MAX_UPLOAD_MB", 10)) * 1024 * 1024,
 		WorkerEnabled:     getenvBool("WORKER_ENABLED", true),
 		AllowedWebOrigins: splitCSV(getenv("WEB_ALLOWED_ORIGINS", "http://localhost:3000")),

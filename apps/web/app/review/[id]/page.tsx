@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AppShell } from "@/components/layout/app-shell";
+import { PhotoEvidence } from "@/components/surveys/photo-evidence";
 import { DataTable } from "@/components/ui/data-table";
 import { FormDialog } from "@/components/ui/form-dialog";
 import { PageHeader } from "@/components/ui/page-header";
@@ -125,7 +126,7 @@ function Damage({ rows }: { rows: Array<Record<string, unknown>> }) {
 }
 
 function Photos({ rows }: { rows: Array<Record<string, unknown>> }) {
-  return <section className="workspace-panel photo-grid">{rows.length === 0 ? <p className="muted-text">Belum ada foto.</p> : rows.map((row, index) => <div className="photo-card" key={String(row.id ?? index)}><strong>{String(row.original_file_name ?? "Photo evidence")}</strong><span>{String(row.caption ?? row.object_key ?? "-")}</span></div>)}</section>;
+  return <section className="workspace-panel photo-grid">{rows.length === 0 ? <p className="muted-text">Belum ada foto.</p> : rows.map((row, index) => <PhotoEvidence id={String(row.id ?? index)} name={String(row.original_file_name ?? "Photo evidence")} caption={row.caption ? String(row.caption) : null} key={String(row.id ?? index)} />)}</section>;
 }
 
 function Log({ rows }: { rows: Array<Record<string, unknown>> }) {

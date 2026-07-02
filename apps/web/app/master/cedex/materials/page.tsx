@@ -1,5 +1,7 @@
-import { NavigationPlaceholderPage } from "@/components/navigation/navigation-placeholder-page";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { AppShell } from "@/components/layout/app-shell";
+import { MasterDataPage } from "@/components/master/master-data-page";
 
 export default function CedexMaterialsPage() {
-  return <NavigationPlaceholderPage title="CEDEX Material" backHref="/master/cedex/components" backLabel="Kembali ke CEDEX Component" />;
+  return <ProtectedRoute><AppShell title="CEDEX Material"><MasterDataPage resourceId="cedex-materials" /></AppShell></ProtectedRoute>;
 }

@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"container-survey/services/api/internal/database"
+	"container-survey/services/api/internal/numbering"
 	"context"
 	"encoding/json"
 	"errors"
@@ -67,7 +68,7 @@ func (r Repository) CreateJob(ctx context.Context, input JobInput, actor Actor) 
 		return nil, err
 	}
 	defer tx.Rollback(ctx)
-	jobNo, err := r.nextDocNo(ctx, tx, "JO", "job_orders")
+	jobNo, err := numbering.Next(ctx, tx, "job_order")
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +252,8 @@ func (r Repository) ListContainers(ctx context.Context, jobID uuid.UUID, params 
 	}
 	args = append(args, perPage, (page-1)*perPage)
 	rows, err := r.pool.Query(ctx, fmt.Sprintf(`
-		SELECT jc.id, jc.container_no, jc.check_digit_status, jc.iso_type_code, jc.seal_no, jc.cargo_status, jc.truck_no, jc.driver_name, jc.status,
+		SELECT jc.id, jc.container_no, jc.check_digit_status, jc.check_digit_override_reason, jc.iso_type_code, jc.seal_no, jc.cargo_status,
+		       jc.gross_weight, jc.tare_weight, jc.payload, jc.manufacture_date, jc.truck_no, jc.driver_name, jc.status,
 		       ct.id AS container_type_id, ct.code AS container_type_code
 		FROM job_containers jc
 		LEFT JOIN container_types ct ON ct.id = jc.container_type_id
@@ -338,6 +340,27 @@ func (r Repository) ImportContainers(ctx context.Context, jobID uuid.UUID, input
 	return result, nil
 }
 
+func (r Repository) ExistingContainerNumbers(ctx context.Context, jobID uuid.UUID, numbers []string) (map[string]bool, error) {
+	result := map[string]bool{}
+	for _, number := range numbers {
+		number = strings.ToUpper(strings.TrimSpace(number))
+		if number == "" || result[number] {
+			continue
+		}
+		var total int
+		if err := r.pool.QueryRow(ctx, `
+			SELECT COUNT(*) FROM job_containers
+			WHERE job_order_id=$1 AND UPPER(container_no)=$2 AND deleted_at IS NULL
+		`, jobID, number).Scan(&total); err != nil {
+			return nil, err
+		}
+		if total > 0 {
+			result[number] = true
+		}
+	}
+	return result, nil
+}
+
 func (r Repository) Assign(ctx context.Context, jobID uuid.UUID, input AssignInput, actor Actor) (map[string]any, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -355,7 +378,7 @@ func (r Repository) Assign(ctx context.Context, jobID uuid.UUID, input AssignInp
 	if err != nil || len(containerIDs) == 0 {
 		return nil, ErrInvalidInput
 	}
-	assignmentNo, err := r.nextDocNo(ctx, tx, "ASG", "assignments")
+	assignmentNo, err := numbering.Next(ctx, tx, "assignment")
 	if err != nil {
 		return nil, err
 	}
@@ -381,7 +404,7 @@ func (r Repository) Assign(ctx context.Context, jobID uuid.UUID, input AssignInp
 		}
 	}
 	_, _ = tx.Exec(ctx, `UPDATE job_orders SET status='assigned', updated_by=$2, updated_at=now() WHERE id=$1 AND status='draft'`, jobID, actor.UserID)
-	item := map[string]any{"id": assignmentID.String(), "assignment_no": assignmentNo, "status": "assigned", "assigned_containers": len(containerIDs)}
+	item := map[string]any{"id": assignmentID.String(), "assignment_no": assignmentNo, "status": "assigned", "assigned_containers": len(containerIDs), "start_date": startDate, "due_date": dueDate, "instruction": input.Instruction}
 	_ = r.insertJobEvent(ctx, tx, jobID, "surveyor_assigned", "Surveyor ditugaskan.", fmt.Sprintf("%d container ditugaskan", len(containerIDs)), actor.UserID, item)
 	_ = r.insertAudit(ctx, tx, actor, "assignments.assign", "assignments", &assignmentID, nil, item)
 	if err := tx.Commit(ctx); err != nil {
@@ -415,7 +438,7 @@ func (r Repository) Reassign(ctx context.Context, containerID uuid.UUID, input R
 		return nil, ErrInvalidInput
 	}
 	_, _ = tx.Exec(ctx, `UPDATE assignment_containers SET unassigned_at=now(), unassigned_reason=$2 WHERE job_container_id=$1 AND unassigned_at IS NULL`, containerID, input.Reason)
-	assignmentNo, err := r.nextDocNo(ctx, tx, "ASG", "assignments")
+	assignmentNo, err := numbering.Next(ctx, tx, "assignment")
 	if err != nil {
 		return nil, err
 	}
@@ -438,7 +461,7 @@ func (r Repository) Reassign(ctx context.Context, containerID uuid.UUID, input R
 func (r Repository) ListAssignments(ctx context.Context, jobID uuid.UUID) ([]map[string]any, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT a.id, a.assignment_no, sp.id AS surveyor_id, sp.full_name AS surveyor_name, a.status, a.assigned_at,
-		       COUNT(ac.id) AS total_containers
+		       a.start_date, a.due_date, a.instruction, COUNT(ac.id) AS total_containers
 		FROM assignments a
 		JOIN surveyor_profiles sp ON sp.id = a.surveyor_id
 		LEFT JOIN assignment_containers ac ON ac.assignment_id = a.id AND ac.unassigned_at IS NULL
@@ -463,6 +486,9 @@ func (r Repository) Timeline(ctx context.Context, jobID uuid.UUID) ([]map[string
 }
 
 func (r Repository) addContainerTx(ctx context.Context, tx database.Tx, jobID uuid.UUID, input ContainerInput) (map[string]any, error) {
+	if err := validateContainerInput(input); err != nil {
+		return nil, err
+	}
 	validation := ValidateContainerNumber(input.ContainerNo)
 	if !validation.IsFormatValid {
 		return nil, ErrInvalidInput
@@ -516,15 +542,6 @@ func (r Repository) resolveContainerType(ctx context.Context, tx database.Tx, in
 		return nil, err
 	}
 	return &id, nil
-}
-
-func (r Repository) nextDocNo(ctx context.Context, tx database.Tx, code string, table string) (string, error) {
-	var total int
-	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", table)
-	if err := tx.QueryRow(ctx, query).Scan(&total); err != nil {
-		return "", err
-	}
-	return nextNumber(code, total), nil
 }
 
 func (r Repository) getJobForUpdate(ctx context.Context, tx database.Tx, id uuid.UUID) (map[string]any, error) {
@@ -651,6 +668,8 @@ func normalizeValue(value any) any {
 		return v.UTC().Format(time.RFC3339)
 	case uuid.UUID:
 		return v.String()
+	case []byte:
+		return string(v)
 	default:
 		return v
 	}
@@ -683,8 +702,13 @@ func parseOptionalTime(value *string) (*time.Time, error) {
 	if value == nil || strings.TrimSpace(*value) == "" {
 		return nil, nil
 	}
-	parsed, err := time.Parse(time.RFC3339, strings.TrimSpace(*value))
-	return &parsed, err
+	trimmed := strings.TrimSpace(*value)
+	for _, layout := range []string{time.RFC3339, "2006-01-02"} {
+		if parsed, err := time.Parse(layout, trimmed); err == nil {
+			return &parsed, nil
+		}
+	}
+	return nil, ErrInvalidInput
 }
 func normalizePriority(value string) string {
 	if value == "urgent" {

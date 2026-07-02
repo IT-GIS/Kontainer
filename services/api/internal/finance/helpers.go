@@ -75,6 +75,8 @@ func normalizeValue(value any) any {
 		return v.UTC().Format(time.RFC3339)
 	case uuid.UUID:
 		return v.String()
+	case []byte:
+		return string(v)
 	default:
 		return v
 	}
@@ -119,14 +121,6 @@ func defaultString(value string, fallback string) string {
 		return fallback
 	}
 	return value
-}
-
-func nextDocNo(ctx context.Context, tx database.Tx, code string, table string) (string, error) {
-	var total int
-	if err := tx.QueryRow(ctx, fmt.Sprintf("SELECT COUNT(*) FROM %s", table)).Scan(&total); err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("GIFT-%s-%d-%06d", code, time.Now().Year(), total+1), nil
 }
 
 func insertAudit(ctx context.Context, tx database.Tx, actor Actor, action, entityType string, entityID *uuid.UUID, oldValue any, newValue any) error {

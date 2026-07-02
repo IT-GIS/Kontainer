@@ -950,6 +950,28 @@ pre {
   overflow-wrap: anywhere;
 }
 
+.photo-evidence-preview {
+  aspect-ratio: 4 / 3;
+  background: #e4e7ec;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+.photo-evidence-preview img {
+  object-fit: cover;
+}
+
+.photo-evidence-empty {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  justify-content: center;
+}
+
 @media (max-width: 900px) {
   .sheet-grid-wrap {
     grid-template-columns: 1fr;

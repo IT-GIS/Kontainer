@@ -67,6 +67,9 @@ export function hasAllowedRole(user: CurrentUser | null, allowed: RoleCode[]): b
 }
 
 function canSeeLink(user: CurrentUser | null, link: NavigationLink): boolean {
+  if (link.exactRoles && (!user || !link.exactRoles.some((role) => user.roles.includes(role)))) {
+    return false;
+  }
   return hasAllowedRole(user, link.roles) && canAny(user, link.permissions);
 }
 

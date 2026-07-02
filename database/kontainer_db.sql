@@ -483,7 +483,8 @@ CREATE TABLE `job_containers` (
   `status` varchar(50) NOT NULL DEFAULT 'not_started',
   `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-  `deleted_at` datetime(6) DEFAULT NULL
+  `deleted_at` datetime(6) DEFAULT NULL,
+  CONSTRAINT `chk_job_containers_status` CHECK ((`status` in (_utf8mb4'not_started',_utf8mb4'assigned',_utf8mb4'in_progress',_utf8mb4'draft',_utf8mb4'submitted',_utf8mb4'need_revision',_utf8mb4'approved',_utf8mb4'rejected',_utf8mb4'reported',_utf8mb4'invoiced',_utf8mb4'closed',_utf8mb4'cancelled')))
 ) ;
 
 -- --------------------------------------------------------
@@ -1224,6 +1225,7 @@ CREATE TABLE `survey_photos` (
   `survey_id` char(36) NOT NULL,
   `damage_id` char(36) DEFAULT NULL,
   `file_id` char(36) NOT NULL,
+  `watermarked_file_id` char(36) DEFAULT NULL,
   `photo_type` varchar(30) NOT NULL DEFAULT 'general',
   `photo_category` varchar(80) DEFAULT NULL,
   `caption` text,
@@ -1689,6 +1691,7 @@ ALTER TABLE `survey_photos`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_survey_photos_survey` (`survey_id`),
   ADD KEY `idx_survey_photos_damage` (`damage_id`),
+  ADD KEY `idx_survey_photos_watermarked_file` (`watermarked_file_id`),
   ADD KEY `idx_survey_photos_type` (`photo_type`);
 
 --
@@ -1734,6 +1737,92 @@ ALTER TABLE `user_roles`
 --
 ALTER TABLE `file_objects`
   ADD CONSTRAINT `fk_file_objects_uploaded_by` FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`id`);
+
+ALTER TABLE `job_orders`
+  ADD CONSTRAINT `fk_job_orders_customer` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`),
+  ADD CONSTRAINT `fk_job_orders_survey_type` FOREIGN KEY (`survey_type_id`) REFERENCES `survey_types` (`id`),
+  ADD CONSTRAINT `fk_job_orders_location` FOREIGN KEY (`location_id`) REFERENCES `locations` (`id`);
+
+ALTER TABLE `job_containers`
+  ADD CONSTRAINT `fk_job_containers_job_order` FOREIGN KEY (`job_order_id`) REFERENCES `job_orders` (`id`),
+  ADD CONSTRAINT `fk_job_containers_container_type` FOREIGN KEY (`container_type_id`) REFERENCES `container_types` (`id`);
+
+ALTER TABLE `assignments`
+  ADD CONSTRAINT `fk_assignments_job_order` FOREIGN KEY (`job_order_id`) REFERENCES `job_orders` (`id`),
+  ADD CONSTRAINT `fk_assignments_surveyor` FOREIGN KEY (`surveyor_id`) REFERENCES `surveyor_profiles` (`id`),
+  ADD CONSTRAINT `fk_assignments_assigned_by` FOREIGN KEY (`assigned_by`) REFERENCES `users` (`id`);
+
+ALTER TABLE `assignment_containers`
+  ADD CONSTRAINT `fk_assignment_containers_assignment` FOREIGN KEY (`assignment_id`) REFERENCES `assignments` (`id`),
+  ADD CONSTRAINT `fk_assignment_containers_job_container` FOREIGN KEY (`job_container_id`) REFERENCES `job_containers` (`id`);
+
+ALTER TABLE `surveys`
+  ADD CONSTRAINT `fk_surveys_job_order` FOREIGN KEY (`job_order_id`) REFERENCES `job_orders` (`id`),
+  ADD CONSTRAINT `fk_surveys_job_container` FOREIGN KEY (`job_container_id`) REFERENCES `job_containers` (`id`),
+  ADD CONSTRAINT `fk_surveys_assignment` FOREIGN KEY (`assignment_id`) REFERENCES `assignments` (`id`),
+  ADD CONSTRAINT `fk_surveys_surveyor` FOREIGN KEY (`surveyor_id`) REFERENCES `surveyor_profiles` (`id`),
+  ADD CONSTRAINT `fk_surveys_survey_type` FOREIGN KEY (`survey_type_id`) REFERENCES `survey_types` (`id`);
+
+ALTER TABLE `survey_general_infos`
+  ADD CONSTRAINT `fk_survey_general_infos_survey` FOREIGN KEY (`survey_id`) REFERENCES `surveys` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_survey_general_infos_customer` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`),
+  ADD CONSTRAINT `fk_survey_general_infos_location` FOREIGN KEY (`location_id`) REFERENCES `locations` (`id`),
+  ADD CONSTRAINT `fk_survey_general_infos_container_type` FOREIGN KEY (`container_type_id`) REFERENCES `container_types` (`id`);
+
+ALTER TABLE `survey_damages`
+  ADD CONSTRAINT `fk_survey_damages_survey` FOREIGN KEY (`survey_id`) REFERENCES `surveys` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_survey_damages_cedex_location` FOREIGN KEY (`cedex_location_id`) REFERENCES `cedex_locations` (`id`),
+  ADD CONSTRAINT `fk_survey_damages_component` FOREIGN KEY (`component_id`) REFERENCES `cedex_components` (`id`),
+  ADD CONSTRAINT `fk_survey_damages_damage` FOREIGN KEY (`damage_id`) REFERENCES `cedex_damages` (`id`),
+  ADD CONSTRAINT `fk_survey_damages_repair` FOREIGN KEY (`repair_id`) REFERENCES `cedex_repairs` (`id`),
+  ADD CONSTRAINT `fk_survey_damages_material` FOREIGN KEY (`material_id`) REFERENCES `cedex_materials` (`id`),
+  ADD CONSTRAINT `fk_survey_damages_responsibility` FOREIGN KEY (`responsibility_id`) REFERENCES `responsibility_codes` (`id`);
+
+ALTER TABLE `survey_photos`
+  ADD CONSTRAINT `fk_survey_photos_survey` FOREIGN KEY (`survey_id`) REFERENCES `surveys` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_survey_photos_damage` FOREIGN KEY (`damage_id`) REFERENCES `survey_damages` (`id`),
+  ADD CONSTRAINT `fk_survey_photos_file` FOREIGN KEY (`file_id`) REFERENCES `file_objects` (`id`),
+  ADD CONSTRAINT `fk_survey_photos_watermarked_file` FOREIGN KEY (`watermarked_file_id`) REFERENCES `file_objects` (`id`),
+  ADD CONSTRAINT `fk_survey_photos_uploaded_by` FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`id`);
+
+ALTER TABLE `reports`
+  ADD CONSTRAINT `fk_reports_job_order` FOREIGN KEY (`job_order_id`) REFERENCES `job_orders` (`id`),
+  ADD CONSTRAINT `fk_reports_survey` FOREIGN KEY (`survey_id`) REFERENCES `surveys` (`id`),
+  ADD CONSTRAINT `fk_reports_customer` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`);
+
+ALTER TABLE `invoice_items`
+  ADD CONSTRAINT `fk_invoice_items_invoice` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_invoice_items_report` FOREIGN KEY (`report_id`) REFERENCES `reports` (`id`),
+  ADD CONSTRAINT `fk_invoice_items_survey` FOREIGN KEY (`survey_id`) REFERENCES `surveys` (`id`);
+
+ALTER TABLE `payments`
+  ADD CONSTRAINT `fk_payments_invoice` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`);
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON p.code='survey_photos.view.assigned'
+WHERE r.code IN ('admin','supervisor');
+
+INSERT IGNORE INTO permissions (code, name, module, action, scope, description)
+VALUES ('surveys.view.all', 'View All Surveys', 'surveys', 'view', 'all', 'Melihat seluruh survey untuk monitoring Admin');
+
+DELETE rp
+FROM role_permissions rp
+JOIN roles r ON r.id = rp.role_id
+JOIN permissions p ON p.id = rp.permission_id
+WHERE r.code = 'admin'
+  AND p.code IN ('users.manage.all', 'roles.view.all', 'roles.manage.all');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON p.code IN (
+  'surveys.view.all', 'reviews.view.all', 'reviews.manage.all', 'reports.view.all',
+  'users.view.all', 'company_profiles.view.all', 'numbering_settings.view.all', 'audit.view.all'
+)
+WHERE r.code = 'admin';
+
 -- Development demo accounts. Password for every account: password.
 INSERT IGNORE INTO users (id, name, email, username, password_hash, status, password_changed_at)
 VALUES
@@ -1771,6 +1860,49 @@ SELECT
   'active'
 FROM users u
 WHERE u.email = 'surveyor@gift.local';
+
+-- Initialize transactional numbering from any operational rows included in the dump.
+INSERT INTO numbering_sequences (document_type, period_key, last_number)
+SELECT ns.document_type, CASE ns.reset_period WHEN 'monthly' THEN DATE_FORMAT(CURRENT_DATE, '%Y%m') WHEN 'never' THEN 'global' ELSE DATE_FORMAT(CURRENT_DATE, '%Y') END,
+       COALESCE(MAX(CAST(SUBSTRING_INDEX(jo.job_order_no, '-', -1) AS UNSIGNED)), 0)
+FROM numbering_settings ns LEFT JOIN job_orders jo ON ns.reset_period = 'never' OR (ns.reset_period = 'yearly' AND YEAR(jo.created_at) = YEAR(CURRENT_DATE)) OR (ns.reset_period = 'monthly' AND DATE_FORMAT(jo.created_at, '%Y%m') = DATE_FORMAT(CURRENT_DATE, '%Y%m'))
+WHERE ns.document_type = 'job_order' GROUP BY ns.document_type, ns.reset_period
+ON DUPLICATE KEY UPDATE last_number = GREATEST(numbering_sequences.last_number, VALUES(last_number));
+
+INSERT INTO numbering_sequences (document_type, period_key, last_number)
+SELECT ns.document_type, CASE ns.reset_period WHEN 'monthly' THEN DATE_FORMAT(CURRENT_DATE, '%Y%m') WHEN 'never' THEN 'global' ELSE DATE_FORMAT(CURRENT_DATE, '%Y') END,
+       COALESCE(MAX(CAST(SUBSTRING_INDEX(a.assignment_no, '-', -1) AS UNSIGNED)), 0)
+FROM numbering_settings ns LEFT JOIN assignments a ON ns.reset_period = 'never' OR (ns.reset_period = 'yearly' AND YEAR(a.created_at) = YEAR(CURRENT_DATE)) OR (ns.reset_period = 'monthly' AND DATE_FORMAT(a.created_at, '%Y%m') = DATE_FORMAT(CURRENT_DATE, '%Y%m'))
+WHERE ns.document_type = 'assignment' GROUP BY ns.document_type, ns.reset_period
+ON DUPLICATE KEY UPDATE last_number = GREATEST(numbering_sequences.last_number, VALUES(last_number));
+
+INSERT INTO numbering_sequences (document_type, period_key, last_number)
+SELECT ns.document_type, CASE ns.reset_period WHEN 'monthly' THEN DATE_FORMAT(CURRENT_DATE, '%Y%m') WHEN 'never' THEN 'global' ELSE DATE_FORMAT(CURRENT_DATE, '%Y') END,
+       COALESCE(MAX(CAST(SUBSTRING_INDEX(s.survey_no, '-', -1) AS UNSIGNED)), 0)
+FROM numbering_settings ns LEFT JOIN surveys s ON ns.reset_period = 'never' OR (ns.reset_period = 'yearly' AND YEAR(s.created_at) = YEAR(CURRENT_DATE)) OR (ns.reset_period = 'monthly' AND DATE_FORMAT(s.created_at, '%Y%m') = DATE_FORMAT(CURRENT_DATE, '%Y%m'))
+WHERE ns.document_type = 'survey' GROUP BY ns.document_type, ns.reset_period
+ON DUPLICATE KEY UPDATE last_number = GREATEST(numbering_sequences.last_number, VALUES(last_number));
+
+INSERT INTO numbering_sequences (document_type, period_key, last_number)
+SELECT ns.document_type, CASE ns.reset_period WHEN 'monthly' THEN DATE_FORMAT(CURRENT_DATE, '%Y%m') WHEN 'never' THEN 'global' ELSE DATE_FORMAT(CURRENT_DATE, '%Y') END,
+       COALESCE(MAX(CAST(SUBSTRING_INDEX(r.report_no, '-', -1) AS UNSIGNED)), 0)
+FROM numbering_settings ns LEFT JOIN reports r ON ns.reset_period = 'never' OR (ns.reset_period = 'yearly' AND YEAR(r.created_at) = YEAR(CURRENT_DATE)) OR (ns.reset_period = 'monthly' AND DATE_FORMAT(r.created_at, '%Y%m') = DATE_FORMAT(CURRENT_DATE, '%Y%m'))
+WHERE ns.document_type = 'report' GROUP BY ns.document_type, ns.reset_period
+ON DUPLICATE KEY UPDATE last_number = GREATEST(numbering_sequences.last_number, VALUES(last_number));
+
+INSERT INTO numbering_sequences (document_type, period_key, last_number)
+SELECT ns.document_type, CASE ns.reset_period WHEN 'monthly' THEN DATE_FORMAT(CURRENT_DATE, '%Y%m') WHEN 'never' THEN 'global' ELSE DATE_FORMAT(CURRENT_DATE, '%Y') END,
+       COALESCE(MAX(CAST(SUBSTRING_INDEX(i.invoice_no, '-', -1) AS UNSIGNED)), 0)
+FROM numbering_settings ns LEFT JOIN invoices i ON ns.reset_period = 'never' OR (ns.reset_period = 'yearly' AND YEAR(i.created_at) = YEAR(CURRENT_DATE)) OR (ns.reset_period = 'monthly' AND DATE_FORMAT(i.created_at, '%Y%m') = DATE_FORMAT(CURRENT_DATE, '%Y%m'))
+WHERE ns.document_type = 'invoice' GROUP BY ns.document_type, ns.reset_period
+ON DUPLICATE KEY UPDATE last_number = GREATEST(numbering_sequences.last_number, VALUES(last_number));
+
+INSERT INTO numbering_sequences (document_type, period_key, last_number)
+SELECT ns.document_type, CASE ns.reset_period WHEN 'monthly' THEN DATE_FORMAT(CURRENT_DATE, '%Y%m') WHEN 'never' THEN 'global' ELSE DATE_FORMAT(CURRENT_DATE, '%Y') END,
+       COALESCE(MAX(CAST(SUBSTRING_INDEX(p.payment_no, '-', -1) AS UNSIGNED)), 0)
+FROM numbering_settings ns LEFT JOIN payments p ON ns.reset_period = 'never' OR (ns.reset_period = 'yearly' AND YEAR(p.created_at) = YEAR(CURRENT_DATE)) OR (ns.reset_period = 'monthly' AND DATE_FORMAT(p.created_at, '%Y%m') = DATE_FORMAT(CURRENT_DATE, '%Y%m'))
+WHERE ns.document_type = 'payment_receipt' GROUP BY ns.document_type, ns.reset_period
+ON DUPLICATE KEY UPDATE last_number = GREATEST(numbering_sequences.last_number, VALUES(last_number));
 
 COMMIT;
 

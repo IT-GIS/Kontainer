@@ -1,6 +1,7 @@
 package http
 
 import (
+	"container-survey/services/api/internal/dashboard"
 	"container-survey/services/api/internal/database"
 	"log/slog"
 
@@ -14,6 +15,7 @@ import (
 	"container-survey/services/api/internal/masterdata"
 	"container-survey/services/api/internal/middleware"
 	"container-survey/services/api/internal/modules"
+	"container-survey/services/api/internal/objectstorage"
 	"container-survey/services/api/internal/reviews"
 	"container-survey/services/api/internal/surveyor"
 )
@@ -52,8 +54,16 @@ func NewRouter(cfg config.Config, logger *slog.Logger, pool *database.Pool) *gin
 	jobService := jobs.NewService(jobRepo)
 	jobs.Register(protected, authService, jobService)
 
+	objectStore, err := objectstorage.NewMinIO(objectstorage.MinIOOptions{
+		Endpoint: cfg.S3Endpoint, AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey,
+		Region: cfg.S3Region, UseSSL: cfg.S3UseSSL,
+	})
+	if err != nil {
+		logger.Error("object storage configuration failed", "error", err)
+		panic(err)
+	}
 	surveyorRepo := surveyor.NewRepository(pool)
-	surveyorService := surveyor.NewService(surveyorRepo)
+	surveyorService := surveyor.NewService(surveyorRepo, objectStore, cfg.S3Bucket, cfg.MaxUploadBytes)
 	surveyor.Register(protected, authService, surveyorService)
 
 	reviewRepo := reviews.NewRepository(pool)
@@ -64,6 +74,10 @@ func NewRouter(cfg config.Config, logger *slog.Logger, pool *database.Pool) *gin
 	financeRepo := finance.NewRepository(pool)
 	financeService := finance.NewService(financeRepo)
 	finance.Register(protected, authService, financeService)
+
+	dashboardRepo := dashboard.NewRepository(pool)
+	dashboardService := dashboard.NewService(dashboardRepo)
+	dashboard.Register(protected, authService, dashboardService)
 	modules.Register(protected)
 
 	return router

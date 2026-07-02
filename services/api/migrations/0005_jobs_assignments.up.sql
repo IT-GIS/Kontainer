@@ -66,7 +66,7 @@ CREATE TABLE job_containers (
   deleted_at DATETIME(6),
   CONSTRAINT chk_job_containers_check_digit_status CHECK (check_digit_status IN ('valid', 'invalid', 'not_checked', 'override')),
   CONSTRAINT chk_job_containers_cargo_status CHECK (cargo_status IN ('empty', 'laden', 'unknown')),
-  CONSTRAINT chk_job_containers_status CHECK (status IN ('not_started', 'assigned', 'in_progress', 'draft', 'submitted', 'need_revision', 'approved', 'reported', 'invoiced', 'closed', 'cancelled'))
+  CONSTRAINT chk_job_containers_status CHECK (status IN ('not_started', 'assigned', 'in_progress', 'draft', 'submitted', 'need_revision', 'approved', 'rejected', 'reported', 'invoiced', 'closed', 'cancelled'))
 );
 
 CREATE UNIQUE INDEX idx_job_containers_job_container_no ON job_containers(job_order_id, container_no);

@@ -1,5 +1,5 @@
-import { NavigationPlaceholderPage } from "@/components/navigation/navigation-placeholder-page";
+import { redirect } from "next/navigation";
 
 export default function SubmittedSurveysPage() {
-  return <NavigationPlaceholderPage title="Submitted" backHref="/review/pending" backLabel="Buka Pending Review" />;
+  redirect("/surveys/monitoring/submitted");
 }

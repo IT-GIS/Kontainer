@@ -1,0 +1,12 @@
+ALTER TABLE payments DROP FOREIGN KEY fk_payments_invoice;
+ALTER TABLE invoice_items DROP FOREIGN KEY fk_invoice_items_survey, DROP FOREIGN KEY fk_invoice_items_report, DROP FOREIGN KEY fk_invoice_items_invoice;
+ALTER TABLE reports DROP FOREIGN KEY fk_reports_customer, DROP FOREIGN KEY fk_reports_survey, DROP FOREIGN KEY fk_reports_job_order;
+ALTER TABLE survey_photos DROP FOREIGN KEY fk_survey_photos_uploaded_by, DROP FOREIGN KEY fk_survey_photos_watermarked_file, DROP FOREIGN KEY fk_survey_photos_file, DROP FOREIGN KEY fk_survey_photos_damage, DROP FOREIGN KEY fk_survey_photos_survey;
+ALTER TABLE survey_damages DROP FOREIGN KEY fk_survey_damages_responsibility, DROP FOREIGN KEY fk_survey_damages_material, DROP FOREIGN KEY fk_survey_damages_repair, DROP FOREIGN KEY fk_survey_damages_damage, DROP FOREIGN KEY fk_survey_damages_component, DROP FOREIGN KEY fk_survey_damages_cedex_location, DROP FOREIGN KEY fk_survey_damages_survey;
+ALTER TABLE survey_general_infos DROP FOREIGN KEY fk_survey_general_infos_container_type, DROP FOREIGN KEY fk_survey_general_infos_location, DROP FOREIGN KEY fk_survey_general_infos_customer, DROP FOREIGN KEY fk_survey_general_infos_survey;
+ALTER TABLE surveys DROP FOREIGN KEY fk_surveys_survey_type, DROP FOREIGN KEY fk_surveys_surveyor, DROP FOREIGN KEY fk_surveys_assignment, DROP FOREIGN KEY fk_surveys_job_container, DROP FOREIGN KEY fk_surveys_job_order;
+ALTER TABLE assignment_containers DROP FOREIGN KEY fk_assignment_containers_job_container, DROP FOREIGN KEY fk_assignment_containers_assignment;
+ALTER TABLE assignments DROP FOREIGN KEY fk_assignments_assigned_by, DROP FOREIGN KEY fk_assignments_surveyor, DROP FOREIGN KEY fk_assignments_job_order;
+ALTER TABLE job_containers DROP FOREIGN KEY fk_job_containers_container_type, DROP FOREIGN KEY fk_job_containers_job_order;
+ALTER TABLE job_orders DROP FOREIGN KEY fk_job_orders_location, DROP FOREIGN KEY fk_job_orders_survey_type, DROP FOREIGN KEY fk_job_orders_customer;
+ALTER TABLE survey_photos DROP INDEX idx_survey_photos_watermarked_file, DROP COLUMN watermarked_file_id;

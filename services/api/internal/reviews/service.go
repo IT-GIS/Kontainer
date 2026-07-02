@@ -19,6 +19,32 @@ func (s *Service) Pending(ctx context.Context, params ListParams) (ListResult, e
 	return s.repo.Pending(ctx, params)
 }
 
+func (s *Service) Monitoring(ctx context.Context, params ListParams) (ListResult, error) {
+	if !validMonitoringStatus(params.Status) {
+		return ListResult{}, ErrInvalidInput
+	}
+	return s.repo.Monitoring(ctx, params)
+}
+
+func (s *Service) Reviews(ctx context.Context, params ListParams) (ListResult, error) {
+	if params.Status == "" {
+		params.Status = "need_revision"
+	}
+	if params.Status != "need_revision" && params.Status != "rejected" && params.Status != "approved" {
+		return ListResult{}, ErrInvalidInput
+	}
+	return s.repo.Reviews(ctx, params)
+}
+
+func validMonitoringStatus(status string) bool {
+	switch status {
+	case "", "in_progress", "draft", "submitted", "need_revision", "approved", "rejected":
+		return true
+	default:
+		return false
+	}
+}
+
 func (s *Service) Detail(ctx context.Context, surveyID uuid.UUID) (map[string]any, error) {
 	return s.repo.Detail(ctx, surveyID)
 }

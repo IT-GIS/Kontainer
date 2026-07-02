@@ -2,8 +2,11 @@ package surveyor
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"path"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -43,6 +46,7 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	v1.PUT("/survey-damages/:id", middleware.RequirePermission(authService, "survey_damages.update.assigned"), h.UpdateDamage)
 	v1.DELETE("/survey-damages/:id", middleware.RequirePermission(authService, "survey_damages.delete.assigned"), h.DeleteDamage)
 	v1.POST("/survey-damages/:id/photos", middleware.RequirePermission(authService, "survey_photos.upload.assigned"), h.UploadPhoto)
+	v1.GET("/survey-photos/:id/content", middleware.RequirePermission(authService, "survey_photos.view.assigned"), h.PhotoContent)
 }
 
 func (h Handler) Dashboard(c *gin.Context) {
@@ -240,18 +244,59 @@ func (h Handler) UploadPhoto(c *gin.Context) {
 	if !ok {
 		return
 	}
+	maxBodyBytes := h.service.MaxUploadBytes() + 1024*1024
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBodyBytes)
 	file, err := c.FormFile("file")
 	if err != nil {
 		apphttp.Fail(c, http.StatusUnprocessableEntity, "File foto wajib diisi.", "VALIDATION_ERROR", nil)
 		return
 	}
-	input := PhotoInput{FileName: file.Filename, ContentType: file.Header.Get("Content-Type"), Size: file.Size, Caption: c.PostForm("caption"), PhotoType: c.PostForm("photo_type"), PhotoCategory: c.PostForm("photo_category")}
+	if file.Size <= 0 || file.Size > h.service.MaxUploadBytes() {
+		apphttp.Fail(c, http.StatusUnprocessableEntity, "Ukuran file foto tidak valid.", "VALIDATION_ERROR", nil)
+		return
+	}
+	opened, err := file.Open()
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	defer opened.Close()
+	var takenAt *time.Time
+	if value := c.PostForm("taken_at"); value != "" {
+		parsed, parseErr := time.Parse(time.RFC3339, value)
+		if parseErr != nil {
+			apphttp.Fail(c, http.StatusUnprocessableEntity, "taken_at tidak valid.", "VALIDATION_ERROR", nil)
+			return
+		}
+		takenAt = &parsed
+	}
+	input := PhotoInput{Reader: opened, FileName: file.Filename, ContentType: file.Header.Get("Content-Type"), Size: file.Size, Caption: c.PostForm("caption"), PhotoType: c.PostForm("photo_type"), PhotoCategory: c.PostForm("photo_category"), TakenAt: takenAt}
 	item, err := h.service.UploadPhoto(c.Request.Context(), id, input, actorFromContext(c))
 	if err != nil {
 		h.writeError(c, err)
 		return
 	}
-	apphttp.Created(c, "Foto evidence berhasil dicatat.", item)
+	apphttp.Created(c, "Foto evidence berhasil disimpan.", item)
+}
+
+func (h Handler) PhotoContent(c *gin.Context) {
+	id, ok := parseID(c)
+	if !ok {
+		return
+	}
+	content, err := h.service.PhotoContent(c.Request.Context(), id, c.DefaultQuery("variant", "watermarked"), actorFromContext(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	defer content.Reader.Close()
+	disposition := "inline"
+	if c.Query("download") == "1" {
+		disposition = "attachment"
+	}
+	fileName := path.Base(content.FileName)
+	c.Header("Content-Disposition", fmt.Sprintf(`%s; filename="%s"`, disposition, fileName))
+	c.DataFromReader(http.StatusOK, content.Size, content.ContentType, content.Reader, nil)
 }
 
 func (h Handler) Photos(c *gin.Context) {

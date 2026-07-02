@@ -158,9 +158,36 @@ export const masterResources: Record<string, MasterResource> = {
       statusField
     ]
   },
+  "cedex-locations": {
+    id: "cedex-locations",
+    title: "Master CEDEX Location",
+    description: "Grid locations used to place container damage markers.",
+    endpoint: "/master/cedex/locations",
+    permissionModule: "cedex_locations",
+    columns: [
+      { key: "code", label: "Code" },
+      { key: "face", label: "Face" },
+      { key: "grid_code", label: "Grid" },
+      { key: "container_size", label: "Container Size" },
+      { key: "display_order", label: "Order" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "code", label: "Code", required: true },
+      { name: "face", label: "Face", type: "select", required: true, options: ["left", "right", "front", "door", "roof", "floor", "understructure"].map((value) => ({ label: value, value })) },
+      { name: "grid_code", label: "Grid Code", required: true },
+      { name: "cedex_mapping_code", label: "CEDEX Mapping Code" },
+      { name: "container_size", label: "Container Size", type: "select", options: ["all", "20", "40", "45"].map((value) => ({ label: value, value })) },
+      { name: "description", label: "Description" },
+      { name: "display_order", label: "Display Order", type: "number", required: true },
+      statusField
+    ]
+  },
   "cedex-components": codeNameResource("cedex-components", "Master CEDEX Component", "CEDEX component references for survey damage records.", "/master/cedex/components", "cedex_components", "component_name", "Component Name"),
   "cedex-damages": codeNameResource("cedex-damages", "Master CEDEX Damage", "Damage code references used by surveyors.", "/master/cedex/damages", "cedex_damages", "damage_name", "Damage Name"),
-  "cedex-repairs": codeNameResource("cedex-repairs", "Master CEDEX Repair", "Repair action code references used in damage records.", "/master/cedex/repairs", "cedex_repairs", "repair_name", "Repair Name")
+  "cedex-repairs": codeNameResource("cedex-repairs", "Master CEDEX Repair", "Repair action code references used in damage records.", "/master/cedex/repairs", "cedex_repairs", "repair_name", "Repair Name"),
+  "cedex-materials": codeNameResource("cedex-materials", "Master CEDEX Material", "Material references used by survey damage records.", "/master/cedex/materials", "cedex_materials", "material_name", "Material Name"),
+  "responsibility-codes": codeNameResource("responsibility-codes", "Master Responsibility Code", "Responsibility codes used by survey damage records.", "/master/responsibility-codes", "responsibility_codes", "name", "Name")
 };
 
 function codeNameResource(id: string, title: string, description: string, endpoint: string, permissionModule: string, nameField: string, nameLabel: string): MasterResource {

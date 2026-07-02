@@ -33,10 +33,19 @@ Jalankan patch berikut secara berurutan:
 
 1. `database/patches/0009_navigation_permissions.sql`
 2. `database/patches/0010_demo_users.sql`
+3. `database/patches/0011_admin_stage1.sql`
+4. `database/patches/0012_admin_stage2.sql`
+5. `database/patches/0013_storage_relations.sql`
 
-Kedua patch memakai `INSERT IGNORE` dan aman dijalankan berulang. Patch `0009`
+Kelima patch aman dijalankan berulang. Patch `0009`
 menyelaraskan permission menu dan role. Patch `0010` menambahkan akun demo,
-role masing-masing, serta profil aktif untuk surveyor demo.
+role masing-masing, serta profil aktif untuk surveyor demo. Patch `0011`
+menambahkan permission Monitoring Survey Admin dan status container `rejected`.
+Patch `0012` menginisialisasi sequence nomor dokumen dari data yang sudah ada
+agar generator transaksional tidak mengulang nomor lama.
+Patch `0013` menambahkan relasi foreign key operasional dan referensi file
+watermark. Foreign key dengan data orphan akan dilewati dan dilaporkan agar
+patch existing database tidak berhenti di tengah.
 
 Jangan menyalin skema dari dokumentasi lain. Jika ada perbedaan, gunakan
 `database/kontainer_db.sql` sebagai acuan.

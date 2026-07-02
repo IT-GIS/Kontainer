@@ -1,10 +1,8 @@
 package jobs
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
-	"time"
 )
 
 var containerPattern = regexp.MustCompile(`^[A-Z]{4}[0-9]{7}$`)
@@ -60,9 +58,4 @@ func calculateCheckDigit(prefix string) int {
 		return 0
 	}
 	return check
-}
-
-func nextNumber(prefix string, count int) string {
-	year := time.Now().UTC().Year()
-	return fmt.Sprintf("GIFT-%s-%d-%06d", prefix, year, count+1)
 }

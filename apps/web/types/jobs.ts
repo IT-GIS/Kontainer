@@ -41,6 +41,11 @@ export type JobContainer = {
   iso_type_code?: string | null;
   seal_no?: string | null;
   cargo_status: string;
+  gross_weight?: number | null;
+  tare_weight?: number | null;
+  payload?: number | null;
+  manufacture_date?: string | null;
+  check_digit_override_reason?: string | null;
   truck_no?: string | null;
   driver_name?: string | null;
   status: string;
@@ -53,6 +58,9 @@ export type AssignmentSummary = {
   surveyor_name: string;
   status: string;
   assigned_at: string;
+  start_date?: string | null;
+  due_date?: string | null;
+  instruction?: string | null;
   total_containers: number;
 };
 

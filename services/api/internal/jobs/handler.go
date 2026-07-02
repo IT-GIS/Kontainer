@@ -28,10 +28,64 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	v1.GET("/jobs/:id/containers", middleware.RequirePermission(authService, "job_containers.view.all"), h.ListContainers)
 	v1.POST("/jobs/:id/containers", middleware.RequirePermission(authService, "job_containers.create.all"), h.AddContainer)
 	v1.POST("/jobs/:id/containers/import", middleware.RequirePermission(authService, "job_containers.import.all"), h.ImportContainers)
+	v1.POST("/jobs/:id/containers/import/preview", middleware.RequirePermission(authService, "job_containers.import.all"), h.PreviewImport)
+	v1.POST("/jobs/:id/containers/import/confirm", middleware.RequirePermission(authService, "job_containers.import.all"), h.ConfirmImport)
 	v1.POST("/jobs/:id/assign", middleware.RequirePermission(authService, "assignments.assign.all"), h.Assign)
 	v1.GET("/jobs/:id/assignments", middleware.RequirePermission(authService, "assignments.view.all"), h.ListAssignments)
 	v1.POST("/job-containers/validate-container-no", middleware.RequirePermission(authService, "job_containers.view.all"), h.ValidateContainerNo)
+	v1.GET("/job-containers/import/template", middleware.RequirePermission(authService, "job_containers.import.all"), h.ImportTemplate)
 	v1.POST("/job-containers/:id/reassign", middleware.RequirePermission(authService, "job_containers.reassign.all"), h.Reassign)
+}
+
+func (h Handler) PreviewImport(c *gin.Context) {
+	id, ok := parseID(c)
+	if !ok {
+		return
+	}
+	file, err := c.FormFile("file")
+	if err != nil {
+		apphttp.Fail(c, http.StatusUnprocessableEntity, "File CSV/XLSX wajib diisi.", "VALIDATION_ERROR", nil)
+		return
+	}
+	opened, err := file.Open()
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	defer opened.Close()
+	result, err := h.service.PreviewImport(c.Request.Context(), id, opened, file.Filename)
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Preview import berhasil dibuat.", result)
+}
+
+func (h Handler) ConfirmImport(c *gin.Context) {
+	id, ok := parseID(c)
+	if !ok {
+		return
+	}
+	var input ImportConfirmInput
+	if !bindJSON(c, &input) {
+		return
+	}
+	result, err := h.service.ConfirmImport(c.Request.Context(), id, input, actorFromContext(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Import container selesai.", result)
+}
+
+func (h Handler) ImportTemplate(c *gin.Context) {
+	data, contentType, filename, err := BuildImportTemplate(c.DefaultQuery("format", "csv"))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	c.Header("Content-Disposition", "attachment; filename="+filename)
+	c.Data(http.StatusOK, contentType, data)
 }
 
 func (h Handler) ListJobs(c *gin.Context) {

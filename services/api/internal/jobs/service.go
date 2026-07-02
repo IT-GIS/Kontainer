@@ -2,9 +2,6 @@ package jobs
 
 import (
 	"context"
-	"encoding/csv"
-	"encoding/json"
-	"fmt"
 	"io"
 	"strings"
 
@@ -48,7 +45,7 @@ func (s *Service) CreateJob(ctx context.Context, input JobInput, actor Actor) (m
 }
 
 func (s *Service) AddContainer(ctx context.Context, jobID uuid.UUID, input ContainerInput, actor Actor) (map[string]any, error) {
-	if strings.TrimSpace(input.ContainerNo) == "" {
+	if err := validateContainerInput(input); err != nil {
 		return nil, ErrInvalidInput
 	}
 	return s.repo.AddContainer(ctx, jobID, input, actor)
@@ -63,10 +60,50 @@ func (s *Service) ImportContainers(ctx context.Context, jobID uuid.UUID, reader 
 }
 
 func (s *Service) Assign(ctx context.Context, jobID uuid.UUID, input AssignInput, actor Actor) (map[string]any, error) {
-	if strings.TrimSpace(input.SurveyorID) == "" || len(input.ContainerIDs) == 0 {
+	if err := validateAssignInput(input); err != nil {
 		return nil, ErrInvalidInput
 	}
 	return s.repo.Assign(ctx, jobID, input, actor)
+}
+
+func validateContainerInput(input ContainerInput) error {
+	validation := ValidateContainerNumber(input.ContainerNo)
+	if !validation.IsFormatValid {
+		return ErrInvalidInput
+	}
+	if input.CargoStatus != "" && input.CargoStatus != "empty" && input.CargoStatus != "laden" && input.CargoStatus != "unknown" {
+		return ErrInvalidInput
+	}
+	for _, weight := range []*float64{input.GrossWeight, input.TareWeight, input.Payload} {
+		if weight != nil && *weight < 0 {
+			return ErrInvalidInput
+		}
+	}
+	if _, err := parseOptionalDate(input.ManufactureDate); err != nil {
+		return ErrInvalidInput
+	}
+	if !validation.IsCheckDigitValid && strings.TrimSpace(input.CheckDigitOverrideReason) == "" {
+		return ErrInvalidInput
+	}
+	return nil
+}
+
+func validateAssignInput(input AssignInput) error {
+	if strings.TrimSpace(input.SurveyorID) == "" || len(input.ContainerIDs) == 0 {
+		return ErrInvalidInput
+	}
+	startDate, err := parseOptionalTime(input.StartDate)
+	if err != nil {
+		return ErrInvalidInput
+	}
+	dueDate, err := parseOptionalTime(input.DueDate)
+	if err != nil {
+		return ErrInvalidInput
+	}
+	if startDate != nil && dueDate != nil && dueDate.Before(*startDate) {
+		return ErrInvalidInput
+	}
+	return nil
 }
 
 func (s *Service) Reassign(ctx context.Context, containerID uuid.UUID, input ReassignInput, actor Actor) (map[string]any, error) {
@@ -84,46 +121,4 @@ func validateJobInput(input JobInput) error {
 		return ErrInvalidInput
 	}
 	return nil
-}
-
-func ParseImport(reader io.Reader) ([]ContainerInput, error) {
-	body, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, err
-	}
-	trimmed := strings.TrimSpace(string(body))
-	if trimmed == "" {
-		return nil, ErrInvalidInput
-	}
-	if strings.HasPrefix(trimmed, "[") {
-		var rows []ContainerInput
-		if err := json.Unmarshal([]byte(trimmed), &rows); err != nil {
-			return nil, ErrInvalidInput
-		}
-		return rows, nil
-	}
-	csvReader := csv.NewReader(strings.NewReader(trimmed))
-	csvReader.TrimLeadingSpace = true
-	records, err := csvReader.ReadAll()
-	if err != nil || len(records) < 2 {
-		return nil, ErrInvalidInput
-	}
-	headers := map[string]int{}
-	for i, header := range records[0] {
-		headers[strings.TrimSpace(header)] = i
-	}
-	rows := []ContainerInput{}
-	for _, record := range records[1:] {
-		get := func(key string) string {
-			if index, ok := headers[key]; ok && index < len(record) {
-				return strings.TrimSpace(record[index])
-			}
-			return ""
-		}
-		rows = append(rows, ContainerInput{ContainerNo: get("container_no"), ContainerTypeCode: get("container_type_code"), ISOTypeCode: get("iso_type_code"), SealNo: get("seal_no"), CargoStatus: get("cargo_status"), TruckNo: get("truck_no"), DriverName: get("driver_name"), Remark: get("remark")})
-	}
-	if len(rows) == 0 {
-		return nil, fmt.Errorf("%w: no import rows", ErrInvalidInput)
-	}
-	return rows, nil
 }

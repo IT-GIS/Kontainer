@@ -1,5 +1,5 @@
-import { NavigationPlaceholderPage } from "@/components/navigation/navigation-placeholder-page";
+import { redirect } from "next/navigation";
 
 export default function InProgressSurveysPage() {
-  return <NavigationPlaceholderPage title="In Progress" backHref="/monitoring/surveys" backLabel="Kembali ke All Survey" />;
+  redirect("/surveys/monitoring/in-progress");
 }

@@ -1,6 +1,7 @@
 package surveyor
 
 import (
+	"container-survey/services/api/internal/objectstorage"
 	"context"
 	"strings"
 
@@ -8,11 +9,14 @@ import (
 )
 
 type Service struct {
-	repo Repository
+	repo           Repository
+	store          objectstorage.Store
+	bucket         string
+	maxUploadBytes int64
 }
 
-func NewService(repo Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo Repository, store objectstorage.Store, bucket string, maxUploadBytes int64) *Service {
+	return &Service{repo: repo, store: store, bucket: bucket, maxUploadBytes: maxUploadBytes}
 }
 
 func (s *Service) Dashboard(ctx context.Context, actor Actor) (Dashboard, error) {
@@ -75,11 +79,23 @@ func (s *Service) DeleteDamage(ctx context.Context, damageID uuid.UUID, actor Ac
 }
 
 func (s *Service) UploadPhoto(ctx context.Context, damageID uuid.UUID, input PhotoInput, actor Actor) (map[string]any, error) {
+	if s.store == nil || strings.TrimSpace(s.bucket) == "" || input.Reader == nil || input.Size <= 0 || input.Size > s.maxUploadBytes {
+		return nil, ErrInvalidInput
+	}
 	if strings.TrimSpace(input.FileName) == "" {
 		input.FileName = "photo"
 	}
-	return s.repo.UploadPhoto(ctx, damageID, input, actor)
+	return s.uploadPhoto(ctx, damageID, input, actor)
 }
+
+func (s *Service) PhotoContent(ctx context.Context, photoID uuid.UUID, variant string, actor Actor) (PhotoContent, error) {
+	if s.store == nil {
+		return PhotoContent{}, ErrNotFound
+	}
+	return s.photoContent(ctx, photoID, variant, actor)
+}
+
+func (s *Service) MaxUploadBytes() int64 { return s.maxUploadBytes }
 
 func (s *Service) Photos(ctx context.Context, surveyID uuid.UUID, actor Actor) ([]map[string]any, error) {
 	return s.repo.Photos(ctx, surveyID, actor)

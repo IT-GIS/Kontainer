@@ -124,3 +124,24 @@ type ImportResult struct {
 	Rows      []ContainerInput `json:"-"`
 	StartedAt time.Time        `json:"-"`
 }
+
+type ImportPreviewRow struct {
+	Row    int            `json:"row"`
+	Data   ContainerInput `json:"data"`
+	Valid  bool           `json:"valid"`
+	Errors []string       `json:"errors"`
+}
+
+type ImportPreview struct {
+	TotalRows         int                `json:"total_rows"`
+	ValidRows         int                `json:"valid_rows"`
+	FailedRows        int                `json:"failed_rows"`
+	DuplicateRows     int                `json:"duplicate_rows"`
+	InvalidCheckDigit int                `json:"invalid_check_digit_rows"`
+	MissingRequired   int                `json:"missing_required_rows"`
+	Rows              []ImportPreviewRow `json:"rows"`
+}
+
+type ImportConfirmInput struct {
+	Rows []ContainerInput `json:"rows"`
+}

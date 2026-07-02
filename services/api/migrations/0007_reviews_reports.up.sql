@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS report_snapshots (
 
 INSERT IGNORE INTO permissions (code, name, module, action, scope, description)
 VALUES
+  ('surveys.view.all', 'View All Surveys', 'surveys', 'view', 'all', 'Melihat seluruh survey untuk monitoring Admin'),
   ('reviews.view.all', 'View Reviews', 'reviews', 'view', 'all', 'Melihat survey pending review'),
   ('reviews.manage.all', 'Manage Reviews', 'reviews', 'manage', 'all', 'Approve, reject, dan need revision survey'),
   ('reports.view.all', 'View Reports', 'reports', 'view', 'all', 'Melihat arsip report'),
@@ -90,6 +91,12 @@ SELECT r.id, p.id
 FROM roles r
 JOIN permissions p ON p.code IN ('reviews.view.all', 'reviews.manage.all', 'reports.view.all', 'reports.generate.all', 'reports.version.all', 'surveys.view.assigned')
 WHERE r.code IN ('super_admin', 'admin', 'supervisor');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON p.code = 'surveys.view.all'
+WHERE r.code = 'admin';
 
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id

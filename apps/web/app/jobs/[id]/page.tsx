@@ -19,8 +19,17 @@ import type { AssignmentSummary, JobContainer, JobDetail, JobEvent, OptionItem }
 const tabs = ["Overview", "Containers", "Assignment", "Survey Progress", "Reports", "Timeline"] as const;
 type Tab = (typeof tabs)[number];
 
-type ContainerForm = { container_no: string; container_type_id: string; iso_type_code: string; seal_no: string; cargo_status: string; truck_no: string; driver_name: string; csc_plate_status: string; remark: string };
-const emptyContainer: ContainerForm = { container_no: "", container_type_id: "", iso_type_code: "", seal_no: "", cargo_status: "unknown", truck_no: "", driver_name: "", csc_plate_status: "not_checked", remark: "" };
+type ContainerForm = {
+  container_no: string; container_type_id: string; iso_type_code: string; seal_no: string; cargo_status: string;
+  gross_weight: string; tare_weight: string; payload: string; manufacture_date: string; check_digit_override_reason: string;
+  truck_no: string; driver_name: string; csc_plate_status: string; remark: string;
+};
+type ContainerCheck = { is_format_valid: boolean; is_check_digit_valid: boolean };
+const emptyContainer: ContainerForm = {
+  container_no: "", container_type_id: "", iso_type_code: "", seal_no: "", cargo_status: "unknown",
+  gross_weight: "", tare_weight: "", payload: "", manufacture_date: "", check_digit_override_reason: "",
+  truck_no: "", driver_name: "", csc_plate_status: "not_checked", remark: ""
+};
 
 export default function JobDetailPage() {
   return <ProtectedRoute><AppShell title="Job Detail"><JobDetailContent /></AppShell></ProtectedRoute>;
@@ -39,6 +48,9 @@ function JobDetailContent() {
   const [containerForm, setContainerForm] = useState<ContainerForm>(emptyContainer);
   const [selectedContainers, setSelectedContainers] = useState<string[]>([]);
   const [surveyorID, setSurveyorID] = useState("");
+  const [assignmentStartDate, setAssignmentStartDate] = useState("");
+  const [assignmentDueDate, setAssignmentDueDate] = useState("");
+  const [assignmentInstruction, setAssignmentInstruction] = useState("");
   const [containerTypes, setContainerTypes] = useState<OptionItem[]>([]);
   const [surveyors, setSurveyors] = useState<OptionItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -77,7 +89,13 @@ function JobDetailContent() {
     if (!accessToken) return;
     setIsSubmitting(true); setError(null);
     try {
-      await apiData(`/jobs/${jobID}/containers`, { method: "POST", accessToken, body: JSON.stringify(clean(containerForm)) });
+      if (!containerForm.container_no.trim()) throw new Error("Container No wajib diisi.");
+      const validation = await apiData<ContainerCheck>("/job-containers/validate-container-no", { method: "POST", accessToken, body: JSON.stringify({ container_no: containerForm.container_no }) });
+      if (!validation.is_format_valid) throw new Error("Format Container No tidak valid.");
+      if (!validation.is_check_digit_valid && !containerForm.check_digit_override_reason.trim()) {
+        throw new Error("Override reason wajib diisi untuk check digit yang tidak valid.");
+      }
+      await apiData(`/jobs/${jobID}/containers`, { method: "POST", accessToken, body: JSON.stringify(containerPayload(containerForm)) });
       setContainerDialog(false); setContainerForm(emptyContainer); await loadJob();
     } catch (err) { setError(err instanceof Error ? err.message : "Gagal menambah container."); }
     finally { setIsSubmitting(false); }
@@ -87,8 +105,16 @@ function JobDetailContent() {
     if (!accessToken) return;
     setIsSubmitting(true); setError(null);
     try {
-      await apiData(`/jobs/${jobID}/assign`, { method: "POST", accessToken, body: JSON.stringify({ surveyor_id: surveyorID, container_ids: selectedContainers }) });
-      setAssignDialog(false); setSurveyorID(""); setSelectedContainers([]); await loadJob();
+      if (!surveyorID) throw new Error("Surveyor wajib dipilih.");
+      if (selectedContainers.length === 0) throw new Error("Pilih minimal satu container.");
+      if (assignmentStartDate && assignmentDueDate && assignmentDueDate < assignmentStartDate) {
+        throw new Error("Due Date tidak boleh lebih kecil dari Start Date.");
+      }
+      await apiData(`/jobs/${jobID}/assign`, {
+        method: "POST", accessToken,
+        body: JSON.stringify({ surveyor_id: surveyorID, container_ids: selectedContainers, start_date: assignmentStartDate || undefined, due_date: assignmentDueDate || undefined, instruction: assignmentInstruction || undefined })
+      });
+      setAssignDialog(false); setSurveyorID(""); setAssignmentStartDate(""); setAssignmentDueDate(""); setAssignmentInstruction(""); setSelectedContainers([]); await loadJob();
     } catch (err) { setError(err instanceof Error ? err.message : "Gagal assign surveyor."); }
     finally { setIsSubmitting(false); }
   }
@@ -121,9 +147,14 @@ function JobDetailContent() {
           <Field label="ISO Type"><input value={containerForm.iso_type_code} onChange={(e) => setContainerFormValue(setContainerForm, "iso_type_code", e.target.value)} /></Field>
           <Field label="Seal No"><input value={containerForm.seal_no} onChange={(e) => setContainerFormValue(setContainerForm, "seal_no", e.target.value)} /></Field>
           <Field label="Cargo Status"><select value={containerForm.cargo_status} onChange={(e) => setContainerFormValue(setContainerForm, "cargo_status", e.target.value)}><option value="unknown">unknown</option><option value="empty">empty</option><option value="laden">laden</option></select></Field>
+          <Field label="Gross Weight"><input min="0" step="0.01" type="number" value={containerForm.gross_weight} onChange={(e) => setContainerFormValue(setContainerForm, "gross_weight", e.target.value)} /></Field>
+          <Field label="Tare Weight"><input min="0" step="0.01" type="number" value={containerForm.tare_weight} onChange={(e) => setContainerFormValue(setContainerForm, "tare_weight", e.target.value)} /></Field>
+          <Field label="Payload"><input min="0" step="0.01" type="number" value={containerForm.payload} onChange={(e) => setContainerFormValue(setContainerForm, "payload", e.target.value)} /></Field>
+          <Field label="Manufacture Date"><input type="date" value={containerForm.manufacture_date} onChange={(e) => setContainerFormValue(setContainerForm, "manufacture_date", e.target.value)} /></Field>
           <Field label="CSC Plate"><input value={containerForm.csc_plate_status} onChange={(e) => setContainerFormValue(setContainerForm, "csc_plate_status", e.target.value)} /></Field>
           <Field label="Truck No"><input value={containerForm.truck_no} onChange={(e) => setContainerFormValue(setContainerForm, "truck_no", e.target.value)} /></Field>
           <Field label="Driver"><input value={containerForm.driver_name} onChange={(e) => setContainerFormValue(setContainerForm, "driver_name", e.target.value)} /></Field>
+          <label className="field form-span-2"><span>Check Digit Override Reason</span><textarea rows={2} value={containerForm.check_digit_override_reason} onChange={(e) => setContainerFormValue(setContainerForm, "check_digit_override_reason", e.target.value)} /></label>
           <label className="field form-span-2"><span>Remark</span><textarea rows={3} value={containerForm.remark} onChange={(e) => setContainerFormValue(setContainerForm, "remark", e.target.value)} /></label>
         </div>
       </FormDialog>
@@ -131,7 +162,10 @@ function JobDetailContent() {
       <FormDialog title="Assign Surveyor" open={assignDialog} onClose={() => setAssignDialog(false)} onSubmit={assignSurveyor} isSubmitting={isSubmitting} submitLabel="Assign">
         <div className="form-grid">
           <Field label="Surveyor"><Select value={surveyorID} options={surveyors} onChange={setSurveyorID} /></Field>
+          <Field label="Start Date"><input type="date" value={assignmentStartDate} onChange={(e) => setAssignmentStartDate(e.target.value)} /></Field>
+          <Field label="Due Date"><input min={assignmentStartDate || undefined} type="date" value={assignmentDueDate} onChange={(e) => setAssignmentDueDate(e.target.value)} /></Field>
           <div className="field form-span-2"><span>Selected Containers</span><p className="muted-text">{selectedContainers.length} container selected from Containers tab.</p></div>
+          <label className="field form-span-2"><span>Instruction</span><textarea rows={3} value={assignmentInstruction} onChange={(e) => setAssignmentInstruction(e.target.value)} /></label>
         </div>
       </FormDialog>
     </div>
@@ -159,10 +193,17 @@ function Containers({ containers, selected, onSelected }: { containers: JobConta
   ]} />;
 }
 
-function Assignments({ rows }: { rows: AssignmentSummary[] }) { return <DataTable rows={rows} columns={[{ key: "assignment_no", header: "Assignment No", render: (r) => r.assignment_no }, { key: "surveyor", header: "Surveyor", render: (r) => r.surveyor_name }, { key: "containers", header: "Containers", render: (r) => r.total_containers }, { key: "status", header: "Status", render: (r) => <StatusBadge tone="success">{r.status.toUpperCase()}</StatusBadge> }]} />; }
+function Assignments({ rows }: { rows: AssignmentSummary[] }) { return <DataTable rows={rows} columns={[{ key: "assignment_no", header: "Assignment No", render: (r) => r.assignment_no }, { key: "surveyor", header: "Surveyor", render: (r) => r.surveyor_name }, { key: "period", header: "Period", render: (r) => `${r.start_date ?? "-"} - ${r.due_date ?? "-"}` }, { key: "instruction", header: "Instruction", render: (r) => r.instruction ?? "-" }, { key: "containers", header: "Containers", render: (r) => r.total_containers }, { key: "status", header: "Status", render: (r) => <StatusBadge tone="success">{r.status.toUpperCase()}</StatusBadge> }]} />; }
 function Progress({ containers }: { containers: JobContainer[] }) { return <section className="metric-grid">{["not_started","assigned","in_progress","submitted","approved"].map((status) => <div className="metric-tile" key={status}><p>{status}</p><strong>{containers.filter((c) => c.status === status).length}</strong></div>)}</section>; }
 function Timeline({ rows }: { rows: JobEvent[] }) { return <section className="workspace-panel timeline-list">{rows.length === 0 ? <p className="muted-text">Timeline kosong.</p> : rows.map((row) => <div key={row.id}><strong>{row.event_title}</strong><p>{row.description}</p><span>{row.actor ?? "System"} - {row.created_at}</span></div>)}</section>; }
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="field"><span>{label}</span>{children}</label>; }
 function Select({ value, options, onChange }: { value: string; options: OptionItem[]; onChange: (value: string) => void }) { return <select value={value} onChange={(e) => onChange(e.target.value)}><option value="">Select</option>{options.map((item) => <option key={item.id} value={item.id}>{item.code ? `${item.code} - ${item.label}` : item.label}</option>)}</select>; }
 function setContainerFormValue(setter: React.Dispatch<React.SetStateAction<ContainerForm>>, key: keyof ContainerForm, value: string) { setter((current) => ({ ...current, [key]: value })); }
-function clean(values: ContainerForm) { return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== "")); }
+function containerPayload(values: ContainerForm) {
+  const payload: Record<string, string | number> = { ...values };
+  for (const key of ["gross_weight", "tare_weight", "payload"] as const) {
+    if (values[key] === "") delete payload[key];
+    else payload[key] = Number(values[key]);
+  }
+  return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== ""));
+}

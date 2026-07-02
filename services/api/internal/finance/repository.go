@@ -2,6 +2,7 @@ package finance
 
 import (
 	"container-survey/services/api/internal/database"
+	"container-survey/services/api/internal/numbering"
 	"context"
 	"fmt"
 	"strings"
@@ -195,7 +196,7 @@ func (r Repository) CreateInvoice(ctx context.Context, input InvoiceInput, actor
 		return nil, err
 	}
 	defer tx.Rollback(ctx)
-	invoiceNo, err := nextDocNo(ctx, tx, "INV", "invoices")
+	invoiceNo, err := numbering.Next(ctx, tx, "invoice")
 	if err != nil {
 		return nil, err
 	}
@@ -383,7 +384,7 @@ func (r Repository) CreatePayment(ctx context.Context, input PaymentInput, actor
 	if input.Amount > outstanding {
 		return nil, ErrInvalidInput
 	}
-	paymentNo, err := nextDocNo(ctx, tx, "RCP", "payments")
+	paymentNo, err := numbering.Next(ctx, tx, "payment_receipt")
 	if err != nil {
 		return nil, err
 	}

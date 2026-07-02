@@ -1,7 +1,7 @@
 import {
   Activity, BarChart3, BookOpenCheck, Boxes, Building2, CheckCircle2, ClipboardCheck,
   ClipboardList, Clock3, Container, Database, FileClock, FilePlus2, FileText,
-  Gauge, Layers, ListChecks, MapPin, PackageCheck, RotateCcw, ScanSearch, Send,
+  Gauge, History, Layers, ListChecks, MapPin, PackageCheck, QrCode, RotateCcw, ScanSearch, Send,
   Settings,
   ShieldCheck, Tags, Truck, Upload, UserCog, UserRoundCheck, UsersRound, Wrench
 } from "lucide-react";
@@ -36,6 +36,7 @@ export const adminWorkspace: NavigationWorkspace = {
       n("Surveyor", "/master/surveyors", UserRoundCheck, admin, ["surveyors.view.all"]),
       n("Container Type", "/master/container-types", Container, admin, ["container_types.view.all"]),
       n("Survey Type", "/master/survey-types", ClipboardCheck, admin, ["survey_types.view.all"]),
+      n("CEDEX Location", "/master/cedex/locations", MapPin, admin, ["cedex_locations.view.all"]),
       n("CEDEX Component", "/master/cedex/components", PackageCheck, admin, ["cedex_components.view.all"]),
       n("CEDEX Damage", "/master/cedex/damages", Layers, admin, ["cedex_damages.view.all"]),
       n("CEDEX Repair", "/master/cedex/repairs", Wrench, admin, ["cedex_repairs.view.all"]),
@@ -55,32 +56,36 @@ export const adminWorkspace: NavigationWorkspace = {
       ])
     ]),
     g("Monitoring Survey", ScanSearch, admin, [
-      n("All Survey", "/monitoring/surveys", ClipboardCheck, admin, ["reviews.view.all"]),
-      n("In Progress", "/monitoring/surveys/in-progress", Activity, admin, ["reviews.view.all"]),
-      n("Submitted", "/monitoring/surveys/submitted", Send, admin, ["reviews.view.all"]),
-      n("Need Revision", "/monitoring/surveys/need-revision", RotateCcw, admin, ["reviews.view.all"]),
-      n("Approved", "/monitoring/surveys/approved", CheckCircle2, admin, ["reviews.view.all"])
+      n("All Survey", "/surveys/monitoring", ClipboardCheck, admin, ["surveys.view.all"]),
+      n("In Progress", "/surveys/monitoring/in-progress", Activity, admin, ["surveys.view.all"]),
+      n("Submitted", "/surveys/monitoring/submitted", Send, admin, ["surveys.view.all"]),
+      n("Need Revision", "/surveys/monitoring/need-revision", RotateCcw, admin, ["surveys.view.all"]),
+      n("Approved", "/surveys/monitoring/approved", CheckCircle2, admin, ["surveys.view.all"])
     ]),
     g("Review", ShieldCheck, reviewer, [
       n("Pending Review", "/review/pending", Clock3, reviewer, ["reviews.view.all", "reviews.manage.all"], [
         { path: "/review/pending" }, { path: "/review/:id", mode: "pattern" }
       ]),
-      n("Need Revision", "/review/need-revision", RotateCcw, reviewer, ["reviews.view.all", "reviews.manage.all"]),
-      n("Approved Survey", "/review/approved", CheckCircle2, reviewer, ["reviews.view.all", "reviews.manage.all"])
+      n("Review History", "/review/history", History, reviewer, ["reviews.view.all"], [
+        { path: "/review/history" }, { path: "/review/need-revision" }, { path: "/review/approved" }
+      ])
     ]),
     g("Report", FileText, reporter, [
       n("Report Archive", "/reports", BookOpenCheck, reporter, ["reports.view.all"], [
         { path: "/reports" }, { path: "/reports/:id", mode: "pattern" }
       ]),
-      n("Report Version", "/reports/versions", FileClock, ["admin", "supervisor"], ["reports.version.all"])
+      n("Report Version", "/reports/versions", FileClock, ["admin", "supervisor"], ["reports.version.all"]),
+      n("QR Validation", "/reports/qr-validation", QrCode, ["admin", "supervisor"], ["reports.view.all"])
     ]),
     g("Setting", Settings, admin, [
-      n("User Management", "/settings/users", UserCog, admin, ["users.view.all", "users.manage.all"]),
-      n("Role & Permission", "/settings/roles", ShieldCheck, admin, ["roles.view.all", "roles.manage.all"]),
       n("Company Profile", "/settings/company-profile", Building2, admin, ["company_profiles.view.all", "company_profiles.manage.all"]),
       n("Numbering Setting", "/settings/numbering", ListChecks, admin, ["numbering_settings.view.all", "numbering_settings.manage.all"]),
       n("Audit Log", "/settings/audit-log", BarChart3, admin, ["audit.view.all"]),
-      n("Data Bootstrap", "/settings/data-bootstrap", Database, admin, ["checklist_templates.view.all"])
+      n("User Management", "/settings/users", UserCog, admin, ["users.view.all"]),
+      {
+        ...n("Role & Permission", "/settings/roles", ShieldCheck, admin, ["roles.view.all", "roles.manage.all"]),
+        exactRoles: ["super_admin"]
+      }
     ])
   ]
 };

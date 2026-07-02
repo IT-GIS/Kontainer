@@ -1,5 +1,5 @@
-import { NavigationPlaceholderPage } from "@/components/navigation/navigation-placeholder-page";
+import { redirect } from "next/navigation";
 
 export default function NeedRevisionSurveysPage() {
-  return <NavigationPlaceholderPage title="Need Revision" backHref="/review/need-revision" backLabel="Buka Review Need Revision" />;
+  redirect("/surveys/monitoring/need-revision");
 }

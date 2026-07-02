@@ -24,6 +24,8 @@ func NewHandler(service *Service) Handler {
 
 func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) {
 	h := NewHandler(service)
+	v1.GET("/surveys/monitoring", middleware.RequirePermission(authService, "surveys.view.all"), h.Monitoring)
+	v1.GET("/reviews", middleware.RequirePermission(authService, "reviews.view.all"), h.ListReviews)
 	v1.GET("/reviews/:id", middleware.RequirePermission(authService, "reviews.view.all"), h.GetReviewOrPending)
 	v1.POST("/reviews/:id/:action", middleware.RequirePermission(authService, "reviews.manage.all"), h.ReviewAction)
 
@@ -32,6 +34,24 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	v1.GET("/reports/:id/versions", middleware.RequirePermission(authService, "reports.view.all"), h.ReportVersions)
 	v1.GET("/reports/:id/download", middleware.RequirePermission(authService, "reports.view.all"), h.DownloadReport)
 	v1.POST("/reports/generate/:id", middleware.RequirePermission(authService, "reports.generate.all"), h.GenerateReport)
+}
+
+func (h Handler) Monitoring(c *gin.Context) {
+	result, err := h.service.Monitoring(c.Request.Context(), listParams(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.Paginated(c, "Monitoring survey berhasil diambil.", result.Rows, apphttp.PaginationMeta{Page: result.Meta.Page, PerPage: result.Meta.PerPage, Total: result.Meta.Total, TotalPages: result.Meta.TotalPages, HasNext: result.Meta.HasNext, HasPrev: result.Meta.HasPrev})
+}
+
+func (h Handler) ListReviews(c *gin.Context) {
+	result, err := h.service.Reviews(c.Request.Context(), listParams(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.Paginated(c, "Riwayat review berhasil diambil.", result.Rows, apphttp.PaginationMeta{Page: result.Meta.Page, PerPage: result.Meta.PerPage, Total: result.Meta.Total, TotalPages: result.Meta.TotalPages, HasNext: result.Meta.HasNext, HasPrev: result.Meta.HasPrev})
 }
 
 func RegisterPublic(v1 *gin.RouterGroup, service *Service) {

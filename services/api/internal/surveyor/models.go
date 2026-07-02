@@ -2,6 +2,7 @@ package surveyor
 
 import (
 	"errors"
+	"io"
 	"time"
 
 	"github.com/google/uuid"
@@ -112,6 +113,7 @@ type SubmitInput struct {
 }
 
 type PhotoInput struct {
+	Reader        io.Reader
 	FileName      string
 	ContentType   string
 	Size          int64

@@ -1,5 +1,5 @@
-import { NavigationPlaceholderPage } from "@/components/navigation/navigation-placeholder-page";
+import { redirect } from "next/navigation";
 
 export default function ApprovedSurveysPage() {
-  return <NavigationPlaceholderPage title="Approved" backHref="/review/approved" backLabel="Buka Approved Survey" />;
+  redirect("/surveys/monitoring/approved");
 }

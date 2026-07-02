@@ -26,7 +26,11 @@
       JWT_ACCESS_TTL_MINUTES: ${JWT_ACCESS_TTL_MINUTES:-60}
       JWT_REFRESH_TTL_DAYS: ${JWT_REFRESH_TTL_DAYS:-14}
       S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
       S3_BUCKET: ${S3_BUCKET:-gift-survey}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_USE_SSL: "false"
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-10}
       WEB_ALLOWED_ORIGINS: http://localhost:${WEB_PORT:-3000}
     ports:
@@ -76,6 +80,7 @@
       - ../../services/api/migrations/0006_surveys_mvp.up.sql:/docker-entrypoint-initdb.d/0006_surveys_mvp.sql:ro
       - ../../services/api/migrations/0007_reviews_reports.up.sql:/docker-entrypoint-initdb.d/0007_reviews_reports.sql:ro
       - ../../services/api/migrations/0008_finance.up.sql:/docker-entrypoint-initdb.d/0008_finance.sql:ro
+      - ../../services/api/migrations/0009_storage_relations.up.sql:/docker-entrypoint-initdb.d/0009_storage_relations.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$${MYSQL_ROOT_PASSWORD}"]
       interval: 10s

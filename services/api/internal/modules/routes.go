@@ -20,7 +20,6 @@ func Register(v1 *gin.RouterGroup) {
 	registerModule(v1.Group("/notifications"), "notifications")
 	registerModule(v1.Group("/files"), "files")
 
-	v1.GET("/dashboard/admin", notImplemented("dashboard_admin"))
 	v1.GET("/dashboard/supervisor", notImplemented("dashboard_supervisor"))
 	v1.GET("/dashboard/management", notImplemented("dashboard_management"))
 }

@@ -50,8 +50,15 @@ func surveyBaseQuery() string {
 }
 
 func surveyWhere(params ListParams, status string) (string, []any) {
-	args := []any{status}
-	clauses := []string{"s.deleted_at IS NULL", "s.status=$1"}
+	args := []any{}
+	clauses := []string{"s.deleted_at IS NULL"}
+	if params.Status != "" {
+		status = normalizeSurveyListStatus(params.Status)
+	}
+	if status != "" {
+		args = append(args, status)
+		clauses = append(clauses, fmt.Sprintf("s.status=$%d", len(args)))
+	}
 	if params.CustomerID != "" {
 		args = append(args, params.CustomerID)
 		clauses = append(clauses, fmt.Sprintf("jo.customer_id=$%d", len(args)))
@@ -62,9 +69,17 @@ func surveyWhere(params ListParams, status string) (string, []any) {
 	}
 	if params.Search != "" {
 		args = append(args, "%"+strings.TrimSpace(params.Search)+"%")
-		clauses = append(clauses, fmt.Sprintf("(s.survey_no LIKE $%d OR jc.container_no LIKE $%d OR jo.job_order_no LIKE $%d)", len(args), len(args), len(args)))
+		clauses = append(clauses, fmt.Sprintf("(s.survey_no LIKE $%d OR jc.container_no LIKE $%d OR jo.job_order_no LIKE $%d OR c.customer_name LIKE $%d OR sp.full_name LIKE $%d)", len(args), len(args), len(args), len(args), len(args)))
 	}
 	return "WHERE " + strings.Join(clauses, " AND "), args
+}
+
+func normalizeSurveyListStatus(status string) string {
+	status = strings.TrimSpace(strings.ToLower(status))
+	if status == "in_progress" {
+		return "draft"
+	}
+	return status
 }
 
 func reportWhere(params ListParams) (string, []any) {
@@ -166,6 +181,8 @@ func normalizeValue(value any) any {
 		return v.UTC().Format(time.RFC3339)
 	case uuid.UUID:
 		return v.String()
+	case []byte:
+		return string(v)
 	default:
 		return v
 	}
@@ -221,15 +238,6 @@ func recommendedResult(damages []map[string]any) string {
 		}
 	}
 	return "damage"
-}
-
-func (r Repository) nextDocNo(ctx context.Context, tx database.Tx, code string, table string) (string, error) {
-	var total int
-	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", table)
-	if err := tx.QueryRow(ctx, query).Scan(&total); err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("GIFT-%s-%d-%06d", code, time.Now().Year(), total+1), nil
 }
 
 func (r Repository) insertJobEvent(ctx context.Context, tx database.Tx, jobID uuid.UUID, eventType, title, description string, actorID uuid.UUID, metadata any) error {

@@ -1,17 +1,30 @@
 ﻿"use client";
 
-import { ClipboardList, FileCheck2, PackageOpen, ReceiptText, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ClipboardList, FileCheck2, PackageOpen, ReceiptText, RotateCcw, Send, Timer } from "lucide-react";
+import { useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AppShell } from "@/components/layout/app-shell";
 import { useAuth } from "@/hooks/use-auth";
+import { apiData } from "@/lib/api-client";
 
-const metrics = [
-  { label: "Draft Job", value: "0", icon: ClipboardList, tone: "teal" },
-  { label: "Assigned", value: "0", icon: PackageOpen, tone: "cyan" },
-  { label: "Pending Review", value: "0", icon: ShieldCheck, tone: "gold" },
-  { label: "Report Archive", value: "0", icon: FileCheck2, tone: "blue" },
-  { label: "Ready Invoice", value: "0", icon: ReceiptText, tone: "violet" }
-];
+type AdminMetrics = {
+  total_jobs: number; draft_jobs: number; assigned_jobs: number; survey_in_progress: number;
+  submitted_surveys: number; need_revision_surveys: number; approved_surveys: number;
+  report_generated: number; ready_to_invoice: number; overdue_jobs: number;
+};
+
+const metricDefinitions = [
+  { key: "total_jobs", label: "Total Job", icon: ClipboardList, tone: "teal" },
+  { key: "draft_jobs", label: "Draft Job", icon: ClipboardList, tone: "teal" },
+  { key: "assigned_jobs", label: "Assigned Job", icon: PackageOpen, tone: "cyan" },
+  { key: "survey_in_progress", label: "Survey In Progress", icon: Timer, tone: "cyan" },
+  { key: "submitted_surveys", label: "Submitted Survey", icon: Send, tone: "gold" },
+  { key: "need_revision_surveys", label: "Need Revision", icon: RotateCcw, tone: "gold" },
+  { key: "approved_surveys", label: "Approved Survey", icon: CheckCircle2, tone: "blue" },
+  { key: "report_generated", label: "Report Generated", icon: FileCheck2, tone: "blue" },
+  { key: "ready_to_invoice", label: "Ready to Invoice", icon: ReceiptText, tone: "violet" },
+  { key: "overdue_jobs", label: "Overdue Job", icon: AlertTriangle, tone: "violet" }
+] as const;
 
 export default function DashboardPage() {
   return (
@@ -24,8 +37,27 @@ export default function DashboardPage() {
 }
 
 function DashboardContent() {
-  const { user } = useAuth();
+  const { accessToken, user } = useAuth();
   const roles = user?.roles ?? [];
+  const isAdmin = roles.includes("admin") || roles.includes("super_admin");
+  const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const isLoading = Boolean(accessToken && isAdmin && metrics === null && error === null);
+
+  useEffect(() => {
+    if (!accessToken || !isAdmin) return;
+    let active = true;
+    void apiData<AdminMetrics>("/dashboard/admin", { accessToken })
+      .then((result) => {
+        if (!active) return;
+        setMetrics(result);
+        setError(null);
+      })
+      .catch((err) => {
+        if (active) setError(err instanceof Error ? err.message : "Gagal mengambil dashboard Admin.");
+      });
+    return () => { active = false; };
+  }, [accessToken, isAdmin]);
 
   return (
     <div className="page-stack source-dashboard-stack">
@@ -34,8 +66,11 @@ function DashboardContent() {
         <p>Ringkasan aktivitas inspeksi &amp; sertifikasi kontainer.</p>
       </div>
 
-      <section className="metric-grid source-metric-grid">
-        {metrics.map((metric) => {
+      {isAdmin && isLoading ? <div className="workspace-panel">Memuat metric dashboard...</div> : null}
+      {isAdmin && error ? <div className="alert alert-danger">{error}</div> : null}
+      {isAdmin && metrics && Object.values(metrics).every((value) => value === 0) ? <div className="workspace-panel muted-text">Belum ada aktivitas operasional untuk ditampilkan.</div> : null}
+      {isAdmin && metrics ? <section className="metric-grid source-metric-grid">
+        {metricDefinitions.map((metric) => {
           const Icon = metric.icon;
           return (
             <article className="metric-tile source-metric-card" key={metric.label}>
@@ -43,11 +78,11 @@ function DashboardContent() {
                 <p>{metric.label}</p>
                 <span className={`source-metric-icon source-metric-${metric.tone}`}><Icon size={20} /></span>
               </div>
-              <strong>{metric.value}</strong>
+              <strong>{metrics[metric.key]}</strong>
             </article>
           );
         })}
-      </section>
+      </section> : null}
 
       <section className="workspace-panel source-dashboard-note">
         <div className="source-note-head">

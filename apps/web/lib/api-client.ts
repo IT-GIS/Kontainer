@@ -67,6 +67,19 @@ export async function apiPaginated<T>(
   return { rows: result.data, meta: result.meta ?? {} };
 }
 
+export async function apiBlob(
+  path: string,
+  init: RequestInit & { accessToken?: string } = {}
+): Promise<Blob> {
+  const headers = new Headers(init.headers);
+  if (init.accessToken) headers.set("Authorization", `Bearer ${init.accessToken}`);
+  const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers, cache: "no-store" });
+  if (!response.ok) {
+    throw new ApiClientError("File tidak dapat diambil.", "FILE_REQUEST_FAILED", response.status);
+  }
+  return response.blob();
+}
+
 export function buildQuery(params: Record<string, string | number | undefined | null>) {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {

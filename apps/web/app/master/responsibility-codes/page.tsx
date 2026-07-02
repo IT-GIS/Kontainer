@@ -1,5 +1,7 @@
-import { NavigationPlaceholderPage } from "@/components/navigation/navigation-placeholder-page";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { AppShell } from "@/components/layout/app-shell";
+import { MasterDataPage } from "@/components/master/master-data-page";
 
 export default function ResponsibilityCodesPage() {
-  return <NavigationPlaceholderPage title="Responsibility Code" backHref="/dashboard" backLabel="Kembali ke Dashboard" />;
+  return <ProtectedRoute><AppShell title="Responsibility Code"><MasterDataPage resourceId="responsibility-codes" /></AppShell></ProtectedRoute>;
 }

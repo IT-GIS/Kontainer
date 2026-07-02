@@ -2,6 +2,7 @@ package surveyor
 
 import (
 	"container-survey/services/api/internal/database"
+	"container-survey/services/api/internal/numbering"
 	"context"
 	"errors"
 	"fmt"
@@ -169,7 +170,7 @@ func (r Repository) StartSurvey(ctx context.Context, input StartSurveyInput, act
 	if !errors.Is(err, ErrNotFound) {
 		return nil, err
 	}
-	surveyNo, err := r.nextDocNo(ctx, tx, "SVY", "surveys")
+	surveyNo, err := numbering.Next(ctx, tx, "survey")
 	if err != nil {
 		return nil, err
 	}
@@ -331,24 +332,62 @@ func (r Repository) UpdateChecklist(ctx context.Context, surveyID uuid.UUID, inp
 }
 
 func (r Repository) Sheet(ctx context.Context, surveyID uuid.UUID, actor Actor) (map[string]any, error) {
+	if _, err := r.surveyBase(ctx, surveyID, actor); err != nil {
+		return nil, err
+	}
 	damages, err := r.Damages(ctx, surveyID, actor)
 	if err != nil {
 		return nil, err
 	}
-	faces := []map[string]any{}
-	for _, face := range []string{"left", "right", "front", "door", "roof", "floor", "understructure"} {
-		locations := []map[string]any{}
-		for i := 1; i <= 8; i++ {
-			code := strings.ToUpper(string(face[0])) + fmt.Sprint(i)
-			markers := []map[string]any{}
-			for _, damage := range damages {
-				if fmt.Sprint(damage["face"]) == face && strings.EqualFold(fmt.Sprint(damage["internal_location"]), code) {
-					markers = append(markers, map[string]any{"damage_id": damage["id"], "damage_no": damage["damage_no"], "severity": damage["severity"]})
-				}
-			}
-			locations = append(locations, map[string]any{"code": code, "label": code, "has_damage": len(markers) > 0, "damage_markers": markers})
+	rows, err := r.pool.Query(ctx, `
+		SELECT cl.id, cl.code, cl.face, cl.grid_code, cl.description, cl.display_order
+		FROM surveys s
+		JOIN job_containers jc ON jc.id=s.job_container_id
+		LEFT JOIN container_types ct ON ct.id=jc.container_type_id
+		JOIN cedex_locations cl ON cl.status='active'
+		  AND (
+		    cl.container_size IS NULL OR cl.container_size='all'
+		    OR cl.container_size=CASE
+		      WHEN ct.size LIKE '20%' THEN '20'
+		      WHEN ct.size LIKE '40%' THEN '40'
+		      WHEN ct.size LIKE '45%' THEN '45'
+		      ELSE ct.size
+		    END
+		  )
+		WHERE s.id=$1 AND s.deleted_at IS NULL
+		ORDER BY FIELD(cl.face,'left','right','front','door','roof','floor','understructure'), cl.display_order, cl.code
+	`, surveyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	locations, err := rowsToMaps(rows)
+	if err != nil {
+		return nil, err
+	}
+	faceRows := map[string][]map[string]any{}
+	faceOrder := []string{}
+	for _, location := range locations {
+		face := fmt.Sprint(location["face"])
+		if _, exists := faceRows[face]; !exists {
+			faceOrder = append(faceOrder, face)
 		}
-		faces = append(faces, map[string]any{"face": face, "label": faceLabel(face), "locations": locations})
+		markers := []map[string]any{}
+		for _, damage := range damages {
+			internalLocation := fmt.Sprint(damage["internal_location"])
+			if fmt.Sprint(damage["face"]) == face && (strings.EqualFold(internalLocation, fmt.Sprint(location["code"])) || strings.EqualFold(internalLocation, fmt.Sprint(location["grid_code"]))) {
+				markers = append(markers, map[string]any{"damage_id": damage["id"], "damage_no": damage["damage_no"], "severity": damage["severity"]})
+			}
+		}
+		faceRows[face] = append(faceRows[face], map[string]any{
+			"id": location["id"], "code": location["code"], "grid_code": location["grid_code"],
+			"label": location["grid_code"], "description": location["description"],
+			"has_damage": len(markers) > 0, "damage_markers": markers,
+		})
+	}
+	faces := []map[string]any{}
+	for _, face := range faceOrder {
+		faces = append(faces, map[string]any{"face": face, "label": faceLabel(face), "locations": faceRows[face]})
 	}
 	return map[string]any{"faces": faces}, nil
 }
@@ -421,7 +460,35 @@ func (r Repository) DeleteDamage(ctx context.Context, damageID uuid.UUID, actor 
 	return item, tx.Commit(ctx)
 }
 
-func (r Repository) UploadPhoto(ctx context.Context, damageID uuid.UUID, input PhotoInput, actor Actor) (map[string]any, error) {
+func (r Repository) PhotoContext(ctx context.Context, damageID uuid.UUID, actor Actor) (PhotoContext, error) {
+	var info PhotoContext
+	err := r.pool.QueryRow(ctx, `
+		SELECT s.id, s.survey_no, jc.container_no, sd.damage_no, sp.full_name,
+		       sgi.gps_latitude, sgi.gps_longitude
+		FROM survey_damages sd
+		JOIN surveys s ON s.id=sd.survey_id AND s.deleted_at IS NULL
+		JOIN job_containers jc ON jc.id=s.job_container_id
+		JOIN surveyor_profiles sp ON sp.id=s.surveyor_id
+		LEFT JOIN survey_general_infos sgi ON sgi.survey_id=s.id
+		WHERE sd.id=$1 AND sd.deleted_at IS NULL
+	`, damageID).Scan(&info.SurveyID, &info.SurveyNo, &info.ContainerNo, &info.DamageNo, &info.SurveyorName, &info.GPSLatitude, &info.GPSLongitude)
+	if err != nil {
+		if errors.Is(err, database.ErrNoRows) {
+			return PhotoContext{}, ErrNotFound
+		}
+		return PhotoContext{}, err
+	}
+	base, err := r.surveyBase(ctx, info.SurveyID, actor)
+	if err != nil {
+		return PhotoContext{}, err
+	}
+	if !editableStatus(fmt.Sprint(base["status"])) {
+		return PhotoContext{}, ErrInvalidStatus
+	}
+	return info, nil
+}
+
+func (r Repository) CreatePhotoMetadata(ctx context.Context, damageID uuid.UUID, input PhotoRecordInput, actor Actor) (map[string]any, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -440,26 +507,43 @@ func (r Repository) UploadPhoto(ctx context.Context, damageID uuid.UUID, input P
 		return nil, ErrInvalidStatus
 	}
 	fileID := uuid.Nil
-	objectKey := fmt.Sprintf("surveys/%s/%s-%s", surveyID.String(), uuid.NewString(), sanitizeFileName(input.FileName))
 	err = tx.QueryRow(ctx, `
-		INSERT INTO file_objects (bucket_name, object_key, original_file_name, mime_type, file_size, visibility, uploaded_by)
-		VALUES ('survey-evidence',$1,NULLIF($2,''),NULLIF($3,''),$4,'private',$5) RETURNING id
-	`, objectKey, input.FileName, input.ContentType, input.Size, actor.UserID).Scan(&fileID)
+		INSERT INTO file_objects (bucket_name, object_key, original_file_name, mime_type, file_size, checksum_sha256, visibility, uploaded_by)
+		VALUES ($1,$2,NULLIF($3,''),$4,$5,$6,'private',$7) RETURNING id
+	`, input.Original.Bucket, input.Original.ObjectKey, input.Original.FileName, input.Original.ContentType, input.Original.Size, input.Original.Checksum, actor.UserID).Scan(&fileID)
+	if err != nil {
+		return nil, err
+	}
+	watermarkedFileID := uuid.Nil
+	err = tx.QueryRow(ctx, `
+		INSERT INTO file_objects (bucket_name, object_key, original_file_name, mime_type, file_size, checksum_sha256, visibility, uploaded_by)
+		VALUES ($1,$2,NULLIF($3,''),$4,$5,$6,'private',$7) RETURNING id
+	`, input.Watermarked.Bucket, input.Watermarked.ObjectKey, input.Watermarked.FileName, input.Watermarked.ContentType, input.Watermarked.Size, input.Watermarked.Checksum, actor.UserID).Scan(&watermarkedFileID)
 	if err != nil {
 		return nil, err
 	}
 	photoType := defaultString(input.PhotoType, "damage")
 	item, err := scanRow(tx.QueryRow(ctx, `
-		INSERT INTO survey_photos (survey_id, damage_id, file_id, photo_type, photo_category, caption, taken_at, uploaded_by)
-		VALUES ($1,$2,$3,$4,NULLIF($5,''),NULLIF($6,''),$7,$8)
-		RETURNING id, survey_id, damage_id, file_id, photo_type, caption, created_at
-	`, surveyID, damageID, fileID, photoType, input.PhotoCategory, input.Caption, input.TakenAt, actor.UserID), []string{"id", "survey_id", "damage_id", "file_id", "photo_type", "caption", "created_at"})
+		INSERT INTO survey_photos (
+			survey_id, damage_id, file_id, watermarked_file_id, photo_type, photo_category,
+			caption, taken_at, gps_latitude, gps_longitude, watermark_text, uploaded_by
+		) VALUES ($1,$2,$3,$4,$5,NULLIF($6,''),NULLIF($7,''),$8,$9,$10,$11,$12)
+		RETURNING id, survey_id, damage_id, file_id, watermarked_file_id, photo_type, caption, created_at
+	`, surveyID, damageID, fileID, watermarkedFileID, photoType, input.PhotoCategory, input.Caption, input.TakenAt, input.GPSLatitude, input.GPSLongitude, input.WatermarkText, actor.UserID), []string{"id", "survey_id", "damage_id", "file_id", "watermarked_file_id", "photo_type", "caption", "created_at"})
 	if err != nil {
 		return nil, err
 	}
-	item["object_key"] = objectKey
-	_ = r.insertAudit(ctx, tx, actor, "survey_photos.upload", "survey_photos", &fileID, nil, item)
-	return item, tx.Commit(ctx)
+	photoID := parseUUIDString(item["id"])
+	item["object_key"] = input.Original.ObjectKey
+	item["watermarked_object_key"] = input.Watermarked.ObjectKey
+	item["original_file_name"] = input.Original.FileName
+	item["content_url"] = fmt.Sprintf("/survey-photos/%s/content", photoID)
+	item["original_url"] = fmt.Sprintf("/survey-photos/%s/content?variant=original", photoID)
+	_ = r.insertAudit(ctx, tx, actor, "survey_photos.upload", "survey_photos", &photoID, nil, item)
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return item, nil
 }
 
 func (r Repository) Photos(ctx context.Context, surveyID uuid.UUID, actor Actor) ([]map[string]any, error) {
@@ -468,9 +552,11 @@ func (r Repository) Photos(ctx context.Context, surveyID uuid.UUID, actor Actor)
 	}
 	rows, err := r.pool.Query(ctx, `
 		SELECT sp.id, sp.survey_id, sp.damage_id, sp.photo_type, sp.photo_category, sp.caption, sp.created_at,
-		       fo.id AS file_id, fo.object_key, fo.original_file_name, fo.mime_type, fo.file_size
+		       fo.id AS file_id, fo.object_key, fo.original_file_name, fo.mime_type, fo.file_size,
+		       wf.id AS watermarked_file_id, wf.object_key AS watermarked_object_key
 		FROM survey_photos sp
 		JOIN file_objects fo ON fo.id=sp.file_id
+		LEFT JOIN file_objects wf ON wf.id=sp.watermarked_file_id
 		WHERE sp.survey_id=$1 AND sp.deleted_at IS NULL
 		ORDER BY sp.created_at DESC
 	`, surveyID)
@@ -478,7 +564,44 @@ func (r Repository) Photos(ctx context.Context, surveyID uuid.UUID, actor Actor)
 		return nil, err
 	}
 	defer rows.Close()
-	return rowsToMaps(rows)
+	items, err := rowsToMaps(rows)
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range items {
+		photoID := fmt.Sprint(item["id"])
+		item["content_url"] = "/survey-photos/" + photoID + "/content"
+		item["original_url"] = "/survey-photos/" + photoID + "/content?variant=original"
+	}
+	return items, nil
+}
+
+func (r Repository) PhotoFile(ctx context.Context, photoID uuid.UUID, variant string, actor Actor) (PhotoFile, error) {
+	fileReference := "COALESCE(sp.watermarked_file_id, sp.file_id)"
+	if strings.EqualFold(strings.TrimSpace(variant), "original") {
+		fileReference = "sp.file_id"
+	}
+	var surveyID uuid.UUID
+	var file PhotoFile
+	err := r.pool.QueryRow(ctx, fmt.Sprintf(`
+		SELECT sp.survey_id, fo.bucket_name, fo.object_key, COALESCE(fo.original_file_name,'photo'),
+		       COALESCE(fo.mime_type,'application/octet-stream'), COALESCE(fo.file_size,0)
+		FROM survey_photos sp
+		JOIN file_objects fo ON fo.id=%s
+		WHERE sp.id=$1 AND sp.deleted_at IS NULL AND fo.deleted_at IS NULL
+	`, fileReference), photoID).Scan(&surveyID, &file.Bucket, &file.ObjectKey, &file.FileName, &file.ContentType, &file.Size)
+	if err != nil {
+		if errors.Is(err, database.ErrNoRows) {
+			return PhotoFile{}, ErrNotFound
+		}
+		return PhotoFile{}, err
+	}
+	if actor.ActiveRole != "admin" && actor.ActiveRole != "supervisor" && actor.ActiveRole != "super_admin" {
+		if _, err := r.surveyBase(ctx, surveyID, actor); err != nil {
+			return PhotoFile{}, err
+		}
+	}
+	return file, nil
 }
 
 func (r Repository) Preview(ctx context.Context, surveyID uuid.UUID, actor Actor) (map[string]any, error) {

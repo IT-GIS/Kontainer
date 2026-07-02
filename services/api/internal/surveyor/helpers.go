@@ -151,15 +151,6 @@ func (r Repository) nextDamageNo(ctx context.Context, tx database.Tx, surveyID u
 	return fmt.Sprintf("D-%03d", next), nil
 }
 
-func (r Repository) nextDocNo(ctx context.Context, tx database.Tx, code string, table string) (string, error) {
-	var total int
-	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", table)
-	if err := tx.QueryRow(ctx, query).Scan(&total); err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("GIFT-%s-%d-%06d", code, time.Now().Year(), total+1), nil
-}
-
 func (r Repository) insertJobEvent(ctx context.Context, tx database.Tx, jobID uuid.UUID, eventType, title, description string, actorID uuid.UUID, metadata any) error {
 	bytes, _ := json.Marshal(metadata)
 	_, err := tx.Exec(ctx, `INSERT INTO job_events (job_order_id,event_type,event_title,event_description,actor_id,metadata) VALUES ($1,$2,$3,$4,$5,$6)`, jobID, eventType, title, description, actorID, string(bytes))
@@ -243,6 +234,8 @@ func normalizeValue(value any) any {
 		return v.UTC().Format(time.RFC3339)
 	case uuid.UUID:
 		return v.String()
+	case []byte:
+		return string(v)
 	default:
 		return v
 	}
@@ -447,6 +440,12 @@ func faceLabel(face string) string {
 func sanitizeFileName(value string) string {
 	value = strings.ReplaceAll(value, "\\", "-")
 	value = strings.ReplaceAll(value, "/", "-")
+	value = strings.Map(func(character rune) rune {
+		if character < 32 || character == 34 {
+			return '-'
+		}
+		return character
+	}, value)
 	value = strings.TrimSpace(value)
 	if value == "" {
 		return "photo"

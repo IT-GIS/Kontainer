@@ -92,6 +92,9 @@ export type SurveyPhoto = {
   caption?: string | null;
   object_key?: string;
   original_file_name?: string | null;
+  watermarked_object_key?: string | null;
+  content_url?: string;
+  original_url?: string;
   created_at?: string;
 };
 

@@ -2,6 +2,7 @@ package reviews
 
 import (
 	"container-survey/services/api/internal/database"
+	"container-survey/services/api/internal/numbering"
 	"context"
 	"encoding/json"
 	"errors"
@@ -21,8 +22,20 @@ func NewRepository(pool *database.Pool) Repository {
 }
 
 func (r Repository) Pending(ctx context.Context, params ListParams) (ListResult, error) {
+	return r.listSurveys(ctx, params, "submitted")
+}
+
+func (r Repository) Monitoring(ctx context.Context, params ListParams) (ListResult, error) {
+	return r.listSurveys(ctx, params, "")
+}
+
+func (r Repository) Reviews(ctx context.Context, params ListParams) (ListResult, error) {
+	return r.listSurveys(ctx, params, "need_revision")
+}
+
+func (r Repository) listSurveys(ctx context.Context, params ListParams, defaultStatus string) (ListResult, error) {
 	page, perPage := normalizePagination(params.Page, params.PerPage)
-	where, args := surveyWhere(params, "submitted")
+	where, args := surveyWhere(params, defaultStatus)
 	total, err := r.count(ctx, where, args)
 	if err != nil {
 		return ListResult{}, err
@@ -30,16 +43,18 @@ func (r Repository) Pending(ctx context.Context, params ListParams) (ListResult,
 	args = append(args, perPage, (page-1)*perPage)
 	rows, err := r.pool.Query(ctx, fmt.Sprintf(`
 		SELECT s.id AS survey_id, s.survey_no, jo.job_order_no, jc.container_no,
-		       c.customer_name, sp.full_name AS surveyor_name, st.name AS survey_type_name,
-		       s.submitted_at, s.status
+		       c.customer_name, l.location_name, sp.full_name AS surveyor_name, st.name AS survey_type_name,
+		       s.started_at, s.submitted_at, s.approved_at,
+		       CASE WHEN s.status='draft' THEN 'in_progress' ELSE s.status END AS status
 		FROM surveys s
 		JOIN job_orders jo ON jo.id=s.job_order_id
 		JOIN job_containers jc ON jc.id=s.job_container_id
 		JOIN customers c ON c.id=jo.customer_id
+		JOIN locations l ON l.id=jo.location_id
 		JOIN survey_types st ON st.id=s.survey_type_id
 		JOIN surveyor_profiles sp ON sp.id=s.surveyor_id
 		%s
-		ORDER BY s.submitted_at IS NULL, s.submitted_at ASC, s.updated_at ASC
+		ORDER BY COALESCE(s.approved_at, s.submitted_at, s.started_at, s.updated_at) DESC
 		LIMIT $%d OFFSET $%d
 	`, where, len(args)-1, len(args)), args...)
 	if err != nil {
@@ -305,7 +320,7 @@ func (r Repository) createReportTx(ctx context.Context, tx database.Tx, surveyID
 	if !errors.Is(err, ErrNotFound) {
 		return nil, err
 	}
-	reportNo, err := r.nextDocNo(ctx, tx, "RPT", "reports")
+	reportNo, err := numbering.Next(ctx, tx, "report")
 	if err != nil {
 		return nil, err
 	}

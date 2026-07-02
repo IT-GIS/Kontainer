@@ -1,11 +1,12 @@
 ﻿"use client";
 
-import { Camera, Check, FileText, Grid3X3, ImagePlus, Plus, Save, Send, Trash2, TriangleAlert } from "lucide-react";
+import { Camera, Check, Grid3X3, ImagePlus, Plus, Save, Send, Trash2, TriangleAlert } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AppShell } from "@/components/layout/app-shell";
+import { PhotoEvidence } from "@/components/surveys/photo-evidence";
 import { DataTable } from "@/components/ui/data-table";
 import { FormDialog } from "@/components/ui/form-dialog";
 import { PageHeader } from "@/components/ui/page-header";
@@ -197,7 +198,7 @@ function SurveyDetailContent() {
       form.set("photo_type", "damage");
       await apiData(`/survey-damages/${photoDamage.id}/photos`, { method: "POST", accessToken, body: form });
       setPhotoDamage(null);
-      setMessage("Foto evidence tercatat.");
+      setMessage("Foto evidence tersimpan.");
     });
   }
 
@@ -274,7 +275,7 @@ function DamageList({ rows, readonly, onAdd, onEdit, onDelete, onPhoto }: { rows
 }
 
 function PhotosTab({ damages, photos, readonly, onPhoto }: { damages: SurveyDamage[]; photos: SurveyPhoto[]; readonly: boolean; onPhoto: (row: SurveyDamage) => void }) {
-  return <section className="workspace-panel photo-list">{damages.length === 0 ? <p className="muted-text">Belum ada damage photo.</p> : null}{damages.map((damage) => { const damagePhotos = photos.filter((photo) => photo.damage_id === damage.id); return <div className="photo-section" key={damage.id}><div className="section-title-row"><div><h3>{damage.damage_no} - {damage.face} {damage.internal_location}</h3><p className="muted-text">{damage.damage_name ?? damage.damage_code}</p></div><button className="secondary-button" disabled={readonly} onClick={() => onPhoto(damage)}><ImagePlus size={17} /><span>Upload</span></button></div>{damagePhotos.length === 0 ? <div className="alert alert-danger">Photo Required</div> : <div className="photo-grid">{damagePhotos.map((photo) => <div className="photo-card" key={photo.id}><FileText size={20} /><strong>{photo.original_file_name ?? "Photo evidence"}</strong><span>{photo.caption ?? photo.object_key}</span></div>)}</div>}</div>; })}</section>;
+  return <section className="workspace-panel photo-list">{damages.length === 0 ? <p className="muted-text">Belum ada damage photo.</p> : null}{damages.map((damage) => { const damagePhotos = photos.filter((photo) => photo.damage_id === damage.id); return <div className="photo-section" key={damage.id}><div className="section-title-row"><div><h3>{damage.damage_no} - {damage.face} {damage.internal_location}</h3><p className="muted-text">{damage.damage_name ?? damage.damage_code}</p></div><button className="secondary-button" disabled={readonly} onClick={() => onPhoto(damage)}><ImagePlus size={17} /><span>Upload</span></button></div>{damagePhotos.length === 0 ? <div className="alert alert-danger">Photo Required</div> : <div className="photo-grid">{damagePhotos.map((photo) => <PhotoEvidence id={photo.id} name={photo.original_file_name} caption={photo.caption} key={photo.id} />)}</div>}</div>; })}</section>;
 }
 
 function PreviewTab({ survey }: { survey: SurveyDetail }) {
@@ -295,7 +296,7 @@ function PhotoDialog({ damage, open, isSaving, onClose, onSubmit }: { damage: Su
   const [file, setFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
   useEffect(() => { if (!open) return; const timer = window.setTimeout(() => { setFile(null); setCaption(""); }, 0); return () => window.clearTimeout(timer); }, [open]);
-  return <FormDialog title={`Upload Photo ${damage?.damage_no ?? ""}`} open={open} onClose={onClose} onSubmit={() => onSubmit(file, caption)} isSubmitting={isSaving} submitLabel="Upload"><div className="form-grid"><label className="field form-span-2"><span>Photo Evidence</span><input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label><label className="field form-span-2"><span>Caption</span><textarea rows={3} value={caption} onChange={(e) => setCaption(e.target.value)} /></label></div></FormDialog>;
+  return <FormDialog title={`Upload Photo ${damage?.damage_no ?? ""}`} open={open} onClose={onClose} onSubmit={() => onSubmit(file, caption)} isSubmitting={isSaving} submitLabel="Upload"><div className="form-grid"><label className="field form-span-2"><span>Photo Evidence (JPG, PNG, WEBP)</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label><label className="field form-span-2"><span>Caption</span><textarea rows={3} value={caption} onChange={(e) => setCaption(e.target.value)} /></label></div></FormDialog>;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
