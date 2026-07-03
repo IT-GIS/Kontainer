@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 
 type MasterRow = Record<string, string | number | boolean | null | undefined>;
+type UserOption = { value: string; label: string };
 
 type MasterDataPageProps = {
   resourceId: keyof typeof masterResources;
@@ -31,6 +32,7 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
   const [selected, setSelected] = useState<MasterRow | null>(null);
   const [formData, setFormData] = useState<MasterRow>(() => defaultFormData(resource));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [surveyorUsers, setSurveyorUsers] = useState<UserOption[]>([]);
 
   const canCreate = can(user, `${resource.permissionModule}.create.all`);
   const canUpdate = can(user, `${resource.permissionModule}.update.all`);
@@ -60,6 +62,15 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
     const timer = window.setTimeout(() => void loadRows(), 0);
     return () => window.clearTimeout(timer);
   }, [loadRows]);
+
+  useEffect(() => {
+    if (!accessToken || resourceId !== "surveyors") return;
+    void apiPaginated<{ id: string; name: string; email: string }>(
+      "/users?page=1&per_page=100&status=active&role=surveyor&without_surveyor_profile=true",
+      { accessToken }
+    ).then((result) => setSurveyorUsers(result.rows.map((item) => ({ value: item.id, label: `${item.name} - ${item.email}` }))))
+      .catch(() => setSurveyorUsers([]));
+  }, [accessToken, resourceId]);
 
   const columns = [
     ...resource.columns.map((column) => ({
@@ -177,6 +188,7 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
               field={field}
               key={field.name}
               value={formData[field.name]}
+              optionsOverride={resourceId === "surveyors" && field.name === "user_id" ? surveyorUserOptions(surveyorUsers, selected) : undefined}
               onChange={(value) => setFormData((current) => ({ ...current, [field.name]: value }))}
             />
           ))}
@@ -186,7 +198,7 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
   );
 }
 
-function FieldInput({ field, value, onChange }: { field: MasterField; value: MasterRow[string]; onChange: (value: MasterRow[string]) => void }) {
+function FieldInput({ field, value, onChange, optionsOverride }: { field: MasterField; value: MasterRow[string]; onChange: (value: MasterRow[string]) => void; optionsOverride?: UserOption[] }) {
   if (field.type === "checkbox") {
     return (
       <label className="check-row form-check">
@@ -199,10 +211,10 @@ function FieldInput({ field, value, onChange }: { field: MasterField; value: Mas
   return (
     <label className="field">
       <span>{field.label}{field.required ? " *" : ""}</span>
-      {field.type === "select" ? (
+      {field.type === "select" || optionsOverride ? (
         <select value={String(value ?? "")} onChange={(event) => onChange(event.target.value)} required={field.required}>
           <option value="">Select</option>
-          {field.options?.map((option) => (
+          {(optionsOverride ?? field.options)?.map((option) => (
             <option value={option.value} key={option.value}>{option.label}</option>
           ))}
         </select>
@@ -216,6 +228,12 @@ function FieldInput({ field, value, onChange }: { field: MasterField; value: Mas
       )}
     </label>
   );
+}
+
+function surveyorUserOptions(options: UserOption[], selected: MasterRow | null) {
+  const currentID = String(selected?.user_id ?? "");
+  if (!currentID || options.some((option) => option.value === currentID)) return options;
+  return [{ value: currentID, label: `${String(selected?.name ?? "Current user")} - current profile` }, ...options];
 }
 
 function renderCell(value: MasterRow[string], type?: "status" | "boolean") {

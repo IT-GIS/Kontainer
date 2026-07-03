@@ -259,6 +259,20 @@ func assignedJobWhere(params ListParams, surveyorID uuid.UUID) (string, []any) {
 	return "WHERE " + strings.Join(clauses, " AND "), args
 }
 
+func assignedSurveyWhere(params ListParams, surveyorID uuid.UUID) (string, []any) {
+	args := []any{surveyorID}
+	clauses := []string{"s.deleted_at IS NULL", "s.surveyor_id=$1"}
+	if params.Status != "" {
+		args = append(args, params.Status)
+		clauses = append(clauses, fmt.Sprintf("s.status=$%d", len(args)))
+	}
+	if strings.TrimSpace(params.Search) != "" {
+		args = append(args, "%"+strings.TrimSpace(params.Search)+"%")
+		clauses = append(clauses, fmt.Sprintf("(s.survey_no LIKE $%d OR jo.job_order_no LIKE $%d OR jc.container_no LIKE $%d OR c.customer_name LIKE $%d)", len(args), len(args), len(args), len(args)))
+	}
+	return "WHERE " + strings.Join(clauses, " AND "), args
+}
+
 func normalizePagination(page, perPage int) (int, int) {
 	if page < 1 {
 		page = 1

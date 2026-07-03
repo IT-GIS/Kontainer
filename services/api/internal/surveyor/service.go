@@ -27,6 +27,22 @@ func (s *Service) ListJobs(ctx context.Context, params ListParams, actor Actor) 
 	return s.repo.ListJobs(ctx, params, actor)
 }
 
+func (s *Service) ListSurveys(ctx context.Context, params ListParams, actor Actor) (ListResult, error) {
+	if !validSurveyListStatus(params.Status) {
+		return ListResult{}, ErrInvalidInput
+	}
+	return s.repo.ListSurveys(ctx, params, actor)
+}
+
+func validSurveyListStatus(status string) bool {
+	switch status {
+	case "", "draft", "need_revision", "submitted", "approved", "rejected":
+		return true
+	default:
+		return false
+	}
+}
+
 func (s *Service) GetJob(ctx context.Context, id uuid.UUID, actor Actor) (map[string]any, error) {
 	return s.repo.GetJob(ctx, id, actor)
 }

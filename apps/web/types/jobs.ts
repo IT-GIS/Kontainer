@@ -48,6 +48,8 @@ export type JobContainer = {
   check_digit_override_reason?: string | null;
   truck_no?: string | null;
   driver_name?: string | null;
+  csc_plate_status?: string | null;
+  remark?: string | null;
   status: string;
 };
 

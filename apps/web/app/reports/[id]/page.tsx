@@ -43,7 +43,7 @@ function ReportDetailContent() {
   useEffect(() => { const timer = window.setTimeout(() => void loadReport(), 0); return () => window.clearTimeout(timer); }, [loadReport]);
 
   if (!report) return <div className="center-screen">Memuat report...</div>;
-  const validateUrl = report.qr_token ? `${apiBase}/public/reports/validate/${report.qr_token}` : "-";
+  const validateUrl = report.qr_token ? `/reports/qr-validation?token=${encodeURIComponent(report.qr_token)}` : "-";
 
   return (
     <div className="page-stack">
@@ -51,7 +51,7 @@ function ReportDetailContent() {
       {error ? <div className="alert alert-danger">{error}</div> : null}
       <div className="job-actions">
         <button className="primary-button" onClick={() => void downloadReport(report.id, report.report_no, accessToken)}><Download size={17} /><span>Download PDF</span></button>
-        {report.qr_token ? <a className="secondary-button" href={validateUrl} target="_blank"><QrCode size={17} /><span>Validate QR</span></a> : null}
+        {report.qr_token ? <a className="secondary-button" href={validateUrl}><QrCode size={17} /><span>Validate QR</span></a> : null}
       </div>
       <section className="workspace-panel detail-grid">
         <div><span>Status</span><strong><StatusBadge tone={report.status === "failed" ? "danger" : report.status === "pending_generation" ? "warning" : "success"}>{report.status.toUpperCase()}</StatusBadge></strong></div>

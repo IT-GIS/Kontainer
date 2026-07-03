@@ -56,6 +56,7 @@ export type InvoiceDetail = InvoiceSummary & {
 
 export type PaymentSummary = {
   id: string;
+  invoice_id: string;
   payment_no: string;
   invoice_no: string;
   payment_date: string;

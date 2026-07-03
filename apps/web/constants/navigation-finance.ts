@@ -16,7 +16,7 @@ export const financeWorkspace: NavigationWorkspace = {
   label: "Finance",
   roles: read,
   items: [
-    n("Dashboard Finance", "/finance/dashboard", Gauge, read),
+    n("Dashboard Finance", "/finance/dashboard", Gauge, finance),
     n("Ready to Invoice", "/finance/ready-to-invoice", FilePlus2, finance),
     n("Price List", "/finance/price-list", Tags, finance),
     n("Invoice List", "/finance/invoices", Receipt, finance, [

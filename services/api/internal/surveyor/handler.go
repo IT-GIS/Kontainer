@@ -30,8 +30,9 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	v1.GET("/surveyor/jobs", middleware.RequirePermission(authService, "surveyor_jobs.view.assigned"), h.ListJobs)
 	v1.GET("/surveyor/jobs/:id", middleware.RequirePermission(authService, "surveyor_jobs.view.assigned"), h.GetJob)
 	v1.GET("/surveyor/jobs/:id/containers", middleware.RequirePermission(authService, "surveyor_jobs.view.assigned"), h.ListContainers)
+	v1.GET("/surveyor/surveys", middleware.RequirePermission(authService, "surveys.view.assigned"), h.ListSurveys)
 
-	v1.POST("/surveys/:id", middleware.RequirePermission(authService, "surveys.start.assigned"), h.StartSurvey)
+	v1.POST("/surveys/start", middleware.RequirePermission(authService, "surveys.start.assigned"), h.StartSurvey)
 	v1.GET("/surveys/:id", middleware.RequirePermission(authService, "surveys.view.assigned"), h.GetSurvey)
 	v1.PUT("/surveys/:id/general-info", middleware.RequirePermission(authService, "surveys.update.assigned"), h.UpdateGeneralInfo)
 	v1.GET("/surveys/:id/checklist", middleware.RequirePermission(authService, "surveys.view.assigned"), h.Checklist)
@@ -91,6 +92,15 @@ func (h Handler) ListContainers(c *gin.Context) {
 		return
 	}
 	apphttp.OK(c, "Container job saya berhasil diambil.", items)
+}
+
+func (h Handler) ListSurveys(c *gin.Context) {
+	result, err := h.service.ListSurveys(c.Request.Context(), listParams(c), actorFromContext(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.Paginated(c, "Survey saya berhasil diambil.", result.Rows, apphttp.PaginationMeta{Page: result.Meta.Page, PerPage: result.Meta.PerPage, Total: result.Meta.Total, TotalPages: result.Meta.TotalPages, HasNext: result.Meta.HasNext, HasPrev: result.Meta.HasPrev})
 }
 
 func (h Handler) StartSurvey(c *gin.Context) {

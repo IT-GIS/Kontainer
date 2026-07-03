@@ -269,16 +269,51 @@ func executeReturning(ctx context.Context, db queryer, base, returning string, a
 		}
 		return db.QueryContext(ctx, fmt.Sprintf("SELECT %s FROM %s WHERE id = ?", returning, table), id)
 	}
-	if match := updatePattern.FindStringSubmatch(prepared); match != nil {
-		whereIndex := strings.Index(strings.ToUpper(prepared), " WHERE ")
-		if whereIndex < 0 {
+	if table, where, setArgCount, ok := updateReturningTarget(prepared); ok {
+		if where == "" {
 			return nil, errors.New("MySQL RETURNING compatibility requires a WHERE clause")
 		}
-		whereArgs := bound[strings.Count(prepared[:whereIndex], "?"):]
+		whereArgs := bound[setArgCount:]
+		idRows, err := db.QueryContext(ctx, fmt.Sprintf("SELECT id FROM %s WHERE %s", table, where), whereArgs...)
+		if err != nil {
+			return nil, err
+		}
+		ids := []any{}
+		for idRows.Next() {
+			var id any
+			if err := idRows.Scan(&id); err != nil {
+				idRows.Close()
+				return nil, err
+			}
+			if bytes, ok := id.([]byte); ok {
+				id = string(bytes)
+			}
+			ids = append(ids, id)
+		}
+		if err := idRows.Err(); err != nil {
+			idRows.Close()
+			return nil, err
+		}
+		idRows.Close()
 		if _, err := db.ExecContext(ctx, prepared, bound...); err != nil {
 			return nil, err
 		}
-		return db.QueryContext(ctx, fmt.Sprintf("SELECT %s FROM %s WHERE %s", returning, match[1], match[2]), whereArgs...)
+		if len(ids) == 0 {
+			return db.QueryContext(ctx, fmt.Sprintf("SELECT %s FROM %s WHERE 1=0", returning, table))
+		}
+		placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
+		return db.QueryContext(ctx, fmt.Sprintf("SELECT %s FROM %s WHERE id IN (%s)", returning, table, placeholders), ids...)
 	}
 	return nil, errors.New("unsupported MySQL RETURNING statement")
+}
+
+func updateReturningTarget(query string) (table string, where string, setArgCount int, ok bool) {
+	match := updatePattern.FindStringSubmatchIndex(query)
+	if match == nil {
+		return "", "", 0, false
+	}
+	table = query[match[2]:match[3]]
+	where = strings.TrimSpace(query[match[4]:match[5]])
+	setArgCount = strings.Count(query[:match[4]], "?")
+	return table, where, setArgCount, true
 }

@@ -27,6 +27,8 @@ type DamageForm = {
   component_code_id: string;
   damage_code_id: string;
   repair_code_id: string;
+  material_code_id: string;
+  responsibility_code_id: string;
   severity: string;
   quantity: string;
   length: string;
@@ -44,6 +46,8 @@ const emptyDamage: DamageForm = {
   component_code_id: "",
   damage_code_id: "",
   repair_code_id: "",
+  material_code_id: "",
+  responsibility_code_id: "",
   severity: "minor",
   quantity: "1",
   length: "",
@@ -71,6 +75,8 @@ function SurveyDetailContent() {
   const [components, setComponents] = useState<OptionItem[]>([]);
   const [damageCodes, setDamageCodes] = useState<OptionItem[]>([]);
   const [repairs, setRepairs] = useState<OptionItem[]>([]);
+  const [materials, setMaterials] = useState<OptionItem[]>([]);
+  const [responsibilities, setResponsibilities] = useState<OptionItem[]>([]);
   const [damageDialog, setDamageDialog] = useState(false);
   const [damageForm, setDamageForm] = useState<DamageForm>(emptyDamage);
   const [photoDamage, setPhotoDamage] = useState<SurveyDamage | null>(null);
@@ -102,13 +108,17 @@ function SurveyDetailContent() {
   useEffect(() => {
     if (!accessToken) return;
     void Promise.all([
-      loadOptions(accessToken, "/master/cedex/components", "name", "code"),
-      loadOptions(accessToken, "/master/cedex/damages", "name", "code"),
-      loadOptions(accessToken, "/master/cedex/repairs", "name", "code")
-    ]).then(([componentRows, damageRows, repairRows]) => {
+      loadOptions(accessToken, "/master/cedex/components", "component_name", "code"),
+      loadOptions(accessToken, "/master/cedex/damages", "damage_name", "code"),
+      loadOptions(accessToken, "/master/cedex/repairs", "repair_name", "code"),
+      loadOptions(accessToken, "/master/cedex/materials", "material_name", "code"),
+      loadOptions(accessToken, "/master/responsibility-codes", "name", "code")
+    ]).then(([componentRows, damageRows, repairRows, materialRows, responsibilityRows]) => {
       setComponents(componentRows);
       setDamageCodes(damageRows);
       setRepairs(repairRows);
+      setMaterials(materialRows);
+      setResponsibilities(responsibilityRows);
     }).catch(() => undefined);
   }, [accessToken]);
 
@@ -139,6 +149,9 @@ function SurveyDetailContent() {
       internal_location: row.internal_location,
       component_code_id: row.component_id ?? "",
       damage_code_id: row.damage_code_id ?? "",
+      repair_code_id: row.repair_code_id ?? "",
+      material_code_id: row.material_code_id ?? "",
+      responsibility_code_id: row.responsibility_code_id ?? "",
       severity: row.severity,
       quantity: String(row.quantity ?? 1),
       length: row.length ? String(row.length) : "",
@@ -168,6 +181,11 @@ function SurveyDetailContent() {
 
   async function saveDamage() {
     if (!accessToken) return;
+    const validationError = validateDamageForm(damageForm);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     await runSave(async () => {
       const body = JSON.stringify(toDamagePayload(damageForm));
       if (damageForm.id) {
@@ -231,7 +249,7 @@ function SurveyDetailContent() {
       {activeTab === "Preview" ? <PreviewTab survey={survey} /> : null}
       {activeTab === "Submit" ? <SubmitTab survey={survey} readonly={readonly} isSaving={isSaving} onSubmit={submitSurvey} /> : null}
       <FormDialog title={damageForm.id ? "Edit Damage" : "Tambah Damage"} open={damageDialog} onClose={() => setDamageDialog(false)} onSubmit={saveDamage} isSubmitting={isSaving} submitLabel="Save Damage">
-        <DamageFormFields form={damageForm} setForm={setDamageForm} components={components} damageCodes={damageCodes} repairs={repairs} />
+        <DamageFormFields form={damageForm} setForm={setDamageForm} components={components} damageCodes={damageCodes} repairs={repairs} materials={materials} responsibilities={responsibilities} />
       </FormDialog>
       <PhotoDialog damage={photoDamage} open={Boolean(photoDamage)} onClose={() => setPhotoDamage(null)} onSubmit={uploadDamagePhoto} isSaving={isSaving} />
     </div>
@@ -267,6 +285,8 @@ function DamageList({ rows, readonly, onAdd, onEdit, onDelete, onPhoto }: { rows
     { key: "location", header: "Location", render: (row) => `${row.face} ${row.internal_location}` },
     { key: "component", header: "Component", render: (row) => row.component_name ?? row.component_code ?? "-" },
     { key: "damage", header: "Damage", render: (row) => row.damage_name ?? row.damage_code ?? "-" },
+    { key: "material", header: "Material", render: (row) => row.material_name ?? row.material_code ?? "-" },
+    { key: "responsibility", header: "Responsibility", render: (row) => row.responsibility_name ?? row.responsibility_code ?? "-" },
     { key: "size", header: "Size", render: (row) => [row.length, row.width, row.depth].filter(Boolean).join("x") || "-" },
     { key: "severity", header: "Severity", render: (row) => <StatusBadge tone={row.severity === "minor" ? "warning" : "danger"}>{row.severity.toUpperCase()}</StatusBadge> },
     { key: "photo", header: "Photo", render: (row) => <button className="secondary-button table-action" disabled={readonly} onClick={() => onPhoto(row)}><Camera size={16} /><span>{row.photo_count ?? 0}</span></button> },
@@ -288,7 +308,11 @@ function SubmitTab({ survey, readonly, isSaving, onSubmit }: { survey: SurveyDet
   return <section className="workspace-panel submit-panel"><h2>Submit Survey</h2>{warnings.length > 0 ? warnings.map((warning) => <div className="alert alert-danger" key={warning.code}>{warning.message}</div>) : <div className="alert alert-success">Survey siap dikirim ke Supervisor.</div>}<button className="primary-button" disabled={readonly || isSaving || warnings.length > 0} onClick={onSubmit}><Send size={17} /><span>Submit Survey</span></button></section>;
 }
 
-function DamageFormFields({ form, setForm, components, damageCodes, repairs }: { form: DamageForm; setForm: Dispatch<SetStateAction<DamageForm>>; components: OptionItem[]; damageCodes: OptionItem[]; repairs: OptionItem[] }) {
+function DamageFormFields({ form, setForm, components, damageCodes, repairs, materials, responsibilities }: { form: DamageForm; setForm: Dispatch<SetStateAction<DamageForm>>; components: OptionItem[]; damageCodes: OptionItem[]; repairs: OptionItem[]; materials: OptionItem[]; responsibilities: OptionItem[] }) {
+  return <><DamageBaseFields form={form} setForm={setForm} components={components} damageCodes={damageCodes} repairs={repairs} /><div className="form-grid"><Field label="CEDEX Material"><Select value={form.material_code_id} options={materials} onChange={(value) => setDamageValue(setForm, "material_code_id", value)} /></Field><Field label="Responsibility Code"><Select value={form.responsibility_code_id} options={responsibilities} onChange={(value) => setDamageValue(setForm, "responsibility_code_id", value)} /></Field></div></>;
+}
+
+function DamageBaseFields({ form, setForm, components, damageCodes, repairs }: { form: DamageForm; setForm: Dispatch<SetStateAction<DamageForm>>; components: OptionItem[]; damageCodes: OptionItem[]; repairs: OptionItem[] }) {
   return <div className="form-grid"><Field label="Face"><select value={form.face} onChange={(e) => setDamageValue(setForm, "face", e.target.value)}>{["left", "right", "front", "door", "roof", "floor", "understructure"].map((item) => <option key={item} value={item}>{item}</option>)}</select></Field><Field label="Location"><input value={form.internal_location} onChange={(e) => setDamageValue(setForm, "internal_location", e.target.value.toUpperCase())} /></Field><Field label="Component"><Select value={form.component_code_id} options={components} onChange={(value) => setDamageValue(setForm, "component_code_id", value)} /></Field><Field label="Damage Type"><Select value={form.damage_code_id} options={damageCodes} onChange={(value) => setDamageValue(setForm, "damage_code_id", value)} /></Field><Field label="Repair"><Select value={form.repair_code_id} options={repairs} onChange={(value) => setDamageValue(setForm, "repair_code_id", value)} /></Field><Field label="Severity"><select value={form.severity} onChange={(e) => setDamageValue(setForm, "severity", e.target.value)}><option value="minor">minor</option><option value="major">major</option><option value="critical">critical</option></select></Field><Field label="Quantity"><input type="number" value={form.quantity} onChange={(e) => setDamageValue(setForm, "quantity", e.target.value)} /></Field><Field label="Unit"><select value={form.unit} onChange={(e) => setDamageValue(setForm, "unit", e.target.value)}><option value="cm">cm</option><option value="mm">mm</option><option value="m">m</option></select></Field><Field label="Length"><input type="number" value={form.length} onChange={(e) => setDamageValue(setForm, "length", e.target.value)} /></Field><Field label="Width"><input type="number" value={form.width} onChange={(e) => setDamageValue(setForm, "width", e.target.value)} /></Field><Field label="Depth"><input type="number" value={form.depth} onChange={(e) => setDamageValue(setForm, "depth", e.target.value)} /></Field><label className="field form-check"><input type="checkbox" checked={form.is_repair_required} onChange={(e) => setDamageValue(setForm, "is_repair_required", e.target.checked)} /> Repair Required</label><label className="field form-check"><input type="checkbox" checked={form.is_cargo_worthy_impact} onChange={(e) => setDamageValue(setForm, "is_cargo_worthy_impact", e.target.checked)} /> Cargo Worthy Impact</label><label className="field form-span-2"><span>Remark</span><textarea rows={3} value={form.remark} onChange={(e) => setDamageValue(setForm, "remark", e.target.value)} /></label></div>;
 }
 
@@ -323,6 +347,8 @@ function toDamagePayload(form: DamageForm) {
     component_code_id: form.component_code_id,
     damage_code_id: form.damage_code_id,
     repair_code_id: form.repair_code_id || undefined,
+    material_code_id: form.material_code_id || undefined,
+    responsibility_code_id: form.responsibility_code_id || undefined,
     severity: form.severity,
     quantity: form.quantity ? Number(form.quantity) : undefined,
     length: form.length ? Number(form.length) : undefined,
@@ -333,5 +359,15 @@ function toDamagePayload(form: DamageForm) {
     is_cargo_worthy_impact: form.is_cargo_worthy_impact,
     remark: form.remark
   };
+}
+
+function validateDamageForm(form: DamageForm) {
+  if (!form.face || !form.internal_location.trim() || !form.component_code_id || !form.damage_code_id) return "Face, Location, Component, dan Damage Type wajib diisi.";
+  const numericValues = [{ label: "Quantity", value: form.quantity }, { label: "Length", value: form.length }, { label: "Width", value: form.width }, { label: "Depth", value: form.depth }];
+  for (const item of numericValues) {
+    if (item.value !== "" && (!Number.isFinite(Number(item.value)) || Number(item.value) < 0)) return item.label + " tidak boleh negatif.";
+  }
+  if (["major", "critical"].includes(form.severity) && (!form.length || !form.width)) return "Length dan Width wajib untuk severity major/critical.";
+  return "";
 }
 

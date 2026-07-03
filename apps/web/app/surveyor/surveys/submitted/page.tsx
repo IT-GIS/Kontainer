@@ -1,5 +1,7 @@
-import { NavigationPlaceholderPage } from "@/components/navigation/navigation-placeholder-page";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { AppShell } from "@/components/layout/app-shell";
+import { SurveyorSurveyList } from "@/components/surveys/surveyor-survey-list";
 
 export default function SubmittedSurveysPage() {
-  return <NavigationPlaceholderPage title="Submitted Survey" backHref="/surveyor/jobs" backLabel="Kembali ke Job Saya" />;
+  return <ProtectedRoute><AppShell title="Submitted Survey"><SurveyorSurveyList title="Submitted Survey" description="Survey yang menunggu review." fixedStatus="submitted" /></AppShell></ProtectedRoute>;
 }

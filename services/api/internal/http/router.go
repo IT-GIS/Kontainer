@@ -18,6 +18,7 @@ import (
 	"container-survey/services/api/internal/objectstorage"
 	"container-survey/services/api/internal/reviews"
 	"container-survey/services/api/internal/surveyor"
+	"container-survey/services/api/internal/users"
 )
 
 func NewRouter(cfg config.Config, logger *slog.Logger, pool *database.Pool) *gin.Engine {
@@ -78,6 +79,7 @@ func NewRouter(cfg config.Config, logger *slog.Logger, pool *database.Pool) *gin
 	dashboardRepo := dashboard.NewRepository(pool)
 	dashboardService := dashboard.NewService(dashboardRepo)
 	dashboard.Register(protected, authService, dashboardService)
+	users.Register(protected, authService, pool)
 	modules.Register(protected)
 
 	return router

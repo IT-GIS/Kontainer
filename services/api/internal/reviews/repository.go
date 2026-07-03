@@ -82,6 +82,7 @@ func (r Repository) Detail(ctx context.Context, surveyID uuid.UUID) (map[string]
 	damages, _ := r.queryRows(ctx, `
 		SELECT sd.id, sd.damage_no, sd.face, sd.internal_location, cc.code AS component_code, cc.component_name AS component_name,
 		       cd.code AS damage_code, cd.damage_name AS damage_name, cr.code AS repair_code, cr.repair_name AS repair_name,
+		       cm.code AS material_code, cm.material_name, rc.code AS responsibility_code, rc.name AS responsibility_name,
 		       sd.severity, sd.quantity, sd.length_value AS length, sd.width_value AS width, sd.depth_value AS depth,
 		       sd.unit, sd.is_repair_required, sd.is_cargo_worthy_impact, sd.remark,
 		       COUNT(sp.id) AS photo_count
@@ -89,9 +90,11 @@ func (r Repository) Detail(ctx context.Context, surveyID uuid.UUID) (map[string]
 		JOIN cedex_components cc ON cc.id=sd.component_id
 		JOIN cedex_damages cd ON cd.id=sd.damage_id
 		LEFT JOIN cedex_repairs cr ON cr.id=sd.repair_id
+		LEFT JOIN cedex_materials cm ON cm.id=sd.material_id
+		LEFT JOIN responsibility_codes rc ON rc.id=sd.responsibility_id
 		LEFT JOIN survey_photos sp ON sp.damage_id=sd.id AND sp.deleted_at IS NULL
 		WHERE sd.survey_id=$1 AND sd.deleted_at IS NULL
-		GROUP BY sd.id, cc.id, cd.id, cr.id
+		GROUP BY sd.id, cc.id, cd.id, cr.id, cm.id, rc.id
 		ORDER BY sd.damage_no
 	`, surveyID)
 	photos, _ := r.queryRows(ctx, `

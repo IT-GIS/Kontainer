@@ -107,6 +107,51 @@ func (r Repository) ListJobs(ctx context.Context, params ListParams, actor Actor
 	return ListResult{Rows: items, Meta: PaginationMeta{Page: page, PerPage: perPage, Total: total, TotalPages: totalPages, HasNext: page < totalPages, HasPrev: page > 1}}, nil
 }
 
+func (r Repository) ListSurveys(ctx context.Context, params ListParams, actor Actor) (ListResult, error) {
+	surveyorID, err := r.surveyorID(ctx, actor.UserID)
+	if err != nil {
+		return ListResult{}, err
+	}
+	page, perPage := normalizePagination(params.Page, params.PerPage)
+	where, args := assignedSurveyWhere(params, surveyorID)
+	var total int
+	if err := r.pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM surveys s
+		JOIN job_orders jo ON jo.id=s.job_order_id
+		JOIN job_containers jc ON jc.id=s.job_container_id
+		JOIN customers c ON c.id=jo.customer_id
+	`+where, args...).Scan(&total); err != nil {
+		return ListResult{}, err
+	}
+	args = append(args, perPage, (page-1)*perPage)
+	rows, err := r.pool.Query(ctx, fmt.Sprintf(`
+		SELECT s.id AS survey_id, s.survey_no, jo.id AS job_order_id, jo.job_order_no,
+		       jc.id AS job_container_id, jc.container_no, c.customer_name, l.location_name,
+		       st.name AS survey_type_name, s.status, s.started_at, s.submitted_at, s.approved_at, s.created_at
+		FROM surveys s
+		JOIN job_orders jo ON jo.id=s.job_order_id
+		JOIN job_containers jc ON jc.id=s.job_container_id
+		JOIN customers c ON c.id=jo.customer_id
+		JOIN locations l ON l.id=jo.location_id
+		JOIN survey_types st ON st.id=s.survey_type_id
+		%s ORDER BY COALESCE(s.approved_at,s.submitted_at,s.started_at,s.created_at) DESC
+		LIMIT $%d OFFSET $%d
+	`, where, len(args)-1, len(args)), args...)
+	if err != nil {
+		return ListResult{}, err
+	}
+	defer rows.Close()
+	items, err := rowsToMaps(rows)
+	if err != nil {
+		return ListResult{}, err
+	}
+	totalPages := 0
+	if total > 0 {
+		totalPages = int(math.Ceil(float64(total) / float64(perPage)))
+	}
+	return ListResult{Rows: items, Meta: PaginationMeta{Page: page, PerPage: perPage, Total: total, TotalPages: totalPages, HasNext: page < totalPages, HasPrev: page > 1}}, nil
+}
+
 func (r Repository) GetJob(ctx context.Context, jobID uuid.UUID, actor Actor) (map[string]any, error) {
 	surveyorID, err := r.surveyorID(ctx, actor.UserID)
 	if err != nil {
@@ -431,7 +476,9 @@ func (r Repository) Damages(ctx context.Context, surveyID uuid.UUID, actor Actor
 		       cl.code AS cedex_location_code,
 		       cc.id AS component_id, cc.code AS component_code, cc.component_name AS component_name,
 		       cd.id AS damage_code_id, cd.code AS damage_code, cd.damage_name AS damage_name,
-		       cr.code AS repair_code, cr.repair_name AS repair_name,
+		       cr.id AS repair_code_id, cr.code AS repair_code, cr.repair_name AS repair_name,
+		       cm.id AS material_code_id, cm.code AS material_code, cm.material_name,
+		       rc.id AS responsibility_code_id, rc.code AS responsibility_code, rc.name AS responsibility_name,
 		       sd.severity, sd.quantity, sd.length_value AS length, sd.width_value AS width, sd.depth_value AS depth,
 		       sd.unit, sd.is_repair_required, sd.is_cargo_worthy_impact, sd.remark,
 		       COUNT(sp.id) AS photo_count
@@ -440,9 +487,11 @@ func (r Repository) Damages(ctx context.Context, surveyID uuid.UUID, actor Actor
 		JOIN cedex_components cc ON cc.id=sd.component_id
 		JOIN cedex_damages cd ON cd.id=sd.damage_id
 		LEFT JOIN cedex_repairs cr ON cr.id=sd.repair_id
+		LEFT JOIN cedex_materials cm ON cm.id=sd.material_id
+		LEFT JOIN responsibility_codes rc ON rc.id=sd.responsibility_id
 		LEFT JOIN survey_photos sp ON sp.damage_id=sd.id AND sp.deleted_at IS NULL
 		WHERE sd.survey_id=$1 AND sd.deleted_at IS NULL
-		GROUP BY sd.id, cl.id, cc.id, cd.id, cr.id
+		GROUP BY sd.id, cl.id, cc.id, cd.id, cr.id, cm.id, rc.id
 		ORDER BY sd.damage_no
 	`, surveyID)
 	if err != nil {

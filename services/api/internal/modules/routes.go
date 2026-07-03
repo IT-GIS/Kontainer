@@ -9,7 +9,6 @@ import (
 )
 
 func Register(v1 *gin.RouterGroup) {
-	registerModule(v1.Group("/users"), "users")
 	registerModule(v1.Group("/roles"), "roles")
 	registerModule(v1.Group("/permissions"), "permissions")
 	registerModule(v1.Group("/settings/company-profile"), "company_profile")

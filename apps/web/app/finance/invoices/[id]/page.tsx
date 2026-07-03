@@ -72,13 +72,16 @@ function InvoiceDetailContent() {
   async function payment() {
     if (!accessToken || !canPay) return;
     try {
+      const paymentAmount = Number(amount);
+      if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) throw new Error("Amount harus lebih besar dari 0.");
+      if (paymentAmount > Number(invoice?.outstanding_amount ?? 0)) throw new Error("Amount tidak boleh melebihi outstanding invoice.");
       await apiData("/finance/payments", {
         method: "POST",
         accessToken,
         body: JSON.stringify({
           invoice_id: params.id,
           payment_date: new Date().toISOString().slice(0, 10),
-          amount: Number(amount),
+          amount: paymentAmount,
           payment_method: "bank_transfer",
           note
         })
@@ -129,7 +132,7 @@ function InvoiceDetailContent() {
         submitLabel={dialog === "payment" ? "Save Payment" : "Cancel Invoice"}
       >
         <div className="form-grid">
-          {dialog === "payment" ? <label className="field"><span>Amount</span><input type="number" value={amount} onChange={(event) => setAmount(event.target.value)} /></label> : null}
+          {dialog === "payment" ? <label className="field"><span>Amount</span><input min="0.01" max={invoice.outstanding_amount} step="0.01" type="number" value={amount} onChange={(event) => setAmount(event.target.value)} /></label> : null}
           <label className="field form-span-2"><span>Note</span><textarea rows={4} value={note} onChange={(event) => setNote(event.target.value)} /></label>
         </div>
       </FormDialog>

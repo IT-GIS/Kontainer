@@ -90,6 +90,12 @@ function JobDetailContent() {
     setIsSubmitting(true); setError(null);
     try {
       if (!containerForm.container_no.trim()) throw new Error("Container No wajib diisi.");
+      for (const [label, value] of [["Gross Weight", containerForm.gross_weight], ["Tare Weight", containerForm.tare_weight], ["Payload", containerForm.payload]]) {
+        if (value !== "" && (!Number.isFinite(Number(value)) || Number(value) < 0)) throw new Error(label + " tidak boleh negatif.");
+      }
+      if (containerForm.manufacture_date && containerForm.manufacture_date > new Date().toISOString().slice(0, 10)) {
+        throw new Error("Manufacture Date tidak boleh di masa depan.");
+      }
       const validation = await apiData<ContainerCheck>("/job-containers/validate-container-no", { method: "POST", accessToken, body: JSON.stringify({ container_no: containerForm.container_no }) });
       if (!validation.is_format_valid) throw new Error("Format Container No tidak valid.");
       if (!validation.is_check_digit_valid && !containerForm.check_digit_override_reason.trim()) {
@@ -187,8 +193,11 @@ function Containers({ containers, selected, onSelected }: { containers: JobConta
     { key: "container_no", header: "Container No", render: (row) => row.container_no },
     { key: "check", header: "Check Digit", render: (row) => <StatusBadge tone={row.check_digit_status === "valid" ? "success" : "warning"}>{row.check_digit_status.toUpperCase()}</StatusBadge> },
     { key: "type", header: "Type", render: (row) => row.container_type_code ?? "-" },
-    { key: "seal", header: "Seal", render: (row) => row.seal_no ?? "-" },
-    { key: "cargo", header: "Cargo", render: (row) => row.cargo_status },
+    { key: "identity", header: "ISO / Seal / Cargo", render: (row) => `${row.iso_type_code ?? "-"} / ${row.seal_no ?? "-"} / ${row.cargo_status}` },
+    { key: "weight", header: "Gross / Tare / Payload", render: (row) => `${row.gross_weight ?? "-"} / ${row.tare_weight ?? "-"} / ${row.payload ?? "-"}` },
+    { key: "manufacture", header: "Manufacture / CSC", render: (row) => `${row.manufacture_date ?? "-"} / ${row.csc_plate_status ?? "-"}` },
+    { key: "vehicle", header: "Vehicle", render: (row) => `${row.truck_no ?? "-"} / ${row.driver_name ?? "-"}` },
+    { key: "notes", header: "Override / Remark", render: (row) => <><span>{row.check_digit_override_reason ?? "-"}</span><br /><span className="muted-text">{row.remark ?? "-"}</span></> },
     { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "not_started" ? "warning" : "success"}>{row.status.toUpperCase()}</StatusBadge> }
   ]} />;
 }

@@ -253,7 +253,8 @@ func (r Repository) ListContainers(ctx context.Context, jobID uuid.UUID, params 
 	args = append(args, perPage, (page-1)*perPage)
 	rows, err := r.pool.Query(ctx, fmt.Sprintf(`
 		SELECT jc.id, jc.container_no, jc.check_digit_status, jc.check_digit_override_reason, jc.iso_type_code, jc.seal_no, jc.cargo_status,
-		       jc.gross_weight, jc.tare_weight, jc.payload, jc.manufacture_date, jc.truck_no, jc.driver_name, jc.status,
+		       jc.gross_weight, jc.tare_weight, jc.payload, jc.manufacture_date, jc.csc_plate_status,
+		       jc.truck_no, jc.driver_name, jc.remark, jc.status,
 		       ct.id AS container_type_id, ct.code AS container_type_code
 		FROM job_containers jc
 		LEFT JOIN container_types ct ON ct.id = jc.container_type_id

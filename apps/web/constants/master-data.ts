@@ -106,7 +106,7 @@ export const masterResources: Record<string, MasterResource> = {
     ],
     fields: [
       { name: "surveyor_code", label: "Surveyor Code", required: true },
-      { name: "user_id", label: "User ID", required: true },
+      { name: "user_id", label: "User Surveyor", required: true },
       { name: "name", label: "Full Name", required: true },
       { name: "phone", label: "Phone" },
       { name: "area", label: "Area" },

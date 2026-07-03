@@ -418,7 +418,7 @@ func (r Repository) ListPayments(ctx context.Context, params ListParams) (ListRe
 		return ListResult{}, err
 	}
 	args = append(args, perPage, (page-1)*perPage)
-	rows, err := r.pool.Query(ctx, fmt.Sprintf(`SELECT p.id, p.payment_no, i.invoice_no, p.payment_date, p.amount, p.payment_method, p.bank_account, p.note, p.created_at FROM payments p JOIN invoices i ON i.id=p.invoice_id %s ORDER BY p.created_at DESC LIMIT $%d OFFSET $%d`, where, len(args)-1, len(args)), args...)
+	rows, err := r.pool.Query(ctx, fmt.Sprintf(paymentListQuery, where, len(args)-1, len(args)), args...)
 	if err != nil {
 		return ListResult{}, err
 	}
@@ -429,6 +429,8 @@ func (r Repository) ListPayments(ctx context.Context, params ListParams) (ListRe
 	}
 	return ListResult{Rows: items, Meta: listMeta(page, perPage, total)}, nil
 }
+
+const paymentListQuery = `SELECT p.id, p.payment_no, i.id AS invoice_id, i.invoice_no, p.payment_date, p.amount, p.payment_method, p.bank_account, p.note, p.created_at FROM payments p JOIN invoices i ON i.id=p.invoice_id %s ORDER BY p.created_at DESC LIMIT $%d OFFSET $%d`
 
 func (r Repository) CustomerSummary(ctx context.Context, params ListParams) (ListResult, error) {
 	page, perPage := normalizePagination(params.Page, params.PerPage)

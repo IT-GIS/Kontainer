@@ -7,6 +7,23 @@ export type SurveyorDashboard = {
   approved: number;
 };
 
+export type SurveyorSurveyListItem = {
+  survey_id: string;
+  survey_no: string;
+  job_order_id: string;
+  job_order_no: string;
+  job_container_id: string;
+  container_no: string;
+  customer_name: string;
+  location_name: string;
+  survey_type_name: string;
+  status: string;
+  started_at?: string | null;
+  submitted_at?: string | null;
+  approved_at?: string | null;
+  created_at?: string | null;
+};
+
 export type SurveyorJob = {
   id: string;
   job_order_no: string;
@@ -76,7 +93,14 @@ export type SurveyDamage = {
   damage_code?: string;
   damage_name?: string;
   repair_code?: string | null;
+  repair_code_id?: string | null;
   repair_name?: string | null;
+  material_code_id?: string | null;
+  material_code?: string | null;
+  material_name?: string | null;
+  responsibility_code_id?: string | null;
+  responsibility_code?: string | null;
+  responsibility_name?: string | null;
   severity: string;
   quantity?: number | null;
   length?: number | null;
