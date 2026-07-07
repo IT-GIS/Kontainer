@@ -1,541 +1,172 @@
-﻿# Database Redesign Container Fitness
+# Database Redesign Container Fitness
 
-## Tujuan
-
-Mengubah database dari model `container survey` umum menjadi model **kelaikan peti kemas** sesuai Permenhub 25/2022.
+Dokumen ini mengunci tahap **Database Foundation Sistem Kelaikan Peti Kemas**. Tahap ini additive-only dan menjadi dasar schema baru tanpa menghapus workflow legacy.
 
 ## Prinsip
 
-1. `survey_type` tidak menjadi pusat aplikasi.
-2. Pusat aplikasi adalah `fitness_applications` dan `application_containers`.
-3. CEDEX repair tidak menjadi master utama.
-4. Status perbaikan dan re-inspection wajib ada.
-5. Output dokumen harus mengikuti format persetujuan kelaikan.
-6. VGM tidak masuk schema utama.
+1. Canonical model kelaikan dimulai dari `fitness_applications` dan `application_containers`.
+2. Tabel legacy general survey tetap dipertahankan sebagai arsip/compatibility layer.
+3. Tabel fisik existing yang stabil digunakan ulang; label UI boleh berubah, nama tabel tidak.
+4. Patch tahap ini tidak membuat API CRUD, backend handler, submit form aktif, upload aktif, approval final, PDF final, QR final, finance kelaikan, Type Design aktif, atau cleanup data legacy.
+5. Acuan regulasi produk tetap Permenhub 25/2022 di dokumentasi Markdown.
 
-## Tabel Inti Baru
+## Kenapa Legacy Tidak Menjadi Canonical
 
-### 1. container_owners
+Schema existing masih berbasis **Container Survey Management System** umum:
 
-Pengganti `customers`.
+- `job_orders` masih bergantung pada `survey_type_id`.
+- `survey_types` berisi survey umum seperti Gate In, Gate Out, Damage Survey, Cargo Worthy, dan sejenisnya.
+- `survey_damages` masih berbasis CEDEX dan responsibility code.
+- `reports`, `report_versions`, dan `report_snapshots` masih merepresentasikan report survey umum.
+- `invoices`, `invoice_items`, `payments`, dan `price_lists` adalah finance legacy dan bukan foundation kelaikan.
+- `container_import_batches` adalah import legacy karena terkait `job_order_id`.
 
-Field utama:
+Karena itu, tabel legacy tidak dihapus, tetapi tidak dipakai sebagai canonical model Sistem Kelaikan Peti Kemas.
 
-```sql
-id
-owner_code
-owner_name
-address
-npwp
-pic_name
-pic_phone
-pic_email
-status
-created_at
-updated_at
-deleted_at
-```
+## Tabel Legacy Yang Dipertahankan
 
-### 2. container_manufacturers
+Tabel berikut tetap ada dan tidak di-drop/rename pada tahap ini:
 
-Field utama:
+- `job_orders`
+- `job_containers`
+- `assignments`
+- `assignment_containers`
+- `surveys`
+- `survey_general_infos`
+- `survey_checklist_responses`
+- `survey_damages`
+- `survey_photos`
+- `survey_approvals`
+- `survey_revision_items`
+- `reports`
+- `report_versions`
+- `report_snapshots`
+- `invoices`
+- `invoice_items`
+- `payments`
+- `price_lists`
+- `survey_types`
+- `cedex_locations`
+- `cedex_components`
+- `cedex_damages`
+- `cedex_repairs`
+- `cedex_materials`
+- `responsibility_codes`
+- `container_import_batches`
 
-```sql
-id
-manufacturer_code
-manufacturer_name
-address
-country
-pic_name
-pic_phone
-pic_email
-status
-created_at
-updated_at
-deleted_at
-```
+## Tabel Existing Yang Digunakan Ulang
 
-### 3. inspection_locations
+Tabel stabil berikut digunakan ulang oleh foundation kelaikan:
 
-Pengganti atau rename dari `locations`.
+- `customers` sebagai Pemilik Peti Kemas
+- `locations` sebagai Lokasi Pemeriksaan
+- `surveyor_profiles` sebagai Surveyor / Pemeriksa
+- `container_types` sebagai Jenis / Model Peti Kemas
+- `users`
+- `roles`
+- `permissions`
+- `role_permissions`
+- `user_roles`
+- `company_profiles`
+- `numbering_settings`
+- `numbering_sequences`
+- `file_objects`
+- `audit_logs`
 
-```sql
-id
-location_code
-location_name
-location_type
-address
-city
-gps_latitude
-gps_longitude
-pic_name
-pic_phone
-status
-```
-
-### 4. fitness_applications
-
-Pengganti `job_orders`.
-
-```sql
-id
-application_no
-application_date
-owner_id
-manufacturer_id NULL
-location_id
-application_category
-application_status
-request_letter_no
-request_letter_date
-reference_no
-pic_name
-pic_phone
-pic_email
-notes
-created_by
-updated_by
-created_at
-updated_at
-deleted_at
-```
-
-`application_category`:
-
-```text
-new_type_design
-new_individual
-existing_used_without_approval
-existing_produced_without_initial_approval
-modified_container
-reinspection_after_repair
-```
-
-### 5. application_containers
-
-Pengganti `job_containers`.
-
-```sql
-id
-application_id
-container_no
-csc_no
-iso_code
-container_model
-manufacture_date
-manufacturer_serial_no
-manufacturer_id
-container_category -- new/existing
-max_gross_weight_kg
-max_gross_weight_lbs
-tare_weight_kg
-tare_weight_lbs
-payload_weight_kg
-payload_weight_lbs
-cube_capacity_m3
-cube_capacity_ft3
-allowable_stacking_weight_kg
-allowable_stacking_weight_lbs
-racking_test_load_value_kg
-racking_test_load_value_lbs
-end_wall_strength
-side_wall_strength
-one_door_off_approved
-next_examination_date
-maintenance_scheme -- ACEP/PES/IICL/ISO/none
-container_status
-remark
-created_at
-updated_at
-deleted_at
-```
-
-`container_status`:
-
-```text
-draft
-assigned
-inspection_in_progress
-submitted
-need_repair
-repair_in_progress
-ready_for_reinspection
-reinspection_in_progress
-fit
-unfit
-suspended
-released
-approval_issued
-certificate_issued
-cancelled
-```
-
-### 6. inspection_assignments
-
-Pengganti `assignments`.
-
-```sql
-id
-assignment_no
-application_id
-surveyor_id
-assigned_by
-assigned_at
-start_date
-due_date
-instruction
-status
-cancel_reason
-created_at
-updated_at
-```
-
-### 7. inspection_assignment_containers
-
-Pengganti `assignment_containers`.
-
-```sql
-id
-assignment_id
-application_container_id
-assigned_at
-unassigned_at
-unassigned_reason
-```
-
-### 8. container_inspections
-
-Pengganti `surveys`.
-
-```sql
-id
-inspection_no
-application_id
-application_container_id
-assignment_id
-surveyor_id
-inspection_date_time
-inspection_location_id
-inspection_status
-final_recommendation
-submitted_at
-approved_at
-rejected_at
-created_at
-updated_at
-```
-
-`inspection_status`:
-
-```text
-draft
-in_progress
-submitted
-need_revision
-need_repair
-repaired_pending_reinspection
-reinspection
-approved_fit
-approved_unfit
-suspended
-released
-cancelled
-```
-
-### 9. inspection_checklist_responses
-
-Pengganti `survey_checklist_responses`.
-
-```sql
-id
-inspection_id
-checklist_item_id
-result -- pass/fail/na
-finding_note
-is_critical
-created_at
-updated_at
-```
-
-### 10. structural_findings
-
-Pengganti `survey_damages`.
-
-```sql
-id
-inspection_id
-finding_no
-component_id
-criteria_id
-location_area
-finding_description
-measurement_value
-measurement_unit
-severity
-requires_repair
-usage_restriction
-recommended_followup
-photo_required
-status
-created_at
-updated_at
-```
-
-Status finding:
-
-```text
-open
-repair_required
-repair_in_progress
-repaired
-still_defective
-closed
-```
-
-### 11. finding_photos
-
-Pengganti `survey_photos`.
-
-```sql
-id
-inspection_id
-finding_id
-file_id
-caption
-photo_type -- before_repair / after_repair / general
-uploaded_by
-created_at
-```
-
-### 12. repair_followups
-
-Baru.
-
-```sql
-id
-application_container_id
-inspection_id
-owner_id
-repair_status
-repair_note
-repair_started_at
-repair_completed_at
-repair_evidence_file_id
-ready_for_reinspection_at
-created_by
-updated_by
-created_at
-updated_at
-```
-
-`repair_status`:
-
-```text
-not_started
-repair_required
-in_progress
-completed_by_owner
-ready_for_reinspection
-still_defective
-accepted
-```
-
-### 13. reinspection_records
-
-Baru.
-
-```sql
-id
-previous_inspection_id
-new_inspection_id
-application_container_id
-reinspection_no
-reason
-result
-created_at
-```
-
-### 14. fitness_approvals
-
-Pengganti `reports` sebagai approval utama.
-
-```sql
-id
-approval_no
-application_id
-application_container_id
-inspection_id
-approval_type
-approval_status
-issued_date
-valid_until
-signed_by
-approved_by
-qr_token
-created_at
-updated_at
-```
-
-`approval_type`:
-
-```text
-new_type_design_approval
-new_individual_approval
-existing_used_approval
-existing_produced_without_initial_approval
-release_after_repair
-rejection_notice
-```
-
-### 15. approval_documents
-
-Pengganti `report_versions` dan `report_snapshots`.
-
-```sql
-id
-approval_id
-document_no
-document_type
-version
-snapshot_json
-pdf_file_id
-status
-generated_at
-generated_by
-```
-
-### 16. csc_plate_records
-
-Baru.
-
-```sql
-id
-application_container_id
-approval_id
-country_reference
-approval_reference_no
-approval_year
-date_manufactured
-identification_number
-maximum_operating_gross_mass_kg
-maximum_operating_gross_mass_lbs
-allowable_stacking_load_kg
-allowable_stacking_load_lbs
-transverse_racking_test_force_newtons
-end_wall_strength
-side_wall_strength
-first_maintenance_date
-next_examination_date
-one_door_off_stacking_load
-one_door_off_racking_force
-created_at
-updated_at
-```
+Tidak ada rename fisik untuk tabel existing.
 
 ## Tabel Master Baru
 
-### structural_components
+Patch `database/patches/0015_container_fitness_foundation.sql` menambahkan master data foundation:
 
-Menggantikan `cedex_components` untuk komponen sensitif struktur:
+- `container_manufacturers`
+- `fitness_approval_categories`
+- `maintenance_schemes`
+- `inspection_areas`
+- `structural_components`
+- `structural_damage_criteria`
+- `finding_severities`
+- `inspection_test_parameters`
+- `fitness_checklist_templates`
+- `fitness_checklist_template_items`
+- `evidence_photo_categories`
+- `inspection_recommendations`
+- `authorized_signers`
 
-- top rail,
-- bottom rail,
-- header,
-- sill,
-- corner posts,
-- corner/intermediate fittings,
-- understructure,
-- locking rods.
+Type Design disimpan sebagai kategori future/inactive dan tidak aktif untuk MVP.
 
-### structural_damage_criteria
+## Tabel Transaksi Foundation Baru
 
-Berdasarkan Lampiran III Permenhub 25/2022.
+Tabel transaksi awal kelaikan:
 
-```sql
-id
-component_id
-serious_damage_criteria
-owner_notification_criteria
-empty_sea_restriction
-empty_other_transport_restriction
-laden_sea_restriction
-laden_other_transport_restriction
-handling_instruction
-status
-```
+- `fitness_applications`
+- `application_containers`
+- `container_technical_specs`
+- `fitness_application_events`
 
-### test_parameters
+Status foundation yang dipakai:
 
-Berdasarkan Lampiran II Permenhub 25/2022:
+- `workflow_status`: `draft`, `assigned`, `inspection_in_progress`, `inspection_submitted`, `under_review`, `need_repair`, `repair_in_progress`, `ready_for_reinspection`, `reinspection_in_progress`, `completed`, `cancelled`
+- `final_fitness_result`: `pending`, `fit`, `unfit`
+- `restriction_status`: `none`, `suspended`, `prohibited`, `released`
+- `approval_status`: `not_ready`, `pending_issue`, `issued`, `superseded`, `revoked`
+- `finding_status`: `open`, `repair_required`, `repaired`, `still_defective`, `accepted`, `closed`
 
-- lifting,
-- stacking,
-- concentrated load,
-- transverse racking,
-- longitudinal restraint,
-- one door off operation,
-- NDT jika diperlukan.
+Tahap ini belum membuat tabel inspection penuh, structural findings aktif, approval final, repair cycle penuh, atau re-inspection cycle.
 
-## Tabel yang Perlu Dihapus / Deprecated
+## Tabel Import Kelaikan Baru
 
-```text
-survey_types
-cedex_repairs
-responsibility_codes
-finance-specific tables jika tidak dipakai
-price_lists jika finance ditunda
-```
+Import data peti kemas kelaikan memakai tabel baru:
 
-Jika belum bisa dihapus langsung, tandai sebagai deprecated dan sembunyikan dari menu.
+- `fitness_container_import_batches`
+- `fitness_container_import_rows`
 
-## Strategi Migrasi
+Tabel existing `container_import_batches` tidak dipakai untuk kelaikan karena masih terkait `job_order_id` dan merupakan legacy import.
 
-### Tahap 1
+## Relasi Utama
 
-- Tambahkan tabel baru tanpa menghapus tabel lama.
-- Buat view/adapter dari job_orders ke fitness_applications sementara.
-- Sembunyikan menu lama yang tidak sesuai.
+- `fitness_applications` -> `customers`
+- `fitness_applications` -> `locations`
+- `fitness_applications` -> `container_manufacturers`
+- `fitness_applications` -> `fitness_approval_categories`
+- `application_containers` -> `fitness_applications`
+- `application_containers` -> `container_types`
+- `container_technical_specs` -> `application_containers`
+- `container_technical_specs` -> `maintenance_schemes`
+- `structural_components` -> `inspection_areas`
+- `structural_damage_criteria` -> `structural_components`
+- `fitness_checklist_template_items` -> `fitness_checklist_templates`
+- `fitness_checklist_template_items` -> `inspection_areas`
+- `fitness_checklist_template_items` -> `structural_components`
+- `fitness_checklist_template_items` -> `inspection_test_parameters`
+- `fitness_container_import_batches` -> `fitness_applications`
+- `fitness_container_import_rows` -> `fitness_container_import_batches`
+- `fitness_container_import_rows` -> `application_containers`
 
-### Tahap 2
+Tidak ada foreign key baru dari foundation kelaikan ke tabel legacy transaksi seperti `job_orders`, `surveys`, `survey_damages`, `reports`, `invoices`, `payments`, `price_lists`, `survey_types`, CEDEX tables, responsibility code, atau `container_import_batches`.
 
-- Pindahkan form Admin ke tabel baru.
-- Pindahkan alur Surveyor ke inspection model.
-- Pindahkan Review ke approval model.
+## Numbering dan Permission
 
-### Tahap 3
+Patch foundation menambahkan document type baru:
 
-- Generate dokumen approval kelaikan yang mengacu pada Permenhub 25/2022.
-- Hapus dependency pada survey_type, cedex_repair, responsibility_code.
-- Clean up tabel lama.
-## Mapping Master Data Admin ke Tabel
+- `fitness_application`
+- `fitness_container_import`
+- `fitness_assignment`
+- `fitness_inspection`
+- `repair_followup`
+- `fitness_review`
+- `fitness_approval`
+- `approval_document`
+- `release_letter`
 
-Tahap menu Admin belum membuat migration. Mapping ini hanya rekomendasi desain untuk tahap database berikutnya.
+Patch juga menambahkan permission foundation untuk master data, permohonan, data peti kemas, import, assignment, pemeriksaan, temuan, repair follow-up, review, approval, dan dokumen kelaikan.
 
-| Sub menu Admin | Tabel existing/baru | Status implementasi tahap ini | Dipakai Surveyor untuk |
-|---|---|---|---|
-| Pemilik Peti Kemas | `customers` | Existing, label UI menjadi Pemilik Peti Kemas | konteks pemilik pekerjaan |
-| Pabrik Pembuat Peti Kemas | `container_manufacturers` | Baru nanti | verifikasi data pabrik dan plate |
-| Lokasi Pemeriksaan | `locations` | Existing, label UI menjadi Lokasi Pemeriksaan | lokasi kerja, GPS, konteks lapangan |
-| Surveyor / Pemeriksa | `surveyor_profiles` | Existing | assignment pemeriksaan |
-| Jenis / Model Peti Kemas | `container_types` | Existing | menentukan checklist dan data teknis |
-| Kategori Persetujuan Kelaikan | `fitness_approval_categories` | Baru nanti | menentukan checklist dan dokumen |
-| Skema Pemeliharaan Peti Kemas | `maintenance_schemes` | Baru nanti | verifikasi NED/skema plate |
-| Area Pemeriksaan Peti Kemas | `inspection_areas` | Baru nanti | pilihan area temuan |
-| Komponen Struktur Peti Kemas | `structural_components` | Baru nanti | pilihan komponen temuan |
-| Kriteria Kerusakan / Ketidaksesuaian | `structural_damage_criteria` | Baru nanti | pilihan jenis temuan |
-| Tingkat Temuan / Severity | `finding_severities` | Baru nanti | klasifikasi risiko temuan |
-| Parameter Pengujian Kelaikan | `inspection_test_parameters` | Baru nanti | input hasil pengujian |
-| Template Checklist Kelaikan | `fitness_checklist_templates`, `fitness_checklist_template_items` | Baru nanti | daftar checklist lapangan |
-| Kategori Foto Evidence | `evidence_photo_categories` | Baru nanti | kategori foto wajib/opsional |
-| Rekomendasi Hasil Pemeriksaan | `inspection_recommendations` | Baru nanti | rekomendasi akhir Surveyor |
-| Pejabat Penandatangan | `authorized_signers` | Baru nanti | metadata dokumen kelaikan |
-| Profil Badan Usaha | `company_profiles` | Existing | header dokumen dan validasi |
+Role mapping tahap ini:
 
-## Batasan Tahap Menu Admin
+- `super_admin`: semua permission foundation.
+- `admin`: master data, permohonan, data peti kemas, import, assignment, repair follow-up, dan dokumen.
+- `surveyor`: pemeriksaan dan temuan assigned.
+- `supervisor`: view pemeriksaan, manage review, view approval, view dokumen.
+- `management`: seluruh `view.all` foundation.
 
-- Tidak membuat migration.
-- Tidak mengubah `database/kontainer_db.sql`.
-- Tidak membuat patch SQL.
-- Tidak menambah permission database.
-- Tidak rename/drop tabel legacy.
-- Tidak cleanup data legacy.
+`fitness_approvals.issue.all` hanya diberikan ke `super_admin` pada foundation stage.

@@ -41,8 +41,9 @@ Jalankan patch berikut secara berurutan:
 4. `database/patches/0012_admin_stage2.sql`
 5. `database/patches/0013_storage_relations.sql`
 6. `database/patches/0014_uat_stabilization.sql`
+7. `database/patches/0015_container_fitness_foundation.sql`
 
-Keenam patch aman dijalankan berulang. Patch `0009`
+Patch aman dijalankan berulang sejauh memungkinkan. Patch `0009`
 menyelaraskan permission menu dan role. Patch `0010` menambahkan akun demo,
 role masing-masing, serta profil aktif untuk surveyor demo. Patch `0011`
 menambahkan permission Monitoring Survey Admin dan status container `rejected`.
@@ -54,6 +55,10 @@ patch existing database tidak berhenti di tengah.
 Patch `0014` menyelaraskan ulang permission Admin, Supervisor, Finance, dan
 Management untuk UAT, termasuk akses read-only User Management dan Monitoring
 Survey bagi Admin.
+
+Patch `0015` menambahkan database foundation Sistem Kelaikan Peti Kemas
+tanpa menghapus workflow legacy, tanpa memakai `container_import_batches`
+untuk kelaikan, dan tanpa mengubah dump canonical.
 
 Jangan menyalin skema dari dokumentasi lain. Jika ada perbedaan, gunakan
 `database/kontainer_db.sql` sebagai acuan.

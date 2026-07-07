@@ -1,132 +1,96 @@
-﻿# Migration Plan ke Sistem Kelaikan Peti Kemas
+# Migration Plan ke Sistem Kelaikan Peti Kemas
 
-## Tujuan
+Dokumen ini mengatur migrasi bertahap dari schema general Container Survey Management System menuju **Sistem Kelaikan Peti Kemas**.
 
-Mengubah aplikasi dari `Container Survey Management System` menjadi `Sistem Kelaikan Peti Kemas` secara aman dan bertahap.
+## Tahap Saat Ini - Database Foundation
 
-## Prinsip Migrasi
+Tahap ini additive-only:
 
-1. Jangan langsung hapus tabel lama pada tahap awal.
-2. Tambahkan tabel baru terlebih dahulu.
-3. Ubah menu dan label agar user tidak salah scope.
-4. Pindahkan proses bisnis dari survey umum ke kelaikan.
-5. Hapus/deprecate modul di luar scope setelah alur baru stabil.
+- Menambahkan tabel foundation baru.
+- Menambahkan seed master data kelaikan.
+- Menambahkan numbering foundation.
+- Menambahkan permission dan role mapping foundation.
+- Tidak drop/rename tabel legacy.
+- Tidak cleanup data legacy.
+- Tidak mengubah `database/kontainer_db.sql`.
+- Tidak membuat CRUD API.
+- Tidak membuat repository, service, handler backend, atau route mutation baru.
+- Tidak mengaktifkan submit form frontend.
+- Tidak membuat upload aktif, PDF final, QR final, approval final, finance kelaikan, Type Design aktif, repair cycle penuh, atau re-inspection cycle penuh.
 
-## Tahap 0 - Dokumentasi Scope
+Patch tahap ini:
 
-Buat/update file:
+- `database/patches/0015_container_fitness_foundation.sql`
+- `services/api/migrations/0010_container_fitness_foundation.up.sql`
+- `services/api/migrations/0010_container_fitness_foundation.down.sql`
 
-```text
-README.md
-docs/SCOPE_KELAIKAN_PETI_KEMAS.md
-docs/MENU_KELAIKAN_PETI_KEMAS.md
-docs/DATABASE_REDESIGN_CONTAINER_FITNESS.md
-docs/WORKFLOW_KELAIKAN_PETI_KEMAS.md
-docs/CERTIFICATE_FIELDS_KELAIKAN_PETI_KEMAS.md
-docs/STATUS_LIFECYCLE_KELAIKAN_PETI_KEMAS.md
-docs/FORM_REQUIREMENTS_KELAIKAN_PETI_KEMAS.md
-```
+Patch harus dijalankan setelah base schema aplikasi tersedia dan harus valid pada salinan database existing terbaru.
 
-## Tahap 1 - Menu dan Label
+## Legacy Compatibility
 
-Perubahan:
+Tabel legacy general survey tetap dipertahankan sebagai archive/compatibility layer:
 
-- Ganti brand aplikasi menjadi Sistem Kelaikan Peti Kemas.
-- Hide menu CEDEX Repair.
-- Hide Responsibility Code.
-- Hide Survey Type.
-- Hide Finance jika belum prioritas.
-- Rename Customer menjadi Pemilik Peti Kemas.
-- Rename Job Order menjadi Permohonan Kelaikan.
-- Rename Report menjadi Dokumen Kelaikan.
+- `job_orders`
+- `job_containers`
+- `assignments`
+- `assignment_containers`
+- `surveys`
+- `survey_general_infos`
+- `survey_checklist_responses`
+- `survey_damages`
+- `survey_photos`
+- `survey_approvals`
+- `survey_revision_items`
+- `reports`
+- `report_versions`
+- `report_snapshots`
+- `invoices`
+- `invoice_items`
+- `payments`
+- `price_lists`
+- `survey_types`
+- CEDEX master tables
+- `responsibility_codes`
+- `container_import_batches`
 
-Output:
+`container_import_batches` tidak dipakai untuk kelaikan karena terkait `job_order_id`. Import kelaikan memakai `fitness_container_import_batches` dan `fitness_container_import_rows`.
 
-- Menu Admin sesuai `MENU_KELAIKAN_PETI_KEMAS.md`.
+## Existing Tables Yang Dipakai Ulang
 
-## Tahap 2 - Database Baru
+- `customers` sebagai Pemilik Peti Kemas
+- `locations` sebagai Lokasi Pemeriksaan
+- `surveyor_profiles` sebagai Surveyor / Pemeriksa
+- `container_types` sebagai Jenis / Model Peti Kemas
+- `users`
+- `roles`
+- `permissions`
+- `role_permissions`
+- `user_roles`
+- `company_profiles`
+- `numbering_settings`
+- `numbering_sequences`
+- `file_objects`
+- `audit_logs`
 
-Tambahkan tabel baru:
+Tabel fisik existing tidak di-rename.
 
-```text
-container_owners
-container_manufacturers
-fitness_applications
-application_containers
-inspection_assignments
-inspection_assignment_containers
-container_inspections
-inspection_checklist_responses
-structural_findings
-finding_photos
-repair_followups
-reinspection_records
-fitness_approvals
-approval_documents
-csc_plate_records
-structural_components
-structural_damage_criteria
-test_parameters
-```
+## Tahap Berikutnya
 
-Jangan hapus tabel lama dulu.
+Setelah database foundation tervalidasi, tahap berikutnya dapat dilakukan bertahap:
 
-## Tahap 3 - Form Admin
+1. API read-only untuk master foundation.
+2. CRUD master data kelaikan.
+3. CRUD permohonan kelaikan dan data peti kemas.
+4. Import preview dan proses import kelaikan.
+5. Assignment surveyor untuk kelaikan.
+6. Pemeriksaan surveyor, temuan struktur, foto evidence, dan submit hasil.
+7. Review, repair follow-up, re-inspection, approval, dokumen, dan QR.
 
-Implement:
+Setiap tahap harus tetap menjaga scope: fokus hanya Kelaikan Peti Kemas. VGM, penimbangan, sertifikat VGM, billing repair, finance utama, dan operasional bengkel repair bukan scope.
 
-- Form Permohonan Kelaikan.
-- Form Data Peti Kemas sesuai field sertifikat.
-- Import Data Peti Kemas.
-- Assign Surveyor.
-- Monitoring status kelaikan.
+## Validasi Wajib
 
-## Tahap 4 - Pemeriksaan Surveyor
-
-Implement:
-
-- General Info.
-- Checklist Kelaikan.
-- Pengujian Beban.
-- Temuan Struktur.
-- Foto Evidence.
-- Submit hasil.
-
-## Tahap 5 - Review dan Status Perbaikan
-
-Implement:
-
-- Review hasil pemeriksaan.
-- Need Repair.
-- Repair Follow Up.
-- Ready for Re-Inspection.
-- Re-Inspection.
-- Approve Fit.
-- Approve Unfit.
-- Release After Repair.
-
-## Tahap 6 - Dokumen Kelaikan Peti Kemas
-
-Generate:
-
-- Surat Persetujuan Kelaikan Baru Type Design.
-- Surat Persetujuan Kelaikan Baru Individual.
-- Surat Persetujuan Peti Kemas Lama.
-- Surat Pembebasan Setelah Perbaikan.
-- QR Validation.
-
-## Tahap 7 - Cleanup
-
-Setelah alur baru stabil:
-
-- Hapus dependency survey_type.
-- Hapus CEDEX Repair dari menu dan schema jika tidak dipakai.
-- Hapus responsibility_codes dari alur kelaikan.
-- Hapus VGM-related route jika ada.
-- Update README final.
-- Update `database/kontainer_db.sql` sebagai schema canonical.
-
-## Test Wajib
+Untuk tahap database foundation:
 
 ```powershell
 go test ./...
@@ -135,9 +99,11 @@ npm run build --workspace apps/web
 git diff --check
 ```
 
-## Risiko
+Validasi SQL:
 
-- Banyak route lama akan berubah label dan konteks.
-- Data lama perlu mapping jika sudah ada data real.
-- Dokumen approval harus diverifikasi manual dengan contoh Permenhub 25/2022.
-- Status repair dan re-inspection harus diuji dengan data peti kemas lama.
+1. Import base schema aplikasi.
+2. Jalankan patch foundation.
+3. Jalankan patch pada salinan database existing terbaru.
+4. Jalankan patch kedua kali untuk cek idempotency.
+5. Pastikan tidak ada tabel legacy yang berubah/drop/rename.
+6. Pastikan istilah terlarang tidak muncul di filename, identifier, route, config, permission, migration, atau module.

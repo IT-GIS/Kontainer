@@ -1,6 +1,6 @@
-﻿# Form Admin Kelaikan Peti Kemas
+# Form Admin Kelaikan Peti Kemas
 
-Dokumen ini mengunci detail form Admin untuk tahap menu dan placeholder. Belum ada CRUD API, submit aktif, mutation backend, permission database baru, atau database migration.
+Dokumen ini mengunci detail form Admin untuk tahap menu dan placeholder. Database foundation sudah disiapkan untuk master, permohonan, data peti kemas, import, numbering, dan permission kelaikan; tetapi belum ada CRUD API, submit aktif, mutation backend, upload aktif, inspection flow penuh, approval final, PDF final, atau QR final.
 
 ## Prinsip Form
 
@@ -78,7 +78,7 @@ Hubungan ke Surveyor: Surveyor melihat pemilik untuk memastikan konteks pekerjaa
 
 Route: `/fitness/master-data/manufacturers`
 
-Tabel baru rekomendasi: `container_manufacturers`
+Tabel foundation: `container_manufacturers`
 
 Field: Kode Pabrik, Nama Pabrik Pembuat, Alamat Pabrik, Negara, Nama PIC, Telepon PIC, Email PIC, Website optional, Catatan, Status active/inactive.
 
@@ -134,7 +134,7 @@ Hubungan ke Surveyor: menentukan checklist dan parameter pemeriksaan yang tampil
 
 Route: `/fitness/master-data/approval-categories`
 
-Tabel baru rekomendasi: `fitness_approval_categories`
+Tabel foundation: `fitness_approval_categories`
 
 Field: Kode Kategori, Nama Kategori, Deskripsi, Berlaku Untuk, Aktif di MVP, Status active/inactive, Display Order.
 
@@ -148,7 +148,7 @@ Hubungan ke Surveyor: menentukan checklist dan parameter sesuai jenis proses kel
 
 Route: `/fitness/master-data/maintenance-schemes`
 
-Tabel baru rekomendasi: `maintenance_schemes`
+Tabel foundation: `maintenance_schemes`
 
 Field: Kode Skema, Nama Skema, Deskripsi, Membutuhkan Next Examination Date yes/no, Interval Pemeriksaan optional, Status active/inactive.
 
@@ -162,7 +162,7 @@ Hubungan ke Surveyor: dipakai untuk memeriksa NED dan skema pada plate/data tekn
 
 Route: `/fitness/master-data/inspection-areas`
 
-Tabel baru rekomendasi: `inspection_areas`
+Tabel foundation: `inspection_areas`
 
 Field: Kode Area, Nama Area, Deskripsi, Urutan Tampil, Status active/inactive.
 
@@ -176,7 +176,7 @@ Hubungan ke Surveyor: Surveyor memilih area seperti roof, floor, door end, under
 
 Route: `/fitness/master-data/structural-components`
 
-Tabel baru rekomendasi: `structural_components`
+Tabel foundation: `structural_components`
 
 Field: Kode Komponen, Nama Komponen, Area Pemeriksaan optional, Komponen Struktural Kritis yes/no, Deskripsi, Urutan Tampil, Status active/inactive.
 
@@ -190,7 +190,7 @@ Hubungan ke Surveyor: Surveyor memilih komponen seperti corner post, cross membe
 
 Route: `/fitness/master-data/damage-criteria`
 
-Tabel baru rekomendasi: `structural_damage_criteria`
+Tabel foundation: `structural_damage_criteria`
 
 Field: Kode Kriteria, Nama Kriteria, Komponen Terkait optional, Deskripsi, Tingkat Temuan Default, Default Memengaruhi Kelaikan yes/no, Default Perlu Perbaikan yes/no, Catatan Pemeriksaan, Status active/inactive.
 
@@ -204,7 +204,7 @@ Hubungan ke Surveyor: Surveyor memilih kriteria seperti dent, crack, hole, corro
 
 Route: `/fitness/master-data/finding-severities`
 
-Tabel baru rekomendasi: `finding_severities`
+Tabel foundation: `finding_severities`
 
 Field: Kode Severity, Nama Severity, Deskripsi, Level Angka, Default Memengaruhi Kelaikan yes/no, Default Perlu Review Supervisor yes/no, Warna Badge optional, Status active/inactive.
 
@@ -218,7 +218,7 @@ Hubungan ke Surveyor: memberi konteks risiko dan prioritas tindak lanjut untuk r
 
 Route: `/fitness/master-data/test-parameters`
 
-Tabel baru rekomendasi: `inspection_test_parameters`
+Tabel foundation: `inspection_test_parameters`
 
 Field: Kode Parameter, Nama Parameter, Deskripsi, Satuan, Referensi Standar, Berlaku untuk Peti Kemas Baru, Berlaku untuk Peti Kemas Lama, Wajib Hasil Angka, Wajib Lampiran/Foto, Urutan Tampil, Status active/inactive.
 
@@ -232,7 +232,7 @@ Hubungan ke Surveyor: Surveyor mengisi hasil uji yang diwajibkan oleh kategori d
 
 Route: `/fitness/master-data/checklist-templates`
 
-Tabel baru rekomendasi: `fitness_checklist_templates`, `fitness_checklist_template_items`
+Tabel foundation: `fitness_checklist_templates`, `fitness_checklist_template_items`
 
 Field header: Kode Template, Nama Template, Kategori Persetujuan, Jenis / Model Peti Kemas optional, Deskripsi, Versi, Status draft/active/inactive, Created by, Approved by optional.
 
@@ -248,7 +248,7 @@ Hubungan ke Surveyor: menjadi daftar pemeriksaan yang diisi Surveyor secara kons
 
 Route: `/fitness/master-data/photo-categories`
 
-Tabel baru rekomendasi: `evidence_photo_categories`
+Tabel foundation: `evidence_photo_categories`
 
 Field: Kode Kategori Foto, Nama Kategori Foto, Deskripsi, Wajib Default yes/no, Berlaku Untuk, Urutan Tampil, Status active/inactive.
 
@@ -262,7 +262,7 @@ Hubungan ke Surveyor: mengarahkan foto seperti general container, container numb
 
 Route: `/fitness/master-data/inspection-recommendations`
 
-Tabel baru rekomendasi: `inspection_recommendations`
+Tabel foundation: `inspection_recommendations`
 
 Field: Kode Rekomendasi, Nama Rekomendasi, Deskripsi, Final Fitness Result Mapping, Workflow Status Mapping, Restriction Status Mapping, Perlu Review Supervisor yes/no, Status active/inactive.
 
@@ -276,7 +276,7 @@ Hubungan ke Surveyor: Surveyor memilih rekomendasi seperti layak, perlu perbaika
 
 Route: `/fitness/master-data/authorized-signers`
 
-Tabel baru rekomendasi: `authorized_signers`
+Tabel foundation: `authorized_signers`
 
 Field: Nama Pejabat, Jabatan, NIP / ID Pegawai optional, Email, Nomor Telepon, File Tanda Tangan optional, Berlaku Mulai, Berlaku Sampai, Status active/inactive.
 

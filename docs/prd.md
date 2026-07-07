@@ -1,13 +1,13 @@
-﻿# PRD — Sistem Kelaikan Peti Kemas
+# PRD — Sistem Kelaikan Peti Kemas
 
-**Nama Produk:** Sistem Kelaikan Peti Kemas  
-**Nama Inggris:** Container Fitness Approval System  
-**Nama Repo:** `IT-GIS/Kontainer`  
-**Versi PRD:** 0.1  
-**Status:** Draft untuk perubahan arah aplikasi  
-**Tanggal:** 2026-07-06  
-**Pemilik Produk:** PT Global Inspeksi Sertifikasi / Tim GIFT-GIS  
-**Acuan Utama:** Peraturan Menteri Perhubungan Nomor 25 Tahun 2022 tentang Kelaikan Peti Kemas dan Berat Kotor Peti Kemas Terverifikasi  
+**Nama Produk:** Sistem Kelaikan Peti Kemas
+**Nama Inggris:** Container Fitness Approval System
+**Nama Repo:** `IT-GIS/Kontainer`
+**Versi PRD:** 0.1
+**Status:** Draft untuk perubahan arah aplikasi
+**Tanggal:** 2026-07-06
+**Pemilik Produk:** PT Global Inspeksi Sertifikasi / Tim GIFT-GIS
+**Acuan Utama:** Peraturan Menteri Perhubungan Nomor 25 Tahun 2022 tentang Kelaikan Peti Kemas dan Berat Kotor Peti Kemas Terverifikasi
 
 ---
 
@@ -583,58 +583,61 @@ Field dokumen:
 
 ## 14. Database Conceptual Model
 
-### 14.1 Tabel Utama Baru/Disesuaikan
+### 14.1 Foundation Kelaikan Aktif
 
-1. `container_owners`
-2. `container_manufacturers`
-3. `inspection_locations`
-4. `inspectors`
-5. `container_type_models`
-6. `fitness_applications`
-7. `application_containers`
-8. `container_technical_specs`
-9. `inspection_assignments`
-10. `fitness_inspections`
-11. `inspection_checklists`
-12. `inspection_test_results`
-13. `structural_findings`
-14. `finding_photos`
-15. `repair_followups`
-16. `reinspection_records`
-17. `fitness_approvals`
-18. `approval_documents`
-19. `csc_plate_records`
-20. `release_letters`
-21. `document_qr_tokens`
+Tahap database foundation bersifat additive-only. Canonical model kelaikan dimulai dari:
 
-### 14.2 Tabel Existing yang Bisa Dipakai Ulang
+1. `fitness_applications`
+2. `application_containers`
+3. `container_technical_specs`
+4. `fitness_application_events`
+5. `fitness_container_import_batches`
+6. `fitness_container_import_rows`
 
-| Existing | Arah Baru |
+Master foundation kelaikan:
+
+1. `container_manufacturers`
+2. `fitness_approval_categories`
+3. `maintenance_schemes`
+4. `inspection_areas`
+5. `structural_components`
+6. `structural_damage_criteria`
+7. `finding_severities`
+8. `inspection_test_parameters`
+9. `fitness_checklist_templates`
+10. `fitness_checklist_template_items`
+11. `evidence_photo_categories`
+12. `inspection_recommendations`
+13. `authorized_signers`
+
+Tabel inspection penuh, structural findings aktif, repair follow-up, re-inspection, approval final, approval documents, CSC plate records, release letters, dan QR final adalah tahap lanjutan.
+
+### 14.2 Tabel Existing yang Dipakai Ulang Tanpa Rename Fisik
+
+| Existing | Pemakaian dalam Kelaikan |
 |---|---|
-| `customers` | rename/konsep menjadi `container_owners` |
-| `locations` | `inspection_locations` |
-| `surveyor_profiles` | `inspectors` |
-| `container_types` | `container_type_models` |
-| `job_orders` | `fitness_applications` |
-| `job_containers` | `application_containers` |
-| `assignments` | `inspection_assignments` |
-| `surveys` | `fitness_inspections` |
-| `survey_damages` | `structural_findings` |
-| `survey_photos` | `finding_photos` |
-| `reports` | `approval_documents` |
-| `report_versions` | `approval_document_versions` |
-| `audit_logs` | tetap |
+| `customers` | Pemilik Peti Kemas |
+| `locations` | Lokasi Pemeriksaan |
+| `surveyor_profiles` | Surveyor / Pemeriksa |
+| `container_types` | Jenis / Model Peti Kemas |
+| `users` | Akun dan actor |
+| `roles` | Role aplikasi |
+| `permissions` | Permission aplikasi |
+| `role_permissions` | Mapping role permission |
+| `user_roles` | Mapping user role |
+| `company_profiles` | Profil Badan Usaha |
+| `numbering_settings` | Konfigurasi nomor dokumen |
+| `numbering_sequences` | Sequence nomor dokumen |
+| `file_objects` | Metadata file |
+| `audit_logs` | Audit log |
 
-### 14.3 Tabel yang Sebaiknya Dihapus dari Menu/Seed Utama
+### 14.3 Legacy Archive
 
-1. `survey_types`
-2. `cedex_repairs`
-3. `responsibility_codes`
+Tabel legacy seperti `job_orders`, `job_containers`, `assignments`, `surveys`, `survey_damages`, `reports`, finance legacy, `survey_types`, CEDEX tables, `responsibility_codes`, dan `container_import_batches` tetap dipertahankan sebagai archive/compatibility layer. Tabel tersebut tidak di-drop/rename dan tidak menjadi canonical model kelaikan.
 
-Catatan: tabel lama dapat dipertahankan sementara untuk migrasi, tetapi jangan lagi menjadi menu utama atau konsep bisnis utama.
+`container_import_batches` tidak dipakai untuk import kelaikan karena masih terkait `job_order_id`; import kelaikan memakai `fitness_container_import_batches` dan `fitness_container_import_rows`.
 
 ---
-
 ## 15. API Requirement
 
 ### 15.1 Permohonan Kelaikan
@@ -859,7 +862,7 @@ Outputkan plan tahap 1 yang aman tanpa refactor besar.
 ```
 ## Addendum — Tahap Menu Admin Kelaikan Peti Kemas
 
-Tahap ini mengunci menu Admin, placeholder halaman, dan dokumentasi form. Belum ada CRUD API penuh, database migration, permission database baru, PDF final, QR final, MinIO/watermark, finance kelaikan, atau cleanup legacy.
+Tahap menu Admin mengunci menu, placeholder halaman, dan dokumentasi form. Tahap database foundation menambahkan schema, numbering, permission, dan role mapping kelaikan secara additive. Belum ada CRUD API penuh, submit form aktif, PDF final, QR final, MinIO/watermark, finance kelaikan, atau cleanup legacy.
 
 ### Menu Admin saat Scope `container_fitness`
 
