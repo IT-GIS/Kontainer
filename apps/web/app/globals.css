@@ -1245,14 +1245,21 @@ pre {
 
 .source-shell-mark {
   align-items: center;
-  background: rgba(25, 132, 151, 0.14);
+  background: rgba(255, 255, 255, 0.72);
   border-radius: 16px;
-  color: #177f91;
   display: flex;
   flex: 0 0 auto;
   height: 40px;
   justify-content: center;
+  overflow: hidden;
   width: 40px;
+}
+
+.source-shell-logo {
+  border-radius: 12px;
+  height: 34px;
+  object-fit: contain;
+  width: 34px;
 }
 
 .source-sidebar-brand {
@@ -1262,13 +1269,14 @@ pre {
 
 .source-sidebar-brand strong {
   color: #17212f;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.25;
 }
 
 .source-sidebar-brand span {
   color: rgba(23, 33, 47, 0.5);
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.3;
 }
 
 .source-collapse-button {

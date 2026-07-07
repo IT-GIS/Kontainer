@@ -1,8 +1,9 @@
 "use client";
 
 import {
-  Bell, ChevronDown, ChevronLeft, ChevronRight, LogOut, Menu, ShieldCheck, X
+  Bell, ChevronDown, ChevronLeft, ChevronRight, LogOut, Menu, X
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -84,10 +85,19 @@ export function AppShell({ title, children }: AppShellProps) {
     <div className={`app-layout source-app-layout ${collapsed ? "source-app-layout-collapsed" : ""}`}>
       <aside className={`sidebar source-sidebar ${isOpen ? "sidebar-open" : ""}`}>
         <div className="sidebar-head source-sidebar-head">
-          <div className="source-shell-mark"><ShieldCheck size={20} /></div>
+          <div className="source-shell-mark">
+            <Image
+              alt="Logo GIFT"
+              className="source-shell-logo"
+              height={34}
+              priority
+              src="/images/gift-logo.png"
+              width={34}
+            />
+          </div>
           <div className="source-sidebar-brand">
-            <strong>PT. Global Inspeksi Sertifikasi</strong>
-            <span>Container Survey Management</span>
+            <strong>Sistem Kelayakan Peti Kemas Terintegrasi</strong>
+            <span>PT Global Inspeksi Sertifikasi</span>
           </div>
           <button className="icon-button sidebar-close" onClick={() => setIsOpen(false)} title="Tutup menu">
             <X size={18} />
