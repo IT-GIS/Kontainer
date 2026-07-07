@@ -11,6 +11,16 @@ var Resources = map[string]Resource{
 		Filters:       map[string]string{"status": "status"},
 		DefaultSort:   "customer_name",
 	},
+	"container_manufacturers": {
+		Name: "container_manufacturers", Table: "container_manufacturers", CodeField: "manufacturer_code", SoftDelete: true,
+		Fields: []Field{
+			{Name: "manufacturer_code", Required: true}, {Name: "manufacturer_name", Required: true}, {Name: "address"}, {Name: "country"},
+			{Name: "pic_name"}, {Name: "pic_phone"}, {Name: "pic_email"}, {Name: "website"}, {Name: "note"}, {Name: "status"},
+		},
+		SearchColumns: []string{"manufacturer_code", "manufacturer_name", "country", "pic_name", "pic_phone", "pic_email"},
+		Filters:       map[string]string{"status": "status"},
+		DefaultSort:   "manufacturer_name",
+	},
 	"locations": {
 		Name: "locations", Table: "locations", CodeField: "location_code", SoftDelete: true,
 		Fields: []Field{
@@ -35,6 +45,16 @@ var Resources = map[string]Resource{
 		Name: "container_types", Table: "container_types", CodeField: "code",
 		Fields:        []Field{{Name: "code", Required: true}, {Name: "iso_code"}, {Name: "size", Required: true}, {Name: "type_name", APIName: "type", Required: true}, {Name: "description"}, {Name: "status"}},
 		SearchColumns: []string{"code", "iso_code", "size", "type_name"}, Filters: map[string]string{"status": "status"}, DefaultSort: "code",
+	},
+	"fitness_approval_categories": {
+		Name: "fitness_approval_categories", Table: "fitness_approval_categories", CodeField: "code",
+		Fields: []Field{
+			{Name: "code", Required: true}, {Name: "name", Required: true}, {Name: "description"},
+			{Name: "container_lifecycle", Required: true}, {Name: "is_mvp_active"}, {Name: "display_order"}, {Name: "status"},
+		},
+		SearchColumns: []string{"code", "name", "container_lifecycle"},
+		Filters:       map[string]string{"status": "status", "container_lifecycle": "container_lifecycle"},
+		DefaultSort:   "display_order",
 	},
 	"survey_types": {
 		Name: "survey_types", Table: "survey_types", CodeField: "code",

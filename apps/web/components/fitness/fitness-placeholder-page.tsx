@@ -1,11 +1,11 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { ClipboardList, Database, Route, ShieldCheck } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { FitnessPlaceholder } from "@/constants/fitness-admin";
-import { masterDataItems } from "@/constants/fitness-admin";
+import { getFitnessStageMessage, masterDataItems } from "@/constants/fitness-admin";
 
 type FitnessPlaceholderPageProps = {
   item: FitnessPlaceholder;
@@ -13,6 +13,7 @@ type FitnessPlaceholderPageProps = {
 
 export function FitnessPlaceholderPage({ item }: FitnessPlaceholderPageProps) {
   const isMasterDataIndex = item.path === "/fitness/master-data";
+  const stageMessage = getFitnessStageMessage(item.path);
 
   return (
     <ProtectedRoute>
@@ -25,7 +26,7 @@ export function FitnessPlaceholderPage({ item }: FitnessPlaceholderPageProps) {
               <div><ShieldCheck size={22} /><h2>Status tahap ini</h2></div>
               <StatusBadge tone="warning">PLACEHOLDER</StatusBadge>
             </div>
-            <p className="muted-text">Placeholder — belum ada API/mutation pada tahap ini.</p>
+            <p className="muted-text">{stageMessage}</p>
           </section>
 
           {isMasterDataIndex ? (
@@ -36,13 +37,14 @@ export function FitnessPlaceholderPage({ item }: FitnessPlaceholderPageProps) {
               <div className="data-table-wrapper">
                 <table className="data-table">
                   <thead>
-                    <tr><th>Sub menu</th><th>Route</th></tr>
+                    <tr><th>Sub menu</th><th>Route</th><th>Status</th></tr>
                   </thead>
                   <tbody>
                     {masterDataItems.map((master) => (
                       <tr key={master.href}>
                         <td><Link href={master.href}>{master.label}</Link></td>
                         <td>{master.href}</td>
+                        <td>{"activeStage" in master && master.activeStage ? <StatusBadge tone="success">Aktif</StatusBadge> : <StatusBadge tone="warning">Stage 2</StatusBadge>}</td>
                       </tr>
                     ))}
                   </tbody>

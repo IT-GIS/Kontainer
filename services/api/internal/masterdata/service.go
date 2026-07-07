@@ -3,6 +3,7 @@ package masterdata
 import (
 	"context"
 	"fmt"
+	"net/mail"
 	"strconv"
 	"strings"
 
@@ -155,13 +156,25 @@ func normalizeFieldValue(field string, value any) any {
 				return parsed
 			}
 		}
+	case "is_mvp_active":
+		switch v := value.(type) {
+		case bool:
+			return v
+		case float64:
+			return v != 0
+		case string:
+			trimmed := strings.TrimSpace(v)
+			if trimmed == "" {
+				return nil
+			}
+			return trimmed == "1" || strings.EqualFold(trimmed, "true") || strings.EqualFold(trimmed, "yes")
+		}
 	}
 	if text, ok := value.(string); ok {
 		return strings.TrimSpace(text)
 	}
 	return value
 }
-
 func validatePayload(resource Resource, payload map[string]any, create bool) error {
 	if create {
 		for _, field := range resource.Fields {
@@ -180,6 +193,16 @@ func validatePayload(resource Resource, payload map[string]any, create bool) err
 		value := stringValue(status)
 		if value != "active" && value != "inactive" {
 			return fmt.Errorf("%w: status tidak valid", ErrInvalidInput)
+		}
+	}
+	if email, ok := payload["pic_email"]; ok && !isEmpty(email) {
+		if _, err := mail.ParseAddress(stringValue(email)); err != nil {
+			return fmt.Errorf("%w: pic_email tidak valid", ErrInvalidInput)
+		}
+	}
+	if value, ok := payload["container_lifecycle"]; ok && !isEmpty(value) {
+		if !oneOf(stringValue(value), []string{"new", "existing"}) {
+			return fmt.Errorf("%w: container_lifecycle tidak valid", ErrInvalidInput)
 		}
 	}
 	if value, ok := payload["location_type"]; ok && !isEmpty(value) {
@@ -247,5 +270,5 @@ func parseMapUUID(item map[string]any, key string) (uuid.UUID, bool) {
 }
 
 func isDuplicateDBError(err error) bool {
-	return strings.Contains(strings.ToLower(err.Error()), "duplicate key") || strings.Contains(strings.ToLower(err.Error()), "unique constraint")
+	return strings.Contains(strings.ToLower(err.Error()), "duplicate key") || strings.Contains(strings.ToLower(err.Error()), "unique constraint") || strings.Contains(strings.ToLower(err.Error()), "duplicate entry")
 }

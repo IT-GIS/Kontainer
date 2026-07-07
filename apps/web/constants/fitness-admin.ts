@@ -1,4 +1,4 @@
-﻿export type FitnessPlaceholder = {
+export type FitnessPlaceholder = {
   path: string;
   title: string;
   purpose: string;
@@ -9,12 +9,12 @@
 };
 
 export const masterDataItems = [
-  { label: "Pemilik Peti Kemas", href: "/fitness/master-data/owners" },
-  { label: "Pabrik Pembuat Peti Kemas", href: "/fitness/master-data/manufacturers" },
-  { label: "Lokasi Pemeriksaan", href: "/fitness/master-data/locations" },
-  { label: "Surveyor / Pemeriksa", href: "/fitness/master-data/surveyors" },
-  { label: "Jenis / Model Peti Kemas", href: "/fitness/master-data/container-types" },
-  { label: "Kategori Persetujuan Kelaikan", href: "/fitness/master-data/approval-categories" },
+  { label: "Pemilik Peti Kemas", href: "/fitness/master-data/owners", activeStage: true },
+  { label: "Pabrik Pembuat Peti Kemas", href: "/fitness/master-data/manufacturers", activeStage: true },
+  { label: "Lokasi Pemeriksaan", href: "/fitness/master-data/locations", activeStage: true },
+  { label: "Surveyor / Pemeriksa", href: "/fitness/master-data/surveyors", activeStage: true },
+  { label: "Jenis / Model Peti Kemas", href: "/fitness/master-data/container-types", activeStage: true },
+  { label: "Kategori Persetujuan Kelaikan", href: "/fitness/master-data/approval-categories", activeStage: true },
   { label: "Skema Pemeliharaan Peti Kemas", href: "/fitness/master-data/maintenance-schemes" },
   { label: "Area Pemeriksaan Peti Kemas", href: "/fitness/master-data/inspection-areas" },
   { label: "Komponen Struktur Peti Kemas", href: "/fitness/master-data/structural-components" },
@@ -28,7 +28,7 @@ export const masterDataItems = [
   { label: "Profil Badan Usaha", href: "/fitness/master-data/company-profile" }
 ] as const;
 
-const commonPlaceholderStatus = "Placeholder — belum ada API/mutation pada tahap ini.";
+const commonPlaceholderStatus = "Belum aktif - menunggu tahap berikutnya.";
 
 export const fitnessPlaceholders: FitnessPlaceholder[] = [
   {
@@ -297,4 +297,27 @@ export const fitnessPlaceholders: FitnessPlaceholder[] = [
 export function getFitnessPlaceholderByPath(path: string): FitnessPlaceholder | undefined {
   const normalizedPath = path.replace(/\/$/, "") || "/fitness/dashboard";
   return fitnessPlaceholders.find((item) => item.path === normalizedPath);
+}
+
+export function getFitnessStageMessage(path: string): string {
+  const normalizedPath = path.replace(/\/$/, "") || "/fitness/dashboard";
+  if (masterDataItems.some((item) => item.href === normalizedPath && "activeStage" in item && item.activeStage)) {
+    return "Aktif - CRUD Master Data Stage 1.";
+  }
+  if (normalizedPath.startsWith("/fitness/master-data/")) {
+    return "Belum aktif - menunggu tahap Master Data CRUD Stage 2.";
+  }
+  if (normalizedPath === "/fitness/assignments") {
+    return "Belum aktif - menunggu tahap Assignment Surveyor.";
+  }
+  if (normalizedPath.startsWith("/fitness/inspections")) {
+    return "Belum aktif - menunggu tahap Surveyor Inspection Flow.";
+  }
+  if (normalizedPath.startsWith("/fitness/reviews")) {
+    return "Belum aktif - menunggu tahap Review & Approval.";
+  }
+  if (normalizedPath.startsWith("/fitness/documents")) {
+    return "Belum aktif - menunggu tahap Document & QR.";
+  }
+  return "Belum aktif - menunggu tahap berikutnya.";
 }

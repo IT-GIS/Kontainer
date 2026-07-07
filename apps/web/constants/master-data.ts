@@ -135,6 +135,151 @@ export const masterResources: Record<string, MasterResource> = {
       statusField
     ]
   },
+  "fitness-owners": {
+    id: "fitness-owners",
+    title: "Pemilik Peti Kemas",
+    description: "Master pemilik/client peti kemas untuk permohonan, dokumen, dan laporan kelaikan.",
+    endpoint: "/fitness/master-data/owners",
+    permissionModule: "customers",
+    columns: [
+      { key: "customer_code", label: "Kode" },
+      { key: "customer_name", label: "Pemilik" },
+      { key: "pic_name", label: "PIC" },
+      { key: "pic_phone", label: "Telepon" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "customer_code", label: "Kode Pemilik", required: true },
+      { name: "customer_name", label: "Nama Pemilik Peti Kemas", required: true },
+      { name: "address", label: "Alamat" },
+      { name: "npwp", label: "NPWP" },
+      { name: "pic_name", label: "Nama PIC" },
+      { name: "pic_phone", label: "Telepon PIC" },
+      { name: "pic_email", label: "Email PIC", type: "email" },
+      { name: "billing_address", label: "Alamat Billing" },
+      statusField
+    ]
+  },
+  "fitness-manufacturers": {
+    id: "fitness-manufacturers",
+    title: "Pabrik Pembuat Peti Kemas",
+    description: "Master pabrik pembuat peti kemas untuk data teknis dan dokumen persetujuan kelaikan.",
+    endpoint: "/fitness/master-data/manufacturers",
+    permissionModule: "container_manufacturers",
+    columns: [
+      { key: "manufacturer_code", label: "Kode" },
+      { key: "manufacturer_name", label: "Pabrik" },
+      { key: "country", label: "Negara" },
+      { key: "pic_name", label: "PIC" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "manufacturer_code", label: "Kode Pabrik", required: true },
+      { name: "manufacturer_name", label: "Nama Pabrik Pembuat", required: true },
+      { name: "address", label: "Alamat" },
+      { name: "country", label: "Negara" },
+      { name: "pic_name", label: "Nama PIC" },
+      { name: "pic_phone", label: "Telepon PIC" },
+      { name: "pic_email", label: "Email PIC", type: "email" },
+      { name: "website", label: "Website" },
+      { name: "note", label: "Catatan" },
+      statusField
+    ]
+  },
+  "fitness-locations": {
+    id: "fitness-locations",
+    title: "Lokasi Pemeriksaan",
+    description: "Master lokasi depo, pelabuhan, pabrik, gudang, dan lokasi lain untuk pemeriksaan kelaikan.",
+    endpoint: "/fitness/master-data/locations",
+    permissionModule: "locations",
+    columns: [
+      { key: "location_code", label: "Kode" },
+      { key: "location_name", label: "Lokasi" },
+      { key: "location_type", label: "Jenis" },
+      { key: "city", label: "Kota" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "location_code", label: "Kode Lokasi", required: true },
+      { name: "location_name", label: "Nama Lokasi", required: true },
+      { name: "location_type", label: "Jenis Lokasi", type: "select", required: true, options: ["depot", "yard", "port", "warehouse", "factory", "customer_site", "other"].map((value) => ({ label: value, value })) },
+      { name: "address", label: "Alamat" },
+      { name: "city", label: "Kota" },
+      { name: "gps_latitude", label: "Latitude", type: "number" },
+      { name: "gps_longitude", label: "Longitude", type: "number" },
+      { name: "pic_name", label: "Nama PIC" },
+      { name: "pic_phone", label: "Telepon PIC" },
+      statusField
+    ]
+  },
+  "fitness-surveyors": {
+    id: "fitness-surveyors",
+    title: "Surveyor / Pemeriksa",
+    description: "Master profil Surveyor atau Pemeriksa yang dapat dipakai pada assignment tahap berikutnya.",
+    endpoint: "/fitness/master-data/surveyors",
+    permissionModule: "surveyors",
+    columns: [
+      { key: "surveyor_code", label: "Kode" },
+      { key: "name", label: "Nama" },
+      { key: "phone", label: "Telepon" },
+      { key: "area", label: "Area" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "user_id", label: "User Akun", required: true },
+      { name: "surveyor_code", label: "Kode Surveyor", required: true },
+      { name: "name", label: "Nama Lengkap", required: true },
+      { name: "phone", label: "Telepon" },
+      { name: "area", label: "Area Tugas" },
+      { name: "signature_file_id", label: "ID File Tanda Tangan" },
+      statusField
+    ]
+  },
+  "fitness-container-types": {
+    id: "fitness-container-types",
+    title: "Jenis / Model Peti Kemas",
+    description: "Master jenis, ukuran, ISO code, dan model peti kemas untuk checklist dan dokumen kelaikan.",
+    endpoint: "/fitness/master-data/container-types",
+    permissionModule: "container_types",
+    columns: [
+      { key: "code", label: "Kode" },
+      { key: "iso_code", label: "ISO" },
+      { key: "size", label: "Ukuran" },
+      { key: "type", label: "Nama Tipe" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "code", label: "Kode Jenis", required: true },
+      { name: "iso_code", label: "ISO Code" },
+      { name: "size", label: "Ukuran", required: true },
+      { name: "type", label: "Nama Tipe", required: true },
+      { name: "description", label: "Deskripsi" },
+      statusField
+    ]
+  },
+  "fitness-approval-categories": {
+    id: "fitness-approval-categories",
+    title: "Kategori Persetujuan Kelaikan",
+    description: "Master kategori proses kelaikan yang dapat dipakai pada scope MVP dan future scope.",
+    endpoint: "/fitness/master-data/approval-categories",
+    permissionModule: "fitness_approval_categories",
+    columns: [
+      { key: "code", label: "Kode" },
+      { key: "name", label: "Kategori" },
+      { key: "container_lifecycle", label: "Lifecycle" },
+      { key: "is_mvp_active", label: "MVP", type: "boolean" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "code", label: "Kode Kategori", required: true },
+      { name: "name", label: "Nama Kategori", required: true },
+      { name: "description", label: "Deskripsi" },
+      { name: "container_lifecycle", label: "Berlaku Untuk", type: "select", required: true, options: [{ label: "Peti Kemas Baru", value: "new" }, { label: "Peti Kemas Lama", value: "existing" }] },
+      { name: "is_mvp_active", label: "Aktif di MVP", type: "checkbox" },
+      { name: "display_order", label: "Display Order", type: "number" },
+      statusField
+    ]
+  },
   "survey-types": {
     id: "survey-types",
     title: "Master Survey Type",

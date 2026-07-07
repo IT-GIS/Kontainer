@@ -1,4 +1,4 @@
-﻿# Menu Admin Kelaikan Peti Kemas
+# Menu Admin Kelaikan Peti Kemas
 
 ## Identitas Aplikasi
 
@@ -127,3 +127,31 @@ Menu legacy tidak dihapus. Data lama tetap dapat diakses melalui mode `legacy` a
 ## Peran Admin terhadap Surveyor
 
 Admin menyiapkan master data agar Surveyor lapangan banyak memilih dari daftar yang sudah dikurasi, bukan mengetik bebas. Master yang paling penting untuk Surveyor adalah area pemeriksaan, komponen struktur, kriteria kerusakan, severity, parameter pengujian, checklist, kategori foto evidence, dan rekomendasi hasil pemeriksaan.
+## Admin Master Data CRUD Stage 1
+
+Tahap ini mengaktifkan CRUD nyata untuk 6 master data prioritas Sistem Kelaikan Peti Kemas:
+
+1. Pemilik Peti Kemas (`/fitness/master-data/owners`) memakai tabel `customers`.
+2. Pabrik Pembuat Peti Kemas (`/fitness/master-data/manufacturers`) memakai tabel `container_manufacturers`.
+3. Lokasi Pemeriksaan (`/fitness/master-data/locations`) memakai tabel `locations`.
+4. Surveyor / Pemeriksa (`/fitness/master-data/surveyors`) memakai tabel `surveyor_profiles`.
+5. Jenis / Model Peti Kemas (`/fitness/master-data/container-types`) memakai tabel `container_types`.
+6. Kategori Persetujuan Kelaikan (`/fitness/master-data/approval-categories`) memakai tabel `fitness_approval_categories`.
+
+Setiap halaman aktif menyediakan list, pencarian, filter status, tambah, detail, edit, validasi dasar, dan aksi nonaktifkan sesuai endpoint REST `/api/v1/fitness/master-data/*`.
+
+Menu yang masih placeholder:
+
+- Master Data Kelaikan selain 6 menu Stage 1 menunggu tahap Master Data CRUD Stage 2.
+- Assign Surveyor menunggu tahap Assignment Surveyor.
+- Pemeriksaan & Pengujian menunggu tahap Surveyor Inspection Flow.
+- Review & Keputusan menunggu tahap Review & Approval.
+- Dokumen Kelaikan menunggu tahap Document & QR.
+
+Batasan tahap ini:
+
+- Tidak mengaktifkan workflow transaksi permohonan, assignment, pemeriksaan lapangan, review final, PDF, QR, import aktif, upload aktif, finance, repair, atau re-inspection.
+- Tidak mengubah `database/kontainer_db.sql`, tabel legacy, atau patch `0015_container_fitness_foundation.sql`.
+- Permission yang dipakai mengikuti foundation yang sudah ada: `*.view.all` untuk baca dan `*.manage.all` atau permission CRUD existing yang setara untuk perubahan data.
+
+Tahap berikutnya adalah Master Data CRUD Stage 2 untuk master pendukung checklist, temuan, foto evidence, rekomendasi, penandatangan, dan profil badan usaha sebelum workflow assignment dan inspection diaktifkan.

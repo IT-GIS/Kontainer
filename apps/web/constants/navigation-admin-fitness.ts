@@ -1,4 +1,4 @@
-﻿import {
+import {
   Archive, BarChart3, Building2, ClipboardCheck, ClipboardList, Container, Database,
   FileText, Gauge, History, ListChecks, MapPin, PackageCheck, PenLine, Settings,
   ShieldCheck, Tags, Upload, UserCog, UserRoundCheck, UsersRound, Wrench
@@ -17,8 +17,9 @@ const n = (
   href: string,
   icon: NavigationLink["icon"],
   roles: RoleCode[],
-  matches?: NavigationRouteMatch[]
-): NavigationLink => ({ kind: "link", id: `${href}#${label}`, label, href, icon, roles, permissions: placeholderPermission, matches });
+  matches?: NavigationRouteMatch[],
+  permissions: string[] = placeholderPermission
+): NavigationLink => ({ kind: "link", id: `${href}#${label}`, label, href, icon, roles, permissions, matches });
 
 const g = (label: string, icon: NavigationLink["icon"], roles: RoleCode[], children: NavigationLink[]): NavigationGroup => ({
   kind: "group",
@@ -36,12 +37,12 @@ export const containerFitnessAdminWorkspace: NavigationWorkspace = {
   items: [
     n("Dashboard Kelaikan", "/fitness/dashboard", Gauge, readOnly),
     g("Master Data Kelaikan", Database, admin, [
-      n("Pemilik Peti Kemas", "/fitness/master-data/owners", UsersRound, admin),
-      n("Pabrik Pembuat Peti Kemas", "/fitness/master-data/manufacturers", Building2, admin),
-      n("Lokasi Pemeriksaan", "/fitness/master-data/locations", MapPin, admin),
-      n("Surveyor / Pemeriksa", "/fitness/master-data/surveyors", UserRoundCheck, admin),
-      n("Jenis / Model Peti Kemas", "/fitness/master-data/container-types", Container, admin),
-      n("Kategori Persetujuan Kelaikan", "/fitness/master-data/approval-categories", ClipboardCheck, admin),
+      n("Pemilik Peti Kemas", "/fitness/master-data/owners", UsersRound, admin, undefined, ["customers.view.all"]),
+      n("Pabrik Pembuat Peti Kemas", "/fitness/master-data/manufacturers", Building2, admin, undefined, ["container_manufacturers.view.all"]),
+      n("Lokasi Pemeriksaan", "/fitness/master-data/locations", MapPin, admin, undefined, ["locations.view.all"]),
+      n("Surveyor / Pemeriksa", "/fitness/master-data/surveyors", UserRoundCheck, admin, undefined, ["surveyors.view.all"]),
+      n("Jenis / Model Peti Kemas", "/fitness/master-data/container-types", Container, admin, undefined, ["container_types.view.all"]),
+      n("Kategori Persetujuan Kelaikan", "/fitness/master-data/approval-categories", ClipboardCheck, admin, undefined, ["fitness_approval_categories.view.all"]),
       n("Skema Pemeliharaan Peti Kemas", "/fitness/master-data/maintenance-schemes", Wrench, admin),
       n("Area Pemeriksaan Peti Kemas", "/fitness/master-data/inspection-areas", MapPin, admin),
       n("Komponen Struktur Peti Kemas", "/fitness/master-data/structural-components", PackageCheck, admin),

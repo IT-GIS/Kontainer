@@ -37,6 +37,14 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	handler.resource(master, authService, "/cedex/repairs", Resources["cedex_repairs"])
 	handler.resource(master, authService, "/cedex/materials", Resources["cedex_materials"])
 	handler.resource(master, authService, "/responsibility-codes", Resources["responsibility_codes"])
+
+	fitnessMaster := v1.Group("/fitness/master-data")
+	handler.resource(fitnessMaster, authService, "/owners", Resources["customers"])
+	handler.resource(fitnessMaster, authService, "/manufacturers", Resources["container_manufacturers"])
+	handler.resource(fitnessMaster, authService, "/locations", Resources["locations"])
+	handler.resource(fitnessMaster, authService, "/surveyors", Resources["surveyors"])
+	handler.resource(fitnessMaster, authService, "/container-types", Resources["container_types"])
+	handler.resource(fitnessMaster, authService, "/approval-categories", Resources["fitness_approval_categories"])
 }
 
 func (h Handler) resource(group *gin.RouterGroup, authService *auth.Service, path string, resource Resource) {

@@ -45,3 +45,26 @@ func TestBuildWhereIncludesSearchStatusAndFilters(t *testing.T) {
 		t.Fatalf("expected where clause with 4 args, got where=%q args=%#v", where, args)
 	}
 }
+
+func TestValidateFitnessManufacturerEmail(t *testing.T) {
+	payload := normalizePayload(Resources["container_manufacturers"], map[string]any{
+		"manufacturer_code": "MFG-001", "manufacturer_name": "Container Maker", "pic_email": "not-email",
+	})
+	if err := validatePayload(Resources["container_manufacturers"], payload, true); err == nil {
+		t.Fatal("expected invalid manufacturer email to fail")
+	}
+}
+
+func TestValidateFitnessApprovalCategoryLifecycle(t *testing.T) {
+	payload := normalizePayload(Resources["fitness_approval_categories"], map[string]any{
+		"code": "new_individual", "name": "Peti Kemas Baru Individual", "container_lifecycle": "future",
+	})
+	if err := validatePayload(Resources["fitness_approval_categories"], payload, true); err == nil {
+		t.Fatal("expected invalid approval category lifecycle to fail")
+	}
+
+	payload["container_lifecycle"] = "new"
+	if err := validatePayload(Resources["fitness_approval_categories"], payload, true); err != nil {
+		t.Fatalf("expected valid approval category payload, got %v", err)
+	}
+}

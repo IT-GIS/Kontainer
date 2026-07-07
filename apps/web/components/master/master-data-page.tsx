@@ -1,6 +1,6 @@
 "use client";
 
-import { Edit, Plus, Search, Trash2 } from "lucide-react";
+import { Edit, Eye, Plus, Search, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { masterResources, type MasterField, type MasterResource } from "@/constants/master-data";
 import { useAuth } from "@/hooks/use-auth";
@@ -30,6 +30,7 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [dialogMode, setDialogMode] = useState<"create" | "edit" | null>(null);
   const [selected, setSelected] = useState<MasterRow | null>(null);
+  const [detailRow, setDetailRow] = useState<MasterRow | null>(null);
   const [formData, setFormData] = useState<MasterRow>(() => defaultFormData(resource));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [surveyorUsers, setSurveyorUsers] = useState<UserOption[]>([]);
@@ -64,7 +65,7 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
   }, [loadRows]);
 
   useEffect(() => {
-    if (!accessToken || resourceId !== "surveyors") return;
+    if (!accessToken || (resourceId !== "surveyors" && resourceId !== "fitness-surveyors")) return;
     void apiPaginated<{ id: string; name: string; email: string }>(
       "/users?page=1&per_page=100&status=active&role=surveyor&without_surveyor_profile=true",
       { accessToken }
@@ -83,13 +84,16 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
       header: "Action",
       render: (row: MasterRow) => (
         <div className="row-actions">
+          <button className="icon-button" onClick={() => setDetailRow(row)} title="Detail">
+            <Eye size={16} />
+          </button>
           {canUpdate ? (
             <button className="icon-button" onClick={() => openEdit(row)} title="Edit">
               <Edit size={16} />
             </button>
           ) : null}
           {canDelete ? (
-            <button className="icon-button danger-action" onClick={() => void handleDelete(row)} title="Deactivate">
+            <button className="icon-button danger-action" onClick={() => void handleDelete(row)} title="Nonaktifkan">
               <Trash2 size={16} />
             </button>
           ) : null}
@@ -138,7 +142,7 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
   }
 
   async function handleDelete(row: MasterRow) {
-    if (!accessToken || !row.id || !window.confirm("Deactivate this item?")) {
+    if (!accessToken || !row.id || !window.confirm("Nonaktifkan data ini?")) {
       return;
     }
     setError(null);
@@ -155,17 +159,17 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
       <PageHeader
         title={resource.title}
         description={resource.description}
-        action={canCreate ? { label: "Add", icon: Plus, onClick: openCreate } : undefined}
+        action={canCreate ? { label: "Tambah", icon: Plus, onClick: openCreate } : undefined}
       />
 
       <div className="toolbar">
         <label className="search-box">
           <Search size={17} />
-          <input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Search" />
+          <input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Cari" />
         </label>
         <select value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }}>
-          <option value="">All Status</option>
-          <option value="active">Active</option>
+          <option value="">Semua Status</option>
+          <option value="active">Aktif</option>
           <option value="inactive">Inactive</option>
         </select>
       </div>
@@ -174,13 +178,30 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
 
       <DataTable columns={columns} rows={rows} isLoading={isLoading} page={page} totalPages={totalPages} onPageChange={setPage} />
 
+      {detailRow ? (
+        <section className="workspace-panel">
+          <div className="section-title-row">
+            <div><Eye size={20} /><h2>Detail</h2></div>
+            <button className="icon-button" onClick={() => setDetailRow(null)} title="Tutup detail"><X size={16} /></button>
+          </div>
+          <div className="detail-grid">
+            {resource.fields.map((field) => (
+              <div className="detail-item" key={field.name}>
+                <span>{field.label}</span>
+                <strong>{renderDetailValue(detailRow[field.name], field.type)}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <FormDialog
-        title={dialogMode === "create" ? `Add ${resource.title}` : `Edit ${resource.title}`}
+        title={dialogMode === "create" ? `Tambah ${resource.title}` : `Edit ${resource.title}`}
         open={Boolean(dialogMode)}
         onClose={closeDialog}
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
-        submitLabel={dialogMode === "create" ? "Create" : "Update"}
+        submitLabel={dialogMode === "create" ? "Simpan" : "Update"}
       >
         <div className="form-grid">
           {resource.fields.map((field) => (
@@ -188,7 +209,7 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
               field={field}
               key={field.name}
               value={formData[field.name]}
-              optionsOverride={resourceId === "surveyors" && field.name === "user_id" ? surveyorUserOptions(surveyorUsers, selected) : undefined}
+              optionsOverride={(resourceId === "surveyors" || resourceId === "fitness-surveyors") && field.name === "user_id" ? surveyorUserOptions(surveyorUsers, selected) : undefined}
               onChange={(value) => setFormData((current) => ({ ...current, [field.name]: value }))}
             />
           ))}
@@ -213,7 +234,7 @@ function FieldInput({ field, value, onChange, optionsOverride }: { field: Master
       <span>{field.label}{field.required ? " *" : ""}</span>
       {field.type === "select" || optionsOverride ? (
         <select value={String(value ?? "")} onChange={(event) => onChange(event.target.value)} required={field.required}>
-          <option value="">Select</option>
+          <option value="">Pilih</option>
           {(optionsOverride ?? field.options)?.map((option) => (
             <option value={option.value} key={option.value}>{option.label}</option>
           ))}
@@ -236,13 +257,19 @@ function surveyorUserOptions(options: UserOption[], selected: MasterRow | null) 
   return [{ value: currentID, label: `${String(selected?.name ?? "Current user")} - current profile` }, ...options];
 }
 
+function renderDetailValue(value: MasterRow[string], type?: MasterField["type"]) {
+  if (value === undefined || value === null || value === "") return "-";
+  if (type === "checkbox") return value ? "Ya" : "Tidak";
+  return String(value);
+}
+
 function renderCell(value: MasterRow[string], type?: "status" | "boolean") {
   if (type === "status") {
     const label = String(value || "inactive");
-    return <StatusBadge tone={label === "active" ? "success" : "neutral"}>{label.toUpperCase()}</StatusBadge>;
+    return <StatusBadge tone={label === "active" ? "success" : "neutral"}>{label === "active" ? "Aktif" : "Inactive"}</StatusBadge>;
   }
   if (type === "boolean") {
-    return <StatusBadge tone={value ? "success" : "neutral"}>{value ? "YES" : "NO"}</StatusBadge>;
+    return <StatusBadge tone={value ? "success" : "neutral"}>{value ? "Ya" : "Tidak"}</StatusBadge>;
   }
   return value === undefined || value === null || value === "" ? <span className="muted-text">-</span> : String(value);
 }
