@@ -19,13 +19,16 @@ Detail field tiap master ada di `docs/ADMIN_FORMS_KELAIKAN_PETI_KEMAS.md`.
 
 ## 2. Form Permohonan Kelaikan
 
+Route daftar: `/fitness/applications`
+Route buat: `/fitness/applications/create`
+
 Field:
 
 ```text
-application_no
+application_no auto numbering
 application_date
 owner_id
-manufacturer_id
+manufacturer_id optional
 inspection_location_id
 approval_category_id
 client_request_letter_no
@@ -34,17 +37,19 @@ pic_name
 pic_phone
 pic_email
 instruction_notes
-status
+status draft/submitted
 ```
 
 Validasi:
 
 - Tanggal permohonan wajib.
-- Pemilik wajib.
-- Lokasi pemeriksaan wajib.
-- Kategori persetujuan wajib.
-- Pabrik pembuat disarankan wajib untuk peti kemas baru.
+- Pemilik wajib diisi.
+- Lokasi wajib dipilih.
+- Kategori persetujuan wajib dipilih.
 - Email PIC harus valid jika diisi.
+- Pabrik pembuat disarankan wajib untuk peti kemas baru.
+
+Dipakai oleh: Data Peti Kemas, Assign Surveyor, Pemeriksaan Lapangan, Dokumen Kelaikan.
 
 Dipakai Surveyor untuk memahami pemilik, lokasi, kategori proses, dan instruksi pemeriksaan.
 
@@ -97,11 +102,13 @@ Dipakai Surveyor sebagai pembanding saat memeriksa identitas, CSC plate, dan dat
 
 ## 4. Form Import Data Peti Kemas
 
+Route: `/fitness/containers/import`
+
 Field:
 
 ```text
 application_id
-file
+file Excel/CSV
 column_mapping
 preview_rows
 validation_result
@@ -127,8 +134,16 @@ Validasi:
 
 - File wajib Excel/CSV.
 - Mapping kolom wajib dikonfirmasi.
-- Nomor peti kemas wajib unik dalam satu permohonan.
+- Nomor peti kemas wajib.
+- Format nomor peti kemas harus divalidasi.
+- Data duplicate harus ditandai.
+- Data invalid tidak boleh langsung masuk.
+- Import hanya placeholder, belum ada proses upload aktif.
 - Status import: processed, partial_failed, failed.
+
+Dipakai oleh: Data Peti Kemas, Assign Surveyor, Pemeriksaan Lapangan, Dokumen Kelaikan.
+
+Hubungan ke Surveyor: Data hasil import akan menjadi daftar peti kemas yang ditugaskan kepada Surveyor.
 
 ## 5. Form Assignment Surveyor
 

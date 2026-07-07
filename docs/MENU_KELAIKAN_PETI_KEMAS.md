@@ -39,6 +39,7 @@ Master Data Kelaikan
 
 Permohonan Kelaikan
 - Daftar Permohonan
+- Buat Permohonan
 - Data Peti Kemas
 - Import Data Peti Kemas
 - Assign Surveyor
@@ -92,8 +93,10 @@ Arsip Survey Lama
 |---|---|
 | Dashboard Kelaikan | `/fitness/dashboard` |
 | Master Data Kelaikan | `/fitness/master-data` |
-| Permohonan Kelaikan | `/fitness/applications` |
+| Daftar Permohonan | `/fitness/applications` |
+| Buat Permohonan | `/fitness/applications/create` |
 | Data Peti Kemas | `/fitness/containers` |
+| Import Data Peti Kemas | `/fitness/containers/import` |
 | Assign Surveyor | `/fitness/assignments` |
 | Pemeriksaan & Pengujian | `/fitness/inspections` |
 | Review & Keputusan Kelaikan | `/fitness/reviews` |

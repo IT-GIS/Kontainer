@@ -19,6 +19,45 @@ Dipakai oleh: Admin, Supervisor, Management.
 
 Hubungan ke Surveyor: status dashboard berasal dari hasil pemeriksaan dan rekomendasi yang dikirim Surveyor.
 
+## Permohonan Kelaikan
+
+### 1. Daftar Permohonan
+
+Route: `/fitness/applications`
+
+Field tampilan: Nomor Permohonan, Tanggal Permohonan, Pemilik Peti Kemas, Pabrik Pembuat, Lokasi Pemeriksaan, Kategori Persetujuan Kelaikan, Nomor Surat Permohonan Client, Tanggal Surat Permohonan Client, PIC, Instruksi / Catatan, Status draft/submitted.
+
+Validasi: pemilik, lokasi, kategori, dan tanggal permohonan wajib; email PIC harus valid jika diisi; pabrik pembuat disarankan wajib untuk peti kemas baru.
+
+Dipakai oleh: Data Peti Kemas, Assign Surveyor, Pemeriksaan Lapangan, Dokumen Kelaikan.
+
+Hubungan ke Surveyor: Surveyor menerima konteks permohonan, pemilik, lokasi, kategori persetujuan, dan instruksi pemeriksaan dari data ini.
+
+### 2. Buat Permohonan Kelaikan
+
+Route: `/fitness/applications/create`
+
+Field: Nomor Permohonan auto numbering, Tanggal Permohonan, Pemilik Peti Kemas, Pabrik Pembuat optional, Lokasi Pemeriksaan, Kategori Persetujuan Kelaikan, Nomor Surat Permohonan Client, Tanggal Surat Permohonan Client, Nama PIC, Telepon PIC, Email PIC, Instruksi / Catatan, Status draft/submitted.
+
+Validasi: pemilik wajib diisi; lokasi wajib dipilih; kategori persetujuan wajib dipilih; tanggal permohonan wajib; email PIC harus valid jika diisi; pabrik pembuat disarankan wajib untuk peti kemas baru.
+
+Dipakai oleh: Data Peti Kemas, Assign Surveyor, Pemeriksaan Lapangan, Dokumen Kelaikan.
+
+Hubungan ke Surveyor: Surveyor menerima konteks permohonan, pemilik, lokasi, kategori persetujuan, dan instruksi pemeriksaan dari data ini.
+
+### 3. Import Data Peti Kemas
+
+Route: `/fitness/containers/import`
+
+Field: Pilih Permohonan, Upload file Excel/CSV, Mapping kolom, Preview data, Validasi hasil import, Status import.
+
+Kolom import minimal: container_no, container_type, iso_type_code, csc_no, manufacture_date, manufacturer_serial_no, type_model, max_gross_weight_kg, tare_weight_kg, payload_weight_kg.
+
+Validasi: file wajib Excel/CSV; nomor peti kemas wajib; format nomor peti kemas harus divalidasi; data duplicate harus ditandai; data invalid tidak boleh langsung masuk; import hanya placeholder, belum ada proses upload aktif.
+
+Dipakai oleh: Data Peti Kemas, Assign Surveyor, Pemeriksaan Lapangan, Dokumen Kelaikan.
+
+Hubungan ke Surveyor: Data hasil import akan menjadi daftar peti kemas yang ditugaskan kepada Surveyor.
 ## Master Data Kelaikan
 
 ### 1. Pemilik Peti Kemas

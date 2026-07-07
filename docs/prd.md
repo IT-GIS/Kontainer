@@ -204,7 +204,7 @@ Pada tahap awal belum perlu login. Client menerima dokumen, melakukan repair bil
 
 1. Daftar Permohonan.
 2. Buat Permohonan.
-3. Input Data Peti Kemas.
+3. Data Peti Kemas.
 4. Import Data Peti Kemas.
 5. Assign Surveyor.
 
@@ -866,6 +866,11 @@ Tahap ini mengunci menu Admin, placeholder halaman, dan dokumentasi form. Belum 
 1. Dashboard Kelaikan
 2. Master Data Kelaikan
 3. Permohonan Kelaikan
+   - Daftar Permohonan: `/fitness/applications`
+   - Buat Permohonan: `/fitness/applications/create`
+   - Data Peti Kemas: `/fitness/containers`
+   - Import Data Peti Kemas: `/fitness/containers/import`
+   - Assign Surveyor: `/fitness/assignments`
 4. Pemeriksaan & Pengujian
 5. Review & Keputusan Kelaikan
 6. Dokumen Kelaikan
@@ -897,7 +902,7 @@ Master Data Kelaikan menjadi sumber pilihan bagi Surveyor lapangan:
 
 ### Placeholder Route Tahap Ini
 
-Route `/fitness/*` hanya menampilkan placeholder tanpa API request, tanpa tombol simpan, dan tanpa mutation aktif. Setiap placeholder wajib menampilkan tujuan menu, field form, validasi ringkas, menu pemakai, dan hubungan ke Surveyor lapangan.
+Route `/fitness/*` hanya menampilkan placeholder tanpa API request, tanpa tombol simpan, dan tanpa mutation aktif. Setiap placeholder wajib menampilkan tujuan menu, field form, validasi ringkas, menu pemakai, dan hubungan ke Surveyor lapangan. Route placeholder khusus tahap ini mencakup `/fitness/applications/create` untuk Buat Permohonan dan `/fitness/containers/import` untuk Import Data Peti Kemas.
 
 ### Menu Legacy
 

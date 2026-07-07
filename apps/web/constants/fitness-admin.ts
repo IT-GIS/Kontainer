@@ -59,6 +59,15 @@ export const fitnessPlaceholders: FitnessPlaceholder[] = [
     surveyorUsage: "Surveyor menerima konteks permohonan, pemilik, lokasi, kategori persetujuan, dan instruksi pemeriksaan dari data ini."
   },
   {
+    path: "/fitness/applications/create",
+    title: "Buat Permohonan Kelaikan",
+    purpose: "Membuat permohonan kelaikan peti kemas sebelum data peti kemas dan surveyor dilengkapi.",
+    fields: ["Nomor Permohonan, auto numbering", "Tanggal Permohonan", "Pemilik Peti Kemas", "Pabrik Pembuat, optional", "Lokasi Pemeriksaan", "Kategori Persetujuan Kelaikan", "Nomor Surat Permohonan Client", "Tanggal Surat Permohonan Client", "Nama PIC", "Telepon PIC", "Email PIC", "Instruksi / Catatan", "Status draft/submitted"],
+    validations: ["Pemilik wajib diisi", "Lokasi wajib dipilih", "Kategori persetujuan wajib dipilih", "Tanggal permohonan wajib", "Email PIC harus valid jika diisi", "Pabrik pembuat disarankan wajib untuk peti kemas baru"],
+    usedBy: ["Data Peti Kemas", "Assign Surveyor", "Pemeriksaan Lapangan", "Dokumen Kelaikan"],
+    surveyorUsage: "Surveyor menerima konteks permohonan, pemilik, lokasi, kategori persetujuan, dan instruksi pemeriksaan dari data ini."
+  },
+  {
     path: "/fitness/containers",
     title: "Data Peti Kemas",
     purpose: "Menyiapkan data identitas dan spesifikasi teknis peti kemas yang akan diperiksa.",
@@ -66,6 +75,15 @@ export const fitnessPlaceholders: FitnessPlaceholder[] = [
     validations: ["Nomor peti kemas wajib", "Check digit harus dicek atau diberi alasan override", "Field teknis wajib sebelum dokumen diterbitkan"],
     usedBy: ["Permohonan Kelaikan", "Pemeriksaan Lapangan", "Review", "Dokumen Kelaikan"],
     surveyorUsage: "Surveyor memakai data teknis sebagai pembanding saat memeriksa plate, struktur, dan parameter pengujian."
+  },
+  {
+    path: "/fitness/containers/import",
+    title: "Import Data Peti Kemas",
+    purpose: "Mengimpor batch data peti kemas dari Excel/CSV agar Admin tidak input satu per satu.",
+    fields: ["Pilih Permohonan", "Upload file Excel/CSV", "Mapping kolom", "Preview data", "Validasi hasil import", "Status import", "Kolom import minimal: container_no", "Kolom import minimal: container_type", "Kolom import minimal: iso_type_code", "Kolom import minimal: csc_no", "Kolom import minimal: manufacture_date", "Kolom import minimal: manufacturer_serial_no", "Kolom import minimal: type_model", "Kolom import minimal: max_gross_weight_kg", "Kolom import minimal: tare_weight_kg", "Kolom import minimal: payload_weight_kg"],
+    validations: ["File wajib Excel/CSV", "Nomor peti kemas wajib", "Format nomor peti kemas harus divalidasi", "Data duplicate harus ditandai", "Data invalid tidak boleh langsung masuk", "Import hanya placeholder, belum ada proses upload aktif"],
+    usedBy: ["Data Peti Kemas", "Assign Surveyor", "Pemeriksaan Lapangan", "Dokumen Kelaikan"],
+    surveyorUsage: "Data hasil import akan menjadi daftar peti kemas yang ditugaskan kepada Surveyor."
   },
   {
     path: "/fitness/assignments",

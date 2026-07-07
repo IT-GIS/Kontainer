@@ -55,9 +55,10 @@ export const containerFitnessAdminWorkspace: NavigationWorkspace = {
       n("Profil Badan Usaha", "/fitness/master-data/company-profile", Building2, admin)
     ]),
     g("Permohonan Kelaikan", ClipboardList, admin, [
-      n("Daftar Permohonan", "/fitness/applications", ClipboardList, admin, [{ path: "/fitness/applications", mode: "prefix" }]),
+      n("Daftar Permohonan", "/fitness/applications", ClipboardList, admin),
+      n("Buat Permohonan", "/fitness/applications/create", PenLine, admin),
       n("Data Peti Kemas", "/fitness/containers", Container, admin),
-      n("Import Data Peti Kemas", "/fitness/containers", Upload, admin),
+      n("Import Data Peti Kemas", "/fitness/containers/import", Upload, admin),
       n("Assign Surveyor", "/fitness/assignments", UserRoundCheck, admin)
     ]),
     g("Pemeriksaan & Pengujian", ClipboardCheck, readOnly, [
