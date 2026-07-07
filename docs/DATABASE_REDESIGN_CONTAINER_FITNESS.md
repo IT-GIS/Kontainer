@@ -507,3 +507,35 @@ Jika belum bisa dihapus langsung, tandai sebagai deprecated dan sembunyikan dari
 - Generate dokumen approval kelaikan yang mengacu pada Permenhub 25/2022.
 - Hapus dependency pada survey_type, cedex_repair, responsibility_code.
 - Clean up tabel lama.
+## Mapping Master Data Admin ke Tabel
+
+Tahap menu Admin belum membuat migration. Mapping ini hanya rekomendasi desain untuk tahap database berikutnya.
+
+| Sub menu Admin | Tabel existing/baru | Status implementasi tahap ini | Dipakai Surveyor untuk |
+|---|---|---|---|
+| Pemilik Peti Kemas | `customers` | Existing, label UI menjadi Pemilik Peti Kemas | konteks pemilik pekerjaan |
+| Pabrik Pembuat Peti Kemas | `container_manufacturers` | Baru nanti | verifikasi data pabrik dan plate |
+| Lokasi Pemeriksaan | `locations` | Existing, label UI menjadi Lokasi Pemeriksaan | lokasi kerja, GPS, konteks lapangan |
+| Surveyor / Pemeriksa | `surveyor_profiles` | Existing | assignment pemeriksaan |
+| Jenis / Model Peti Kemas | `container_types` | Existing | menentukan checklist dan data teknis |
+| Kategori Persetujuan Kelaikan | `fitness_approval_categories` | Baru nanti | menentukan checklist dan dokumen |
+| Skema Pemeliharaan Peti Kemas | `maintenance_schemes` | Baru nanti | verifikasi NED/skema plate |
+| Area Pemeriksaan Peti Kemas | `inspection_areas` | Baru nanti | pilihan area temuan |
+| Komponen Struktur Peti Kemas | `structural_components` | Baru nanti | pilihan komponen temuan |
+| Kriteria Kerusakan / Ketidaksesuaian | `structural_damage_criteria` | Baru nanti | pilihan jenis temuan |
+| Tingkat Temuan / Severity | `finding_severities` | Baru nanti | klasifikasi risiko temuan |
+| Parameter Pengujian Kelaikan | `inspection_test_parameters` | Baru nanti | input hasil pengujian |
+| Template Checklist Kelaikan | `fitness_checklist_templates`, `fitness_checklist_template_items` | Baru nanti | daftar checklist lapangan |
+| Kategori Foto Evidence | `evidence_photo_categories` | Baru nanti | kategori foto wajib/opsional |
+| Rekomendasi Hasil Pemeriksaan | `inspection_recommendations` | Baru nanti | rekomendasi akhir Surveyor |
+| Pejabat Penandatangan | `authorized_signers` | Baru nanti | metadata dokumen kelaikan |
+| Profil Badan Usaha | `company_profiles` | Existing | header dokumen dan validasi |
+
+## Batasan Tahap Menu Admin
+
+- Tidak membuat migration.
+- Tidak mengubah `database/kontainer_db.sql`.
+- Tidak membuat patch SQL.
+- Tidak menambah permission database.
+- Tidak rename/drop tabel legacy.
+- Tidak cleanup data legacy.

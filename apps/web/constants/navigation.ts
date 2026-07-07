@@ -1,7 +1,9 @@
-import type { LucideIcon } from "lucide-react";
+﻿import type { LucideIcon } from "lucide-react";
 import { adminWorkspace } from "@/constants/navigation-admin";
+import { containerFitnessAdminWorkspace } from "@/constants/navigation-admin-fitness";
 import { financeWorkspace } from "@/constants/navigation-finance";
 import { surveyorWorkspace } from "@/constants/navigation-surveyor";
+import { isContainerFitnessScope } from "@/lib/app-scope";
 import type { RoleCode } from "@/types/auth";
 
 export type NavigationRouteMatch = {
@@ -40,8 +42,10 @@ export type NavigationWorkspace = {
   items: NavigationNode[];
 };
 
+const activeAdminWorkspace = isContainerFitnessScope() ? containerFitnessAdminWorkspace : adminWorkspace;
+
 export const navigationWorkspaces: NavigationWorkspace[] = [
-  adminWorkspace,
+  activeAdminWorkspace,
   surveyorWorkspace,
   financeWorkspace
 ];

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   Bell, ChevronDown, ChevronLeft, ChevronRight, LogOut, Menu, X
@@ -96,7 +96,7 @@ export function AppShell({ title, children }: AppShellProps) {
             />
           </div>
           <div className="source-sidebar-brand">
-            <strong>Sistem Kelayakan Peti Kemas Terintegrasi</strong>
+            <strong>Sistem Kelaikan Peti Kemas Terintegrasi</strong>
             <span>PT Global Inspeksi Sertifikasi</span>
           </div>
           <button className="icon-button sidebar-close" onClick={() => setIsOpen(false)} title="Tutup menu">

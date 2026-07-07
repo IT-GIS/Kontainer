@@ -857,3 +857,48 @@ Jangan implement code dulu.
 Fokus pada mapping menu, database, form, status lifecycle, dan dokumen.
 Outputkan plan tahap 1 yang aman tanpa refactor besar.
 ```
+## Addendum — Tahap Menu Admin Kelaikan Peti Kemas
+
+Tahap ini mengunci menu Admin, placeholder halaman, dan dokumentasi form. Belum ada CRUD API penuh, database migration, permission database baru, PDF final, QR final, MinIO/watermark, finance kelaikan, atau cleanup legacy.
+
+### Menu Admin saat Scope `container_fitness`
+
+1. Dashboard Kelaikan
+2. Master Data Kelaikan
+3. Permohonan Kelaikan
+4. Pemeriksaan & Pengujian
+5. Review & Keputusan Kelaikan
+6. Dokumen Kelaikan
+7. Laporan
+8. Setting
+9. Arsip Survey Lama
+
+### Master Data Kelaikan
+
+Master Data Kelaikan menjadi sumber pilihan bagi Surveyor lapangan:
+
+- Pemilik Peti Kemas
+- Pabrik Pembuat Peti Kemas
+- Lokasi Pemeriksaan
+- Surveyor / Pemeriksa
+- Jenis / Model Peti Kemas
+- Kategori Persetujuan Kelaikan
+- Skema Pemeliharaan Peti Kemas
+- Area Pemeriksaan Peti Kemas
+- Komponen Struktur Peti Kemas
+- Kriteria Kerusakan / Ketidaksesuaian
+- Tingkat Temuan / Severity
+- Parameter Pengujian Kelaikan
+- Template Checklist Kelaikan
+- Kategori Foto Evidence
+- Rekomendasi Hasil Pemeriksaan
+- Pejabat Penandatangan
+- Profil Badan Usaha
+
+### Placeholder Route Tahap Ini
+
+Route `/fitness/*` hanya menampilkan placeholder tanpa API request, tanpa tombol simpan, dan tanpa mutation aktif. Setiap placeholder wajib menampilkan tujuan menu, field form, validasi ringkas, menu pemakai, dan hubungan ke Surveyor lapangan.
+
+### Menu Legacy
+
+Menu Survey Type, CEDEX, Responsibility Code, Job Order legacy, Monitoring Survey legacy, Review legacy, Report legacy, dan finance legacy tidak tampil di Admin Kelaikan aktif. Data lama tidak dihapus dan hanya diarahkan ke konsep Arsip Survey Lama atau mode `legacy`.

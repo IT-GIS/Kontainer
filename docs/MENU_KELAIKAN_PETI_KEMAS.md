@@ -1,31 +1,45 @@
 ﻿# Menu Admin Kelaikan Peti Kemas
 
-## Tujuan Menu
+## Identitas Aplikasi
 
-Menu Admin harus mencerminkan alur kelaikan peti kemas, bukan alur general container survey.
+- Nama aplikasi: Sistem Kelaikan Peti Kemas
+- Nama Inggris: Container Fitness Approval System
+- Acuan regulasi dokumentasi: Permenhub 25/2022
+- Scope aktif: Kelaikan Peti Kemas
+
+## Aturan Scope Menu
+
+Saat `NEXT_PUBLIC_APP_SCOPE=legacy`, menu legacy tetap tampil seperti sebelumnya.
+
+Saat `NEXT_PUBLIC_APP_SCOPE=container_fitness`, Admin memakai menu Kelaikan dan menu general container survey disembunyikan dari workspace Admin aktif. Finance tetap workspace terpisah dan Surveyor legacy boleh tetap ada sementara.
 
 ## Menu Admin Final
 
 ```text
-Dashboard
+Dashboard Kelaikan
 
-Master Data
+Master Data Kelaikan
 - Pemilik Peti Kemas
 - Pabrik Pembuat Peti Kemas
 - Lokasi Pemeriksaan
 - Surveyor / Pemeriksa
 - Jenis / Model Peti Kemas
+- Kategori Persetujuan Kelaikan
+- Skema Pemeliharaan Peti Kemas
+- Area Pemeriksaan Peti Kemas
 - Komponen Struktur Peti Kemas
-- Kriteria Kerusakan Struktur
+- Kriteria Kerusakan / Ketidaksesuaian
+- Tingkat Temuan / Severity
 - Parameter Pengujian Kelaikan
 - Template Checklist Kelaikan
+- Kategori Foto Evidence
+- Rekomendasi Hasil Pemeriksaan
 - Pejabat Penandatangan
 - Profil Badan Usaha
 
 Permohonan Kelaikan
 - Daftar Permohonan
-- Buat Permohonan
-- Input Data Peti Kemas
+- Data Peti Kemas
 - Import Data Peti Kemas
 - Assign Surveyor
 
@@ -34,128 +48,79 @@ Pemeriksaan & Pengujian
 - Pemeriksaan Berjalan
 - Perlu Perbaikan
 - Siap Re-Inspection
+- Re-Inspection
 - Layak
 - Tidak Layak
 
-Review & Persetujuan
+Review & Keputusan Kelaikan
 - Pending Review
-- Review History
-- Persetujuan Kelaikan
+- Riwayat Review
+- Keputusan Kelaikan
 - Pembebasan Setelah Perbaikan
 
 Dokumen Kelaikan
 - Surat Persetujuan Kelaikan
-- CSC Safety Approval Plate Data
-- Surat Pembebasan
-- QR Validation
+- Surat Persetujuan Peti Kemas Baru Individual
+- Surat Persetujuan Peti Kemas Lama
+- Surat Pembebasan Setelah Perbaikan
+- Data CSC Safety Approval Plate
+- Validasi Dokumen
 
 Laporan
-- Laporan Kegiatan 6 Bulanan
-- Peti Kemas Layak
-- Peti Kemas Tidak Layak
-- Peti Kemas Perlu Perbaikan
-- Persetujuan Dicabut / Dilarang Digunakan
+- Rekap Pemeriksaan
+- Rekap Peti Kemas Layak
+- Rekap Peti Kemas Tidak Layak
+- Rekap Perlu Perbaikan
+- Rekap Re-Inspection
 - Rekap Pemilik Peti Kemas
 - Rekap Pabrik Pembuat
+- Laporan Kegiatan 6 Bulanan
 
 Setting
 - Company Profile
 - Numbering Setting
+- Audit Log
 - User Management
 - Role & Permission
-- Audit Log
+
+Arsip Survey Lama
 ```
 
-## Menu yang Harus Dihapus dari Versi Lama
+## Route Placeholder
 
-```text
+| Menu | Route |
+|---|---|
+| Dashboard Kelaikan | `/fitness/dashboard` |
+| Master Data Kelaikan | `/fitness/master-data` |
+| Permohonan Kelaikan | `/fitness/applications` |
+| Data Peti Kemas | `/fitness/containers` |
+| Assign Surveyor | `/fitness/assignments` |
+| Pemeriksaan & Pengujian | `/fitness/inspections` |
+| Review & Keputusan Kelaikan | `/fitness/reviews` |
+| Dokumen Kelaikan | `/fitness/documents` |
+| Laporan | `/fitness/reports` |
+| Arsip Survey Lama | `/fitness/legacy-archive` |
+
+## Menu Legacy yang Disembunyikan dari Admin Kelaikan
+
 - Survey Type
+- CEDEX Location
+- CEDEX Component
+- CEDEX Damage
 - CEDEX Repair
+- CEDEX Material
 - Responsibility Code
-- Ready to Invoice
+- Job Order legacy
+- Monitoring Survey legacy
+- Review legacy
+- Report legacy
 - Price List
-- Invoice List
+- Invoice
 - Payment
 - Outstanding
-- VGM module jika ada
-```
 
-## Menu yang Harus Diubah Label
+Menu legacy tidak dihapus. Data lama tetap dapat diakses melalui mode `legacy` atau konsep `Arsip Survey Lama`.
 
-| Menu Lama | Menu Baru |
-|---|---|
-| Customer | Pemilik Peti Kemas |
-| Job Order | Permohonan Kelaikan |
-| Job List | Daftar Permohonan |
-| Create Job | Buat Permohonan |
-| Add Container | Input Data Peti Kemas |
-| Assign Surveyor | Assign Surveyor / Pemeriksa |
-| Monitoring Survey | Monitoring Pemeriksaan |
-| Review | Review & Persetujuan |
-| Report | Dokumen Kelaikan |
-| Report Archive | Surat Persetujuan Kelaikan |
-| QR Validation | Validasi Dokumen Kelaikan |
+## Peran Admin terhadap Surveyor
 
-## Catatan Role
-
-### Admin
-
-Admin boleh:
-
-- membuat permohonan,
-- mengelola master data,
-- input/import data peti kemas,
-- assign surveyor,
-- monitoring status,
-- melihat dokumen.
-
-Admin tidak otomatis menjadi approver final kecuali kebijakan internal mengizinkan.
-
-### Surveyor / Pemeriksa
-
-Surveyor melakukan:
-
-- pemeriksaan,
-- pengujian,
-- input checklist,
-- input temuan,
-- upload foto,
-- submit hasil pemeriksaan.
-
-### Supervisor / Reviewer
-
-Supervisor melakukan:
-
-- review hasil pemeriksaan,
-- meminta perbaikan,
-- menyetujui kelaikan,
-- menyatakan tidak layak,
-- menyetujui pembebasan setelah re-inspection.
-
-### Management
-
-Management hanya read-only:
-
-- dashboard,
-- laporan,
-- dokumen.
-
-## Prioritas Implementasi Menu
-
-Tahap 1:
-
-- Ganti label menu utama.
-- Hapus menu di luar scope.
-- Tambah menu Perlu Perbaikan dan Siap Re-Inspection.
-- Tambah menu Dokumen Kelaikan.
-
-Tahap 2:
-
-- Implement persetujuan kelaikan.
-- Implement surat pembebasan.
-- Implement laporan kegiatan 6 bulanan.
-
-Tahap 3:
-
-- QR Validation final.
-- Dashboard statistik kelaikan.
+Admin menyiapkan master data agar Surveyor lapangan banyak memilih dari daftar yang sudah dikurasi, bukan mengetik bebas. Master yang paling penting untuk Surveyor adalah area pemeriksaan, komponen struktur, kriteria kerusakan, severity, parameter pengujian, checklist, kategori foto evidence, dan rekomendasi hasil pemeriksaan.

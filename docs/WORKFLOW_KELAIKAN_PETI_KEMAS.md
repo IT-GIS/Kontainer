@@ -1,111 +1,101 @@
 ﻿# Workflow Kelaikan Peti Kemas
 
-## Alur Utama
+## Prinsip Workflow
+
+Sistem Kelaikan Peti Kemas berfokus pada kelaikan peti kemas. VGM, penimbangan, sertifikat VGM, billing repair, finance utama, dan operasional bengkel repair bukan scope workflow ini.
+
+## Alur Admin ke Surveyor
 
 ```text
-Admin membuat Permohonan Kelaikan
-â†“
-Admin input data Pemilik / Pabrik / Lokasi
-â†“
-Admin input atau import data Peti Kemas
-â†“
-Admin assign Surveyor
-â†“
-Surveyor melakukan Pemeriksaan dan Pengujian
-â†“
-Surveyor input checklist, hasil uji, temuan, foto
-â†“
-Surveyor submit hasil pemeriksaan
-â†“
-Supervisor review
-â†“
-Keputusan:
-  - Layak
-  - Perlu Perbaikan
-  - Tidak Layak
-â†“
-Jika perlu perbaikan:
-  - Pemilik/client melakukan perbaikan
-  - Admin tandai Ready for Re-Inspection
-  - Surveyor cek ulang
-â†“
-Jika layak:
-  - Persetujuan Kelaikan diterbitkan
-  - Data CSC Safety Approval Plate dicatat
-  - QR dokumen dibuat
+Admin menyiapkan Master Data Kelaikan
+  -> Admin membuat Permohonan Kelaikan
+  -> Admin input/import Data Peti Kemas
+  -> Admin assign Surveyor / Pemeriksa
+  -> Surveyor melakukan pemeriksaan lapangan
+  -> Surveyor memilih checklist, area, komponen, kriteria, severity, parameter uji, foto, dan rekomendasi dari master data
+  -> Surveyor submit hasil pemeriksaan
+  -> Supervisor / Reviewer melakukan review
+  -> Keputusan: Layak, Perlu Perbaikan, Tidak Layak, Revisi, atau Dilarang Digunakan Sementara
+  -> Dokumen Kelaikan disiapkan jika memenuhi syarat
 ```
 
-## Alur Peti Kemas Baru
+## Peran Master Data untuk Surveyor
 
-### A. Peti Kemas Baru Type Design
+Admin wajib menyiapkan master berikut agar input Surveyor konsisten:
 
-1. Pemohon mengajukan permohonan.
-2. Admin mencatat data pabrik pembuat dan jenis desain.
-3. Surveyor melakukan pengawasan/pemeriksaan/pengujian.
-4. Hasil dilengkapi gambar dan spesifikasi desain.
-5. Supervisor melakukan review.
-6. Jika memenuhi, surat persetujuan type design diterbitkan.
-7. Pelat persetujuan kelaikan dilekatkan.
+- Area Pemeriksaan Peti Kemas
+- Komponen Struktur Peti Kemas
+- Kriteria Kerusakan / Ketidaksesuaian
+- Tingkat Temuan / Severity
+- Parameter Pengujian Kelaikan
+- Template Checklist Kelaikan
+- Kategori Foto Evidence
+- Rekomendasi Hasil Pemeriksaan
 
-### B. Peti Kemas Baru Individual
+## Alur Permohonan Kelaikan
 
-1. Pemohon mengajukan permohonan.
-2. Admin mencatat data pemilik, pabrik, dan spesifikasi teknis container.
-3. Surveyor melakukan pemeriksaan dan pengujian.
-4. Supervisor review.
-5. Jika memenuhi, surat persetujuan kelaikan peti kemas baru individual diterbitkan.
-6. Pelat persetujuan kelaikan dilekatkan.
+1. Admin memilih Pemilik Peti Kemas.
+2. Admin memilih Pabrik Pembuat jika relevan.
+3. Admin memilih Lokasi Pemeriksaan.
+4. Admin memilih Kategori Persetujuan Kelaikan aktif MVP.
+5. Admin mengisi surat permohonan client, PIC, dan instruksi.
+6. Admin menyimpan draft atau submitted pada tahap lanjutan.
 
-## Alur Peti Kemas Lama
+## Alur Data Peti Kemas
 
-### A. Lama sudah digunakan dan belum mendapat persetujuan
+1. Admin input atau import daftar peti kemas.
+2. Admin melengkapi identitas container, check digit, ISO type code, CSC number, dan data teknis.
+3. Admin memilih jenis/model peti kemas dan skema pemeliharaan.
+4. Data teknis menjadi pembanding bagi Surveyor saat memeriksa lapangan.
 
-1. Pemilik mengajukan permohonan beserta data dan informasi peti kemas.
-2. Admin input data teknis.
-3. Surveyor mengevaluasi data dan/atau melakukan pemeriksaan/pengujian.
-4. Jika data dan hasil pemeriksaan memenuhi, persetujuan diterbitkan.
-5. Jika tidak memenuhi, status menjadi perlu perbaikan atau tidak layak.
+## Alur Pemeriksaan Lapangan
 
-### B. Lama sudah diproduksi tetapi belum mendapat persetujuan saat produksi
-
-1. Pemilik mengajukan permohonan.
-2. Admin input data teknis.
-3. Surveyor melakukan evaluasi data dan pemeriksaan/pengujian bila diperlukan.
-4. Supervisor review.
-5. Jika memenuhi, surat persetujuan diterbitkan.
+1. Surveyor membuka assignment.
+2. Surveyor melihat pemilik, lokasi, kategori persetujuan, dan instruksi.
+3. Surveyor mengisi general info.
+4. Surveyor mengisi checklist dari template aktif.
+5. Surveyor mengisi hasil pengujian dari parameter yang berlaku.
+6. Surveyor mencatat temuan dengan memilih area, komponen, kriteria, dan severity.
+7. Surveyor upload foto sesuai kategori evidence.
+8. Surveyor memilih rekomendasi hasil pemeriksaan.
+9. Surveyor submit untuk review.
 
 ## Alur Perbaikan dan Re-Inspection
 
 ```text
-Temuan kerusakan
-â†“
-Status: Perlu Perbaikan
-â†“
-Pemilik/client melakukan perbaikan
-â†“
-Admin upload/isi bukti perbaikan jika ada
-â†“
-Status: Siap Re-Inspection
-â†“
-Surveyor melakukan pemeriksaan ulang
-â†“
-Hasil:
-  - Masih Rusak
-  - Layak Setelah Perbaikan
-  - Tidak Layak
-â†“
-Jika layak setelah perbaikan:
-  - Surat Pembebasan / Release Letter diterbitkan
+Temuan kerusakan atau ketidaksesuaian
+  -> Reviewer memberi keputusan Perlu Perbaikan / Dilarang Digunakan Sementara
+  -> Pemilik/client melakukan perbaikan di luar sistem
+  -> Admin menandai siap re-inspection pada tahap workflow berikutnya
+  -> Surveyor melakukan re-inspection
+  -> Reviewer menyatakan layak, masih perlu perbaikan, atau tidak layak
+  -> Jika layak setelah perbaikan, surat pembebasan dapat disiapkan
 ```
 
-## Status Alur
+## Alur Dokumen
 
-Lihat `STATUS_LIFECYCLE_KELAIKAN_PETI_KEMAS.md` untuk detail status.
+1. Dokumen memakai data permohonan, data peti kemas, hasil pemeriksaan, hasil review, pejabat penandatangan, dan profil badan usaha.
+2. Tahap ini hanya placeholder metadata dokumen.
+3. PDF final, QR final, snapshot dokumen, MinIO, dan watermark belum dikerjakan.
+
+## Route Placeholder Tahap Ini
+
+- `/fitness/dashboard`
+- `/fitness/master-data`
+- `/fitness/applications`
+- `/fitness/containers`
+- `/fitness/assignments`
+- `/fitness/inspections`
+- `/fitness/reviews`
+- `/fitness/documents`
+- `/fitness/reports`
+- `/fitness/legacy-archive`
 
 ## Aturan Penting
 
-1. VGM tidak boleh muncul di form atau workflow.
-2. CEDEX repair tidak boleh menjadi dasar keputusan.
-3. Tindakan repair dicatat sebagai tindak lanjut oleh pemilik/client.
-4. Hasil akhir harus berupa status kelaikan, bukan status survey umum.
-5. Dokumen akhir harus sesuai kategori permohonan.
+1. Gunakan istilah Kelaikan secara konsisten.
+2. Permenhub 25/2022 hanya ditulis sebagai acuan regulasi dalam Markdown.
+3. Jangan gunakan singkatan regulasi sebagai identifier.
+4. CEDEX repair tidak menjadi dasar keputusan utama.
+5. Repair dicatat sebagai tindak lanjut pemilik/client, bukan operasional bengkel internal.
+6. Data legacy tidak dihapus dan tidak menjadi workflow aktif.

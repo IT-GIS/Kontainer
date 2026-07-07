@@ -1,0 +1,262 @@
+﻿# Form Admin Kelaikan Peti Kemas
+
+Dokumen ini mengunci detail form Admin untuk tahap menu dan placeholder. Belum ada CRUD API, submit aktif, mutation backend, permission database baru, atau database migration.
+
+## Prinsip Form
+
+- Admin menyiapkan data yang akan dipakai Surveyor di lapangan.
+- Surveyor diarahkan memilih data master, bukan mengetik bebas.
+- Type Design hanya future/inactive di dokumentasi, tidak aktif pada UI MVP.
+- VGM, penimbangan, sertifikat VGM, billing repair, dan finance utama bukan scope.
+
+## Dashboard Kelaikan
+
+Field tampilan: Total Permohonan, Permohonan Draft, Pemeriksaan Berjalan, Menunggu Review, Perlu Perbaikan, Siap Re-Inspection, Peti Kemas Layak, Peti Kemas Tidak Layak, Dokumen Kelaikan Terbit, Surat Pembebasan Terbit, Aktivitas Terbaru.
+
+Validasi: filter periode harus valid; filter pemilik, lokasi, surveyor, status, dan kategori bersifat opsional.
+
+Dipakai oleh: Admin, Supervisor, Management.
+
+Hubungan ke Surveyor: status dashboard berasal dari hasil pemeriksaan dan rekomendasi yang dikirim Surveyor.
+
+## Master Data Kelaikan
+
+### 1. Pemilik Peti Kemas
+
+Route: `/fitness/master-data/owners`
+
+Tabel existing: `customers`
+
+Field: Kode Pemilik, Nama Pemilik Peti Kemas, Alamat, NPWP, Nama PIC, Nomor Telepon PIC, Email PIC, Alamat Billing optional, Catatan, Status active/inactive.
+
+Validasi: kode pemilik unik; nama wajib; email valid jika diisi; status wajib.
+
+Dipakai oleh: Permohonan Kelaikan, Data Peti Kemas, Dokumen Kelaikan, Laporan.
+
+Hubungan ke Surveyor: Surveyor melihat pemilik untuk memastikan konteks pekerjaan dan identitas peti kemas.
+
+### 2. Pabrik Pembuat Peti Kemas
+
+Route: `/fitness/master-data/manufacturers`
+
+Tabel baru rekomendasi: `container_manufacturers`
+
+Field: Kode Pabrik, Nama Pabrik Pembuat, Alamat Pabrik, Negara, Nama PIC, Telepon PIC, Email PIC, Website optional, Catatan, Status active/inactive.
+
+Validasi: kode pabrik unik; nama wajib; negara wajib; email valid jika diisi.
+
+Dipakai oleh: Permohonan Kelaikan, Data Teknis Peti Kemas, Surat Persetujuan Kelaikan.
+
+Hubungan ke Surveyor: menjadi referensi saat Surveyor memeriksa plate dan data teknis.
+
+### 3. Lokasi Pemeriksaan
+
+Route: `/fitness/master-data/locations`
+
+Tabel existing: `locations`
+
+Field: Kode Lokasi, Nama Lokasi, Jenis Lokasi, Alamat, Kota, Latitude optional, Longitude optional, Nama PIC Lokasi, Telepon PIC Lokasi, Status active/inactive.
+
+Validasi: kode lokasi unik; nama wajib; jenis lokasi wajib.
+
+Dipakai oleh: Permohonan Kelaikan, Assignment Surveyor, Pemeriksaan Lapangan, Laporan.
+
+Hubungan ke Surveyor: menjadi tujuan pekerjaan, bukti GPS, dan konteks pemeriksaan lapangan.
+
+### 4. Surveyor / Pemeriksa
+
+Route: `/fitness/master-data/surveyors`
+
+Tabel existing: `surveyor_profiles`
+
+Field: User akun, Kode Surveyor, Nama Lengkap, Nomor Telepon, Area Tugas, Tanda Tangan optional, Status active/inactive.
+
+Validasi: user wajib; kode surveyor unik; nama wajib; inactive tidak boleh di-assign.
+
+Dipakai oleh: Assign Surveyor, Pemeriksaan Lapangan, Dokumen Hasil Pemeriksaan, Laporan.
+
+Hubungan ke Surveyor: akun ini menerima assignment dan mengirim hasil pemeriksaan.
+
+### 5. Jenis / Model Peti Kemas
+
+Route: `/fitness/master-data/container-types`
+
+Tabel existing: `container_types`
+
+Field: Kode Jenis, ISO Code, Ukuran, Nama Tipe, Deskripsi, Status active/inactive, Catatan scope optional.
+
+Validasi: kode jenis unik; ukuran wajib; nama tipe wajib; jenis di luar scope internal tidak aktif default.
+
+Dipakai oleh: Data Peti Kemas, Template Checklist, Pemeriksaan Lapangan, Dokumen Kelaikan.
+
+Hubungan ke Surveyor: menentukan checklist dan parameter pemeriksaan yang tampil.
+
+### 6. Kategori Persetujuan Kelaikan
+
+Route: `/fitness/master-data/approval-categories`
+
+Tabel baru rekomendasi: `fitness_approval_categories`
+
+Field: Kode Kategori, Nama Kategori, Deskripsi, Berlaku Untuk, Aktif di MVP, Status active/inactive, Display Order.
+
+Validasi: kode kategori unik; kategori aktif MVP hanya peti kemas baru individual dan peti kemas lama sesuai scope; kategori future/inactive tidak tampil aktif di UI MVP.
+
+Dipakai oleh: Permohonan Kelaikan, Template Checklist, Dokumen Kelaikan, Laporan.
+
+Hubungan ke Surveyor: menentukan checklist dan parameter sesuai jenis proses kelaikan.
+
+### 7. Skema Pemeliharaan Peti Kemas
+
+Route: `/fitness/master-data/maintenance-schemes`
+
+Tabel baru rekomendasi: `maintenance_schemes`
+
+Field: Kode Skema, Nama Skema, Deskripsi, Membutuhkan Next Examination Date yes/no, Interval Pemeriksaan optional, Status active/inactive.
+
+Validasi: kode skema unik; nama wajib; interval numeric jika diisi.
+
+Dipakai oleh: Data Teknis Peti Kemas, CSC Safety Approval Plate, Dokumen Kelaikan, Laporan.
+
+Hubungan ke Surveyor: dipakai untuk memeriksa NED dan skema pada plate/data teknis.
+
+### 8. Area Pemeriksaan Peti Kemas
+
+Route: `/fitness/master-data/inspection-areas`
+
+Tabel baru rekomendasi: `inspection_areas`
+
+Field: Kode Area, Nama Area, Deskripsi, Urutan Tampil, Status active/inactive.
+
+Validasi: kode area unik; nama wajib; urutan numeric jika diisi.
+
+Dipakai oleh: Komponen Struktur, Form Temuan Surveyor, Foto Evidence.
+
+Hubungan ke Surveyor: Surveyor memilih area seperti roof, floor, door end, understructure, corner area, dan CSC plate area.
+
+### 9. Komponen Struktur Peti Kemas
+
+Route: `/fitness/master-data/structural-components`
+
+Tabel baru rekomendasi: `structural_components`
+
+Field: Kode Komponen, Nama Komponen, Area Pemeriksaan optional, Komponen Struktural Kritis yes/no, Deskripsi, Urutan Tampil, Status active/inactive.
+
+Validasi: kode komponen unik; nama wajib.
+
+Dipakai oleh: Form Temuan Surveyor, Kriteria Kerusakan, Keputusan Kelaikan.
+
+Hubungan ke Surveyor: Surveyor memilih komponen seperti corner post, cross member, floor, roof, side wall, door panel, dan CSC plate.
+
+### 10. Kriteria Kerusakan / Ketidaksesuaian
+
+Route: `/fitness/master-data/damage-criteria`
+
+Tabel baru rekomendasi: `structural_damage_criteria`
+
+Field: Kode Kriteria, Nama Kriteria, Komponen Terkait optional, Deskripsi, Tingkat Temuan Default, Default Memengaruhi Kelaikan yes/no, Default Perlu Perbaikan yes/no, Catatan Pemeriksaan, Status active/inactive.
+
+Validasi: kode kriteria unik; nama wajib; severity default harus aktif jika dipilih.
+
+Dipakai oleh: Form Temuan Surveyor, Review Kelaikan, Repair Follow-up, Laporan Kerusakan.
+
+Hubungan ke Surveyor: Surveyor memilih kriteria seperti dent, crack, hole, corrosion, CSC plate missing, unreadable plate, deformation, atau watertightness failure.
+
+### 11. Tingkat Temuan / Severity
+
+Route: `/fitness/master-data/finding-severities`
+
+Tabel baru rekomendasi: `finding_severities`
+
+Field: Kode Severity, Nama Severity, Deskripsi, Level Angka, Default Memengaruhi Kelaikan yes/no, Default Perlu Review Supervisor yes/no, Warna Badge optional, Status active/inactive.
+
+Validasi: kode severity unik; level angka numeric; data awal minor, major, critical.
+
+Dipakai oleh: Kriteria Kerusakan, Form Temuan Surveyor, Review Kelaikan.
+
+Hubungan ke Surveyor: memberi konteks risiko dan prioritas tindak lanjut untuk reviewer.
+
+### 12. Parameter Pengujian Kelaikan
+
+Route: `/fitness/master-data/test-parameters`
+
+Tabel baru rekomendasi: `inspection_test_parameters`
+
+Field: Kode Parameter, Nama Parameter, Deskripsi, Satuan, Referensi Standar, Berlaku untuk Peti Kemas Baru, Berlaku untuk Peti Kemas Lama, Wajib Hasil Angka, Wajib Lampiran/Foto, Urutan Tampil, Status active/inactive.
+
+Validasi: kode parameter unik; nama wajib; satuan wajib jika hasil angka diwajibkan.
+
+Dipakai oleh: Form Pengujian Surveyor, Review Hasil Pengujian, Dokumen Kelaikan.
+
+Hubungan ke Surveyor: Surveyor mengisi hasil uji yang diwajibkan oleh kategori dan checklist.
+
+### 13. Template Checklist Kelaikan
+
+Route: `/fitness/master-data/checklist-templates`
+
+Tabel baru rekomendasi: `fitness_checklist_templates`, `fitness_checklist_template_items`
+
+Field header: Kode Template, Nama Template, Kategori Persetujuan, Jenis / Model Peti Kemas optional, Deskripsi, Versi, Status draft/active/inactive, Created by, Approved by optional.
+
+Field item: Kode Item, Label Pertanyaan, Deskripsi, Area Pemeriksaan optional, Komponen Struktur optional, Parameter Pengujian optional, Response Type, Expected Value optional, Wajib Diisi yes/no, Critical Item yes/no, Jika Gagal Perlu Perbaikan yes/no, Jika Gagal Tidak Layak yes/no, Urutan Tampil, Status active/inactive.
+
+Validasi: template active minimal satu item; response type wajib; critical item wajib punya aturan dampak.
+
+Dipakai oleh: Form Surveyor, Review Hasil Pemeriksaan, Audit Trail, Dokumen Kelaikan.
+
+Hubungan ke Surveyor: menjadi daftar pemeriksaan yang diisi Surveyor secara konsisten.
+
+### 14. Kategori Foto Evidence
+
+Route: `/fitness/master-data/photo-categories`
+
+Tabel baru rekomendasi: `evidence_photo_categories`
+
+Field: Kode Kategori Foto, Nama Kategori Foto, Deskripsi, Wajib Default yes/no, Berlaku Untuk, Urutan Tampil, Status active/inactive.
+
+Validasi: kode kategori unik; nama wajib; berlaku untuk minimal satu konteks.
+
+Dipakai oleh: Upload Foto Surveyor, Temuan Kerusakan, Re-Inspection, Dokumen Evidence.
+
+Hubungan ke Surveyor: mengarahkan foto seperti general container, container number, CSC plate, damage finding, test result, repair evidence, dan reinspection evidence.
+
+### 15. Rekomendasi Hasil Pemeriksaan
+
+Route: `/fitness/master-data/inspection-recommendations`
+
+Tabel baru rekomendasi: `inspection_recommendations`
+
+Field: Kode Rekomendasi, Nama Rekomendasi, Deskripsi, Final Fitness Result Mapping, Workflow Status Mapping, Restriction Status Mapping, Perlu Review Supervisor yes/no, Status active/inactive.
+
+Validasi: kode rekomendasi unik; mapping status wajib; rekomendasi aktif saja yang tampil di form Surveyor.
+
+Dipakai oleh: Form Surveyor, Review Kelaikan, Status Monitoring.
+
+Hubungan ke Surveyor: Surveyor memilih rekomendasi seperti layak, perlu perbaikan, tidak layak, perlu re-inspection, atau dilarang digunakan sementara.
+
+### 16. Pejabat Penandatangan
+
+Route: `/fitness/master-data/authorized-signers`
+
+Tabel baru rekomendasi: `authorized_signers`
+
+Field: Nama Pejabat, Jabatan, NIP / ID Pegawai optional, Email, Nomor Telepon, File Tanda Tangan optional, Berlaku Mulai, Berlaku Sampai, Status active/inactive.
+
+Validasi: nama dan jabatan wajib; email valid jika diisi; berlaku sampai tidak boleh sebelum berlaku mulai.
+
+Dipakai oleh: Surat Persetujuan Kelaikan, Surat Pembebasan Setelah Perbaikan, Dokumen Final.
+
+Hubungan ke Surveyor: hasil pemeriksaan lengkap menjadi dasar dokumen yang ditandatangani.
+
+### 17. Profil Badan Usaha
+
+Route: `/fitness/master-data/company-profile`
+
+Tabel existing: `company_profiles`
+
+Field: Nama Badan Usaha, Brand, Alamat, Telepon, Email, Website, Nomor Pajak, Logo, Tanda Tangan Default optional, Status Aktif.
+
+Validasi: nama badan usaha wajib; email valid jika diisi; hanya satu profil aktif sebagai default.
+
+Dipakai oleh: Header Dokumen, Surat Persetujuan, Validasi Dokumen, Report.
+
+Hubungan ke Surveyor: dokumen hasil pemeriksaan memakai profil ini, tetapi Surveyor tidak mengubahnya.
