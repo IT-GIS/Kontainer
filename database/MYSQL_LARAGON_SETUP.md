@@ -42,6 +42,7 @@ Jalankan patch berikut secara berurutan:
 5. `database/patches/0013_storage_relations.sql`
 6. `database/patches/0014_uat_stabilization.sql`
 7. `database/patches/0015_container_fitness_foundation.sql`
+8. `database/patches/0016_container_fitness_master_stage1_permissions.sql`
 
 Patch aman dijalankan berulang sejauh memungkinkan. Patch `0009`
 menyelaraskan permission menu dan role. Patch `0010` menambahkan akun demo,
@@ -59,6 +60,10 @@ Survey bagi Admin.
 Patch `0015` menambahkan database foundation Sistem Kelaikan Peti Kemas
 tanpa menghapus workflow legacy, tanpa memakai `container_import_batches`
 untuk kelaikan, dan tanpa mengubah dump canonical.
+
+Patch `0016` menyelaraskan permission granular CRUD untuk master baru Stage 1,
+yaitu pabrik pembuat peti kemas dan kategori persetujuan kelaikan, tanpa
+menghapus permission `view.all` atau `manage.all` yang sudah ada.
 
 Jangan menyalin skema dari dokumentasi lain. Jika ada perbedaan, gunakan
 `database/kontainer_db.sql` sebagai acuan.

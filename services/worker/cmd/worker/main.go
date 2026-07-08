@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"container-survey/services/worker/internal/config"
 	"container-survey/services/worker/internal/jobs"
