@@ -68,3 +68,22 @@ func TestValidateFitnessApprovalCategoryLifecycle(t *testing.T) {
 		t.Fatalf("expected valid approval category payload, got %v", err)
 	}
 }
+
+func TestValidateChecklistTemplateAllowsDraftStatus(t *testing.T) {
+	payload := normalizePayload(Resources["fitness_checklist_templates"], map[string]any{
+		"template_code": "CHK-001", "template_name": "Checklist Baru", "status": "draft",
+	})
+	if err := validatePayload(Resources["fitness_checklist_templates"], payload, true); err != nil {
+		t.Fatalf("expected draft checklist template status to be valid, got %v", err)
+	}
+}
+
+func TestCompanyProfileUsesIsActiveAsStatusFilter(t *testing.T) {
+	where, args := buildWhere(Resources["company_profiles"], ListParams{Status: "inactive"})
+	if where != "WHERE is_active = $1" {
+		t.Fatalf("expected is_active status filter, got %q", where)
+	}
+	if len(args) != 1 || args[0] != false {
+		t.Fatalf("expected inactive status to map to false, got %#v", args)
+	}
+}

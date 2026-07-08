@@ -142,7 +142,7 @@ Setiap halaman aktif menyediakan list, pencarian, filter status, tambah, detail,
 
 Menu yang masih placeholder:
 
-- Master Data Kelaikan selain 6 menu Stage 1 menunggu tahap Master Data CRUD Stage 2.
+- Item Template Checklist Kelaikan belum menjadi CRUD nested aktif dan belum dipakai flow Surveyor.
 - Assign Surveyor menunggu tahap Assignment Surveyor.
 - Pemeriksaan & Pengujian menunggu tahap Surveyor Inspection Flow.
 - Review & Keputusan menunggu tahap Review & Approval.
@@ -155,4 +155,27 @@ Batasan tahap ini:
 - Permission yang dipakai mengikuti foundation yang sudah ada: `*.view.all` untuk baca dan `*.manage.all` atau permission CRUD existing yang setara untuk perubahan data.
 - Patch `0016_container_fitness_master_stage1_permissions.sql` menyelaraskan permission granular `create.all`, `update.all`, dan `delete.all` untuk `container_manufacturers` dan `fitness_approval_categories` agar CRUD Stage 1 berjalan dengan pola permission frontend dan backend saat ini.
 
-Tahap berikutnya adalah Master Data CRUD Stage 2 untuk master pendukung checklist, temuan, foto evidence, rekomendasi, penandatangan, dan profil badan usaha sebelum workflow assignment dan inspection diaktifkan.
+## Admin Master Data CRUD Stage 2
+
+Tahap ini mengaktifkan CRUD nyata untuk 11 master data pendukung Surveyor lapangan:
+
+1. Skema Pemeliharaan Peti Kemas (`/fitness/master-data/maintenance-schemes`) memakai tabel `maintenance_schemes`.
+2. Area Pemeriksaan Peti Kemas (`/fitness/master-data/inspection-areas`) memakai tabel `inspection_areas`.
+3. Komponen Struktur Peti Kemas (`/fitness/master-data/structural-components`) memakai tabel `structural_components`.
+4. Kriteria Kerusakan / Ketidaksesuaian (`/fitness/master-data/damage-criteria`) memakai tabel `structural_damage_criteria`.
+5. Tingkat Temuan / Severity (`/fitness/master-data/finding-severities`) memakai tabel `finding_severities`.
+6. Parameter Pengujian Kelaikan (`/fitness/master-data/test-parameters`) memakai tabel `inspection_test_parameters`.
+7. Template Checklist Kelaikan (`/fitness/master-data/checklist-templates`) memakai tabel `fitness_checklist_templates` untuk header template saja.
+8. Kategori Foto Evidence (`/fitness/master-data/photo-categories`) memakai tabel `evidence_photo_categories`.
+9. Rekomendasi Hasil Pemeriksaan (`/fitness/master-data/inspection-recommendations`) memakai tabel `inspection_recommendations`.
+10. Pejabat Penandatangan (`/fitness/master-data/authorized-signers`) memakai tabel `authorized_signers`.
+11. Profil Badan Usaha (`/fitness/master-data/company-profile`) memakai tabel `company_profiles`.
+
+Setiap halaman Stage 2 aktif menyediakan list, pencarian, filter status, tambah, detail, edit, dan aksi nonaktifkan melalui endpoint REST `/api/v1/fitness/master-data/*`.
+
+Batasan Stage 2:
+
+- Item checklist pada `fitness_checklist_template_items` belum menjadi CRUD nested aktif.
+- Tidak mengaktifkan Assignment Surveyor, Pemeriksaan Lapangan, Review/Approval final, Dokumen PDF/QR final, Import Excel proses nyata, Finance, atau workflow transaksi lain.
+- Tidak mengubah tabel legacy, tidak drop/rename tabel, dan tidak mengubah patch `0015` maupun `0016`.
+- Patch `0017_container_fitness_master_stage2_permissions.sql` menyelaraskan permission granular `view.all`, `create.all`, `update.all`, dan `delete.all` untuk 11 master Stage 2 dan mapping `super_admin`/`admin`.

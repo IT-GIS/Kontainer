@@ -4,6 +4,7 @@ export type MasterField = {
   type?: "text" | "number" | "select" | "checkbox" | "email";
   required?: boolean;
   options?: Array<{ label: string; value: string }>;
+  defaultValue?: string | number | boolean;
 };
 
 export type MasterColumn = {
@@ -278,6 +279,267 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "is_mvp_active", label: "Aktif di MVP", type: "checkbox" },
       { name: "display_order", label: "Display Order", type: "number" },
       statusField
+    ]
+  },
+  "fitness-maintenance-schemes": {
+    id: "fitness-maintenance-schemes",
+    title: "Skema Pemeliharaan Peti Kemas",
+    description: "Master skema pemeliharaan dan pemeriksaan berkala untuk data teknis dan dokumen kelaikan.",
+    endpoint: "/fitness/master-data/maintenance-schemes",
+    permissionModule: "maintenance_schemes",
+    columns: [
+      { key: "code", label: "Kode" },
+      { key: "name", label: "Skema" },
+      { key: "requires_next_examination_date", label: "Butuh NED", type: "boolean" },
+      { key: "default_interval_months", label: "Interval" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "code", label: "Kode Skema", required: true },
+      { name: "name", label: "Nama Skema", required: true },
+      { name: "description", label: "Deskripsi" },
+      { name: "requires_next_examination_date", label: "Membutuhkan Next Examination Date", type: "checkbox" },
+      { name: "default_interval_months", label: "Interval Pemeriksaan Default (bulan)", type: "number" },
+      statusField
+    ]
+  },
+  "fitness-inspection-areas": {
+    id: "fitness-inspection-areas",
+    title: "Area Pemeriksaan Peti Kemas",
+    description: "Master area peti kemas untuk referensi temuan, checklist, dan foto evidence.",
+    endpoint: "/fitness/master-data/inspection-areas",
+    permissionModule: "inspection_areas",
+    columns: [
+      { key: "code", label: "Kode" },
+      { key: "area_name", label: "Area" },
+      { key: "display_order", label: "Urutan" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "code", label: "Kode Area", required: true },
+      { name: "area_name", label: "Nama Area", required: true },
+      { name: "description", label: "Deskripsi" },
+      { name: "display_order", label: "Urutan Tampil", type: "number" },
+      statusField
+    ]
+  },
+  "fitness-structural-components": {
+    id: "fitness-structural-components",
+    title: "Komponen Struktur Peti Kemas",
+    description: "Master komponen struktur yang akan dipakai sebagai referensi temuan pemeriksaan.",
+    endpoint: "/fitness/master-data/structural-components",
+    permissionModule: "structural_components",
+    columns: [
+      { key: "code", label: "Kode" },
+      { key: "component_name", label: "Komponen" },
+      { key: "inspection_area_id", label: "ID Area" },
+      { key: "is_structural_critical", label: "Kritis", type: "boolean" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "code", label: "Kode Komponen", required: true },
+      { name: "component_name", label: "Nama Komponen", required: true },
+      { name: "inspection_area_id", label: "ID Area Pemeriksaan" },
+      { name: "is_structural_critical", label: "Komponen Struktural Kritis", type: "checkbox" },
+      { name: "description", label: "Deskripsi" },
+      { name: "display_order", label: "Urutan Tampil", type: "number" },
+      statusField
+    ]
+  },
+  "fitness-damage-criteria": {
+    id: "fitness-damage-criteria",
+    title: "Kriteria Kerusakan / Ketidaksesuaian",
+    description: "Master kriteria kerusakan atau ketidaksesuaian untuk referensi temuan pemeriksaan.",
+    endpoint: "/fitness/master-data/damage-criteria",
+    permissionModule: "structural_damage_criteria",
+    columns: [
+      { key: "code", label: "Kode" },
+      { key: "criteria_name", label: "Kriteria" },
+      { key: "severity_default", label: "Severity" },
+      { key: "affects_fitness_default", label: "Pengaruh Kelaikan", type: "boolean" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "code", label: "Kode Kriteria", required: true },
+      { name: "criteria_name", label: "Nama Kriteria", required: true },
+      { name: "component_id", label: "ID Komponen Terkait" },
+      { name: "description", label: "Deskripsi" },
+      { name: "severity_default", label: "Tingkat Temuan Default", type: "select", options: ["minor", "major", "critical"].map((value) => ({ label: value, value })) },
+      { name: "affects_fitness_default", label: "Default Memengaruhi Kelaikan", type: "checkbox" },
+      { name: "repair_required_default", label: "Default Perlu Perbaikan", type: "checkbox" },
+      { name: "inspection_note", label: "Catatan Pemeriksaan" },
+      statusField
+    ]
+  },
+  "fitness-finding-severities": {
+    id: "fitness-finding-severities",
+    title: "Tingkat Temuan / Severity",
+    description: "Master tingkat temuan untuk menentukan risiko, review, dan keputusan kelaikan.",
+    endpoint: "/fitness/master-data/finding-severities",
+    permissionModule: "finding_severities",
+    columns: [
+      { key: "code", label: "Kode" },
+      { key: "name", label: "Severity" },
+      { key: "level_no", label: "Level" },
+      { key: "requires_supervisor_review", label: "Review", type: "boolean" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "code", label: "Kode Severity", required: true },
+      { name: "name", label: "Nama Severity", required: true },
+      { name: "description", label: "Deskripsi" },
+      { name: "level_no", label: "Level Angka", type: "number", required: true },
+      { name: "affects_fitness_default", label: "Default Memengaruhi Kelaikan", type: "checkbox" },
+      { name: "requires_supervisor_review", label: "Default Perlu Review Supervisor", type: "checkbox" },
+      { name: "badge_tone", label: "Warna Badge", type: "select", options: ["neutral", "success", "warning", "danger"].map((value) => ({ label: value, value })) },
+      statusField
+    ]
+  },
+  "fitness-test-parameters": {
+    id: "fitness-test-parameters",
+    title: "Parameter Pengujian Kelaikan",
+    description: "Master parameter pengujian untuk referensi pemeriksaan dan dokumen kelaikan.",
+    endpoint: "/fitness/master-data/test-parameters",
+    permissionModule: "inspection_test_parameters",
+    columns: [
+      { key: "code", label: "Kode" },
+      { key: "parameter_name", label: "Parameter" },
+      { key: "requires_numeric_result", label: "Angka", type: "boolean" },
+      { key: "requires_attachment", label: "Lampiran", type: "boolean" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "code", label: "Kode Parameter", required: true },
+      { name: "parameter_name", label: "Nama Parameter", required: true },
+      { name: "description", label: "Deskripsi" },
+      { name: "unit", label: "Satuan" },
+      { name: "standard_reference", label: "Referensi Standar" },
+      { name: "applies_to_new_container", label: "Berlaku untuk Peti Kemas Baru", type: "checkbox", defaultValue: true },
+      { name: "applies_to_existing_container", label: "Berlaku untuk Peti Kemas Lama", type: "checkbox", defaultValue: true },
+      { name: "requires_numeric_result", label: "Wajib Hasil Angka", type: "checkbox" },
+      { name: "requires_attachment", label: "Wajib Lampiran/Foto", type: "checkbox" },
+      { name: "display_order", label: "Urutan Tampil", type: "number" },
+      statusField
+    ]
+  },
+  "fitness-checklist-templates": {
+    id: "fitness-checklist-templates",
+    title: "Template Checklist Kelaikan",
+    description: "CRUD header template checklist kelaikan. Item checklist tetap menjadi placeholder terpisah untuk tahap berikutnya.",
+    endpoint: "/fitness/master-data/checklist-templates",
+    permissionModule: "fitness_checklist_templates",
+    columns: [
+      { key: "template_code", label: "Kode" },
+      { key: "template_name", label: "Template" },
+      { key: "version_no", label: "Versi" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "template_code", label: "Kode Template", required: true },
+      { name: "template_name", label: "Nama Template", required: true },
+      { name: "approval_category_id", label: "ID Kategori Persetujuan" },
+      { name: "container_type_id", label: "ID Jenis / Model Peti Kemas" },
+      { name: "description", label: "Deskripsi" },
+      { name: "version_no", label: "Versi", type: "number", defaultValue: 1 },
+      { name: "status", label: "Status", type: "select", defaultValue: "draft", options: [{ label: "Draft", value: "draft" }, { label: "Active", value: "active" }, { label: "Inactive", value: "inactive" }] }
+    ]
+  },
+  "fitness-photo-categories": {
+    id: "fitness-photo-categories",
+    title: "Kategori Foto Evidence",
+    description: "Master kategori foto evidence untuk pemeriksaan, temuan, pengujian, repair, dan re-inspection.",
+    endpoint: "/fitness/master-data/photo-categories",
+    permissionModule: "evidence_photo_categories",
+    columns: [
+      { key: "code", label: "Kode" },
+      { key: "name", label: "Kategori" },
+      { key: "applies_to", label: "Berlaku Untuk" },
+      { key: "is_required_default", label: "Wajib", type: "boolean" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "code", label: "Kode Kategori Foto", required: true },
+      { name: "name", label: "Nama Kategori Foto", required: true },
+      { name: "description", label: "Deskripsi" },
+      { name: "is_required_default", label: "Wajib Default", type: "checkbox" },
+      { name: "applies_to", label: "Berlaku Untuk" },
+      { name: "display_order", label: "Urutan Tampil", type: "number" },
+      statusField
+    ]
+  },
+  "fitness-inspection-recommendations": {
+    id: "fitness-inspection-recommendations",
+    title: "Rekomendasi Hasil Pemeriksaan",
+    description: "Master rekomendasi hasil pemeriksaan untuk referensi review kelaikan di tahap berikutnya.",
+    endpoint: "/fitness/master-data/inspection-recommendations",
+    permissionModule: "inspection_recommendations",
+    columns: [
+      { key: "code", label: "Kode" },
+      { key: "name", label: "Rekomendasi" },
+      { key: "final_fitness_result_mapping", label: "Hasil" },
+      { key: "requires_supervisor_review", label: "Review", type: "boolean" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "code", label: "Kode Rekomendasi", required: true },
+      { name: "name", label: "Nama Rekomendasi", required: true },
+      { name: "description", label: "Deskripsi" },
+      { name: "final_fitness_result_mapping", label: "Final Fitness Result Mapping", type: "select", options: ["pending", "fit", "unfit"].map((value) => ({ label: value, value })) },
+      { name: "workflow_status_mapping", label: "Workflow Status Mapping" },
+      { name: "restriction_status_mapping", label: "Restriction Status Mapping", type: "select", options: ["none", "suspended", "prohibited"].map((value) => ({ label: value, value })) },
+      { name: "requires_supervisor_review", label: "Perlu Review Supervisor", type: "checkbox", defaultValue: true },
+      statusField
+    ]
+  },
+  "fitness-authorized-signers": {
+    id: "fitness-authorized-signers",
+    title: "Pejabat Penandatangan",
+    description: "Master pejabat yang berwenang menandatangani dokumen kelaikan.",
+    endpoint: "/fitness/master-data/authorized-signers",
+    permissionModule: "authorized_signers",
+    columns: [
+      { key: "signer_name", label: "Nama" },
+      { key: "position_title", label: "Jabatan" },
+      { key: "employee_no", label: "NIP / ID" },
+      { key: "email", label: "Email" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "signer_name", label: "Nama Pejabat", required: true },
+      { name: "position_title", label: "Jabatan", required: true },
+      { name: "employee_no", label: "NIP / ID Pegawai" },
+      { name: "email", label: "Email", type: "email" },
+      { name: "phone", label: "Nomor Telepon" },
+      { name: "signature_file_id", label: "ID File Tanda Tangan" },
+      { name: "valid_from", label: "Berlaku Mulai" },
+      { name: "valid_until", label: "Berlaku Sampai" },
+      statusField
+    ]
+  },
+  "fitness-company-profile": {
+    id: "fitness-company-profile",
+    title: "Profil Badan Usaha",
+    description: "Master profil badan usaha untuk header dokumen, surat persetujuan, validasi dokumen, dan laporan.",
+    endpoint: "/fitness/master-data/company-profile",
+    permissionModule: "company_profiles",
+    columns: [
+      { key: "company_name", label: "Badan Usaha" },
+      { key: "brand_name", label: "Brand" },
+      { key: "phone", label: "Telepon" },
+      { key: "email", label: "Email" },
+      { key: "is_active", label: "Aktif", type: "boolean" }
+    ],
+    fields: [
+      { name: "company_name", label: "Nama Badan Usaha", required: true },
+      { name: "brand_name", label: "Brand" },
+      { name: "address", label: "Alamat" },
+      { name: "phone", label: "Telepon" },
+      { name: "email", label: "Email", type: "email" },
+      { name: "website", label: "Website" },
+      { name: "tax_no", label: "Nomor Pajak" },
+      { name: "logo_file_id", label: "ID File Logo" },
+      { name: "default_signature_file_id", label: "ID File Tanda Tangan Default" },
+      { name: "is_active", label: "Status Aktif", type: "checkbox", defaultValue: true }
     ]
   },
   "survey-types": {

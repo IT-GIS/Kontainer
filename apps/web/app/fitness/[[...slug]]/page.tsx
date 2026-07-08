@@ -10,7 +10,18 @@ const activeMasterDataRoutes: Record<string, string> = {
   "/fitness/master-data/locations": "fitness-locations",
   "/fitness/master-data/surveyors": "fitness-surveyors",
   "/fitness/master-data/container-types": "fitness-container-types",
-  "/fitness/master-data/approval-categories": "fitness-approval-categories"
+  "/fitness/master-data/approval-categories": "fitness-approval-categories",
+  "/fitness/master-data/maintenance-schemes": "fitness-maintenance-schemes",
+  "/fitness/master-data/inspection-areas": "fitness-inspection-areas",
+  "/fitness/master-data/structural-components": "fitness-structural-components",
+  "/fitness/master-data/damage-criteria": "fitness-damage-criteria",
+  "/fitness/master-data/finding-severities": "fitness-finding-severities",
+  "/fitness/master-data/test-parameters": "fitness-test-parameters",
+  "/fitness/master-data/checklist-templates": "fitness-checklist-templates",
+  "/fitness/master-data/photo-categories": "fitness-photo-categories",
+  "/fitness/master-data/inspection-recommendations": "fitness-inspection-recommendations",
+  "/fitness/master-data/authorized-signers": "fitness-authorized-signers",
+  "/fitness/master-data/company-profile": "fitness-company-profile"
 };
 
 type FitnessRouteProps = {

@@ -107,10 +107,13 @@ func (r Repository) Create(ctx context.Context, resource Resource, payload map[s
 		args = append(args, value)
 		placeholders = append(placeholders, fmt.Sprintf("$%d", len(args)))
 	}
-	if _, ok := payload["status"]; !ok && resource.hasField("status") {
-		columns = append(columns, "status")
-		args = append(args, "active")
-		placeholders = append(placeholders, fmt.Sprintf("$%d", len(args)))
+	statusField := resource.statusField()
+	if statusField != "" {
+		if _, ok := payload[statusField]; !ok && resource.hasField(statusField) {
+			columns = append(columns, statusField)
+			args = append(args, resource.activeStatusValue())
+			placeholders = append(placeholders, fmt.Sprintf("$%d", len(args)))
+		}
 	}
 
 	query := fmt.Sprintf(
@@ -154,13 +157,18 @@ func (r Repository) Update(ctx context.Context, resource Resource, id uuid.UUID,
 }
 
 func (r Repository) Delete(ctx context.Context, resource Resource, id uuid.UUID) (map[string]any, error) {
+	statusField := resource.statusField()
+	if statusField == "" {
+		return nil, ErrInvalidInput
+	}
+
 	var query string
 	if resource.SoftDelete {
-		query = fmt.Sprintf("UPDATE %s SET status = 'inactive', deleted_at = now(), updated_at = now() WHERE id = $1 AND deleted_at IS NULL RETURNING %s", resource.Table, resource.selectColumns())
+		query = fmt.Sprintf("UPDATE %s SET %s = $1, deleted_at = now(), updated_at = now() WHERE id = $2 AND deleted_at IS NULL RETURNING %s", resource.Table, statusField, resource.selectColumns())
 	} else {
-		query = fmt.Sprintf("UPDATE %s SET status = 'inactive', updated_at = now() WHERE id = $1 RETURNING %s", resource.Table, resource.selectColumns())
+		query = fmt.Sprintf("UPDATE %s SET %s = $1, updated_at = now() WHERE id = $2 RETURNING %s", resource.Table, statusField, resource.selectColumns())
 	}
-	return r.queryOne(ctx, query, id)
+	return r.queryOne(ctx, query, resource.inactiveStatusValue(), id)
 }
 
 func (r Repository) DuplicateExists(ctx context.Context, resource Resource, payload map[string]any, excludeID *uuid.UUID) (bool, error) {
@@ -248,13 +256,22 @@ func buildWhere(resource Resource, params ListParams) (string, []any) {
 		value := ""
 		if queryKey == "status" {
 			value = params.Status
+			column = resource.statusField()
 		} else {
 			value = params.Filters[queryKey]
 		}
-		if strings.TrimSpace(value) == "" {
+		if strings.TrimSpace(value) == "" || column == "" {
 			continue
 		}
-		args = append(args, value)
+		filterValue := any(value)
+		if queryKey == "status" {
+			converted, ok := resource.statusQueryValue(value)
+			if !ok {
+				continue
+			}
+			filterValue = converted
+		}
+		args = append(args, filterValue)
 		clauses = append(clauses, fmt.Sprintf("%s = $%d", column, len(args)))
 	}
 	if len(clauses) == 0 {
@@ -333,6 +350,54 @@ func (resource Resource) hasField(name string) bool {
 		}
 	}
 	return false
+}
+
+func (resource Resource) statusField() string {
+	if resource.StatusField != "" {
+		return resource.StatusField
+	}
+	if resource.hasField("status") {
+		return "status"
+	}
+	return ""
+}
+
+func (resource Resource) activeStatusValue() any {
+	if resource.ActiveStatusValue != nil {
+		return resource.ActiveStatusValue
+	}
+	if resource.statusField() == "is_active" {
+		return true
+	}
+	return "active"
+}
+
+func (resource Resource) inactiveStatusValue() any {
+	if resource.InactiveStatusValue != nil {
+		return resource.InactiveStatusValue
+	}
+	if resource.statusField() == "is_active" {
+		return false
+	}
+	return "inactive"
+}
+
+func (resource Resource) allowedStatusValues() []string {
+	if len(resource.AllowedStatusValues) > 0 {
+		return resource.AllowedStatusValues
+	}
+	return []string{"active", "inactive"}
+}
+
+func (resource Resource) statusQueryValue(status string) (any, bool) {
+	status = strings.TrimSpace(status)
+	if !oneOf(status, resource.allowedStatusValues()) {
+		return nil, false
+	}
+	if resource.statusField() == "is_active" {
+		return status == "active", true
+	}
+	return status, true
 }
 
 func (resource Resource) columnForRequest(requested string) string {

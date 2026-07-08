@@ -266,7 +266,10 @@ function renderDetailValue(value: MasterRow[string], type?: MasterField["type"])
 function renderCell(value: MasterRow[string], type?: "status" | "boolean") {
   if (type === "status") {
     const label = String(value || "inactive");
-    return <StatusBadge tone={label === "active" ? "success" : "neutral"}>{label === "active" ? "Aktif" : "Inactive"}</StatusBadge>;
+    const normalized = label.toLowerCase();
+    const tone = normalized === "active" ? "success" : normalized === "draft" ? "warning" : "neutral";
+    const display = normalized === "active" ? "Aktif" : normalized === "inactive" ? "Inactive" : label;
+    return <StatusBadge tone={tone}>{display}</StatusBadge>;
   }
   if (type === "boolean") {
     return <StatusBadge tone={value ? "success" : "neutral"}>{value ? "Ya" : "Tidak"}</StatusBadge>;
@@ -277,7 +280,9 @@ function renderCell(value: MasterRow[string], type?: "status" | "boolean") {
 function defaultFormData(resource: MasterResource): MasterRow {
   const data: MasterRow = {};
   for (const field of resource.fields) {
-    if (field.type === "checkbox") {
+    if (field.defaultValue !== undefined) {
+      data[field.name] = field.defaultValue;
+    } else if (field.type === "checkbox") {
       data[field.name] = false;
     } else if (field.name === "status") {
       data[field.name] = "active";

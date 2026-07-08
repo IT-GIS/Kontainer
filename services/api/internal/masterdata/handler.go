@@ -45,6 +45,17 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	handler.resource(fitnessMaster, authService, "/surveyors", Resources["surveyors"])
 	handler.resource(fitnessMaster, authService, "/container-types", Resources["container_types"])
 	handler.resource(fitnessMaster, authService, "/approval-categories", Resources["fitness_approval_categories"])
+	handler.resource(fitnessMaster, authService, "/maintenance-schemes", Resources["maintenance_schemes"])
+	handler.resource(fitnessMaster, authService, "/inspection-areas", Resources["inspection_areas"])
+	handler.resource(fitnessMaster, authService, "/structural-components", Resources["structural_components"])
+	handler.resource(fitnessMaster, authService, "/damage-criteria", Resources["structural_damage_criteria"])
+	handler.resource(fitnessMaster, authService, "/finding-severities", Resources["finding_severities"])
+	handler.resource(fitnessMaster, authService, "/test-parameters", Resources["inspection_test_parameters"])
+	handler.resource(fitnessMaster, authService, "/checklist-templates", Resources["fitness_checklist_templates"])
+	handler.resource(fitnessMaster, authService, "/photo-categories", Resources["evidence_photo_categories"])
+	handler.resource(fitnessMaster, authService, "/inspection-recommendations", Resources["inspection_recommendations"])
+	handler.resource(fitnessMaster, authService, "/authorized-signers", Resources["authorized_signers"])
+	handler.resource(fitnessMaster, authService, "/company-profile", Resources["company_profiles"])
 }
 
 func (h Handler) resource(group *gin.RouterGroup, authService *auth.Service, path string, resource Resource) {

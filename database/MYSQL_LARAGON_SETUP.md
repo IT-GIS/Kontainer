@@ -43,6 +43,7 @@ Jalankan patch berikut secara berurutan:
 6. `database/patches/0014_uat_stabilization.sql`
 7. `database/patches/0015_container_fitness_foundation.sql`
 8. `database/patches/0016_container_fitness_master_stage1_permissions.sql`
+9. `database/patches/0017_container_fitness_master_stage2_permissions.sql`
 
 Patch aman dijalankan berulang sejauh memungkinkan. Patch `0009`
 menyelaraskan permission menu dan role. Patch `0010` menambahkan akun demo,
@@ -64,6 +65,12 @@ untuk kelaikan, dan tanpa mengubah dump canonical.
 Patch `0016` menyelaraskan permission granular CRUD untuk master baru Stage 1,
 yaitu pabrik pembuat peti kemas dan kategori persetujuan kelaikan, tanpa
 menghapus permission `view.all` atau `manage.all` yang sudah ada.
+
+Patch `0017` menyelaraskan permission granular CRUD untuk 11 master Stage 2:
+skema pemeliharaan, area pemeriksaan, komponen struktur, kriteria kerusakan,
+severity, parameter pengujian kelaikan, template checklist header, kategori foto
+evidence, rekomendasi hasil pemeriksaan, pejabat penandatangan, dan profil
+badan usaha.
 
 Jangan menyalin skema dari dokumentasi lain. Jika ada perbedaan, gunakan
 `database/kontainer_db.sql` sebagai acuan.

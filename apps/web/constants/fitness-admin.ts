@@ -15,17 +15,17 @@ export const masterDataItems = [
   { label: "Surveyor / Pemeriksa", href: "/fitness/master-data/surveyors", activeStage: true },
   { label: "Jenis / Model Peti Kemas", href: "/fitness/master-data/container-types", activeStage: true },
   { label: "Kategori Persetujuan Kelaikan", href: "/fitness/master-data/approval-categories", activeStage: true },
-  { label: "Skema Pemeliharaan Peti Kemas", href: "/fitness/master-data/maintenance-schemes" },
-  { label: "Area Pemeriksaan Peti Kemas", href: "/fitness/master-data/inspection-areas" },
-  { label: "Komponen Struktur Peti Kemas", href: "/fitness/master-data/structural-components" },
-  { label: "Kriteria Kerusakan / Ketidaksesuaian", href: "/fitness/master-data/damage-criteria" },
-  { label: "Tingkat Temuan / Severity", href: "/fitness/master-data/finding-severities" },
-  { label: "Parameter Pengujian Kelaikan", href: "/fitness/master-data/test-parameters" },
-  { label: "Template Checklist Kelaikan", href: "/fitness/master-data/checklist-templates" },
-  { label: "Kategori Foto Evidence", href: "/fitness/master-data/photo-categories" },
-  { label: "Rekomendasi Hasil Pemeriksaan", href: "/fitness/master-data/inspection-recommendations" },
-  { label: "Pejabat Penandatangan", href: "/fitness/master-data/authorized-signers" },
-  { label: "Profil Badan Usaha", href: "/fitness/master-data/company-profile" }
+  { label: "Skema Pemeliharaan Peti Kemas", href: "/fitness/master-data/maintenance-schemes", activeStage: true },
+  { label: "Area Pemeriksaan Peti Kemas", href: "/fitness/master-data/inspection-areas", activeStage: true },
+  { label: "Komponen Struktur Peti Kemas", href: "/fitness/master-data/structural-components", activeStage: true },
+  { label: "Kriteria Kerusakan / Ketidaksesuaian", href: "/fitness/master-data/damage-criteria", activeStage: true },
+  { label: "Tingkat Temuan / Severity", href: "/fitness/master-data/finding-severities", activeStage: true },
+  { label: "Parameter Pengujian Kelaikan", href: "/fitness/master-data/test-parameters", activeStage: true },
+  { label: "Template Checklist Kelaikan", href: "/fitness/master-data/checklist-templates", activeStage: true },
+  { label: "Kategori Foto Evidence", href: "/fitness/master-data/photo-categories", activeStage: true },
+  { label: "Rekomendasi Hasil Pemeriksaan", href: "/fitness/master-data/inspection-recommendations", activeStage: true },
+  { label: "Pejabat Penandatangan", href: "/fitness/master-data/authorized-signers", activeStage: true },
+  { label: "Profil Badan Usaha", href: "/fitness/master-data/company-profile", activeStage: true }
 ] as const;
 
 const commonPlaceholderStatus = "Belum aktif - menunggu tahap berikutnya.";
@@ -302,7 +302,7 @@ export function getFitnessPlaceholderByPath(path: string): FitnessPlaceholder | 
 export function getFitnessStageMessage(path: string): string {
   const normalizedPath = path.replace(/\/$/, "") || "/fitness/dashboard";
   if (masterDataItems.some((item) => item.href === normalizedPath && "activeStage" in item && item.activeStage)) {
-    return "Aktif - CRUD Master Data Stage 1.";
+    return "Aktif - CRUD Master Data.";
   }
   if (normalizedPath.startsWith("/fitness/master-data/")) {
     return "Belum aktif - menunggu tahap Master Data CRUD Stage 2.";

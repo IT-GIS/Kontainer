@@ -143,7 +143,7 @@ func normalizeFieldValue(field string, value any) any {
 		return nil
 	}
 	switch field {
-	case "payment_term_days", "display_order":
+	case "payment_term_days", "display_order", "default_interval_months", "level_no", "version_no":
 		switch v := value.(type) {
 		case float64:
 			return int(v)
@@ -156,7 +156,7 @@ func normalizeFieldValue(field string, value any) any {
 				return parsed
 			}
 		}
-	case "is_mvp_active":
+	case "is_mvp_active", "requires_next_examination_date", "is_structural_critical", "affects_fitness_default", "repair_required_default", "requires_supervisor_review", "applies_to_new_container", "applies_to_existing_container", "requires_numeric_result", "requires_attachment", "is_required_default", "is_active":
 		switch v := value.(type) {
 		case bool:
 			return v
@@ -191,13 +191,15 @@ func validatePayload(resource Resource, payload map[string]any, create bool) err
 	}
 	if status, ok := payload["status"]; ok && !isEmpty(status) {
 		value := stringValue(status)
-		if value != "active" && value != "inactive" {
+		if !oneOf(value, resource.allowedStatusValues()) {
 			return fmt.Errorf("%w: status tidak valid", ErrInvalidInput)
 		}
 	}
-	if email, ok := payload["pic_email"]; ok && !isEmpty(email) {
-		if _, err := mail.ParseAddress(stringValue(email)); err != nil {
-			return fmt.Errorf("%w: pic_email tidak valid", ErrInvalidInput)
+	for _, emailField := range []string{"pic_email", "email"} {
+		if email, ok := payload[emailField]; ok && !isEmpty(email) {
+			if _, err := mail.ParseAddress(stringValue(email)); err != nil {
+				return fmt.Errorf("%w: %s tidak valid", ErrInvalidInput, emailField)
+			}
 		}
 	}
 	if value, ok := payload["container_lifecycle"]; ok && !isEmpty(value) {

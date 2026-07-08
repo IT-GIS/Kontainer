@@ -28,15 +28,19 @@ func (f Field) RequestName() string {
 }
 
 type Resource struct {
-	Name          string
-	Table         string
-	CodeField     string
-	ScopedCode    bool
-	SoftDelete    bool
-	Fields        []Field
-	SearchColumns []string
-	Filters       map[string]string
-	DefaultSort   string
+	Name                string
+	Table               string
+	CodeField           string
+	ScopedCode          bool
+	SoftDelete          bool
+	StatusField         string
+	ActiveStatusValue   any
+	InactiveStatusValue any
+	AllowedStatusValues []string
+	Fields              []Field
+	SearchColumns       []string
+	Filters             map[string]string
+	DefaultSort         string
 }
 
 type ListParams struct {
