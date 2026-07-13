@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import {
   navigationWorkspaces, type NavigationGroup, type NavigationLink
 } from "@/constants/navigation";
@@ -14,14 +15,28 @@ import { useAuth } from "@/hooks/use-auth";
 import {
   activeNavigationID, navigationLabel, visibleNavigation
 } from "@/lib/navigation";
+import type { BreadcrumbItem } from "@/types/fitness-admin";
 import type { CurrentUser, RoleCode } from "@/types/auth";
+
+type AppShellAction = {
+  label: string;
+  href?: string;
+  onClick?: () => void;
+  variant?: "primary" | "secondary";
+  disabled?: boolean;
+};
 
 type AppShellProps = {
   title: string;
+  subtitle?: string;
+  breadcrumbs?: BreadcrumbItem[];
+  actions?: AppShellAction[];
   children: React.ReactNode;
 };
 
-export function AppShell({ title, children }: AppShellProps) {
+const defaultSubtitle = "Kelola permohonan, pemeriksaan, review, dan dokumen kelaikan peti kemas.";
+
+export function AppShell({ title, subtitle = defaultSubtitle, breadcrumbs = [], actions = [], children }: AppShellProps) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -62,7 +77,7 @@ export function AppShell({ title, children }: AppShellProps) {
   function renderGroup(item: NavigationGroup) {
     const Icon = item.icon;
     const groupActive = item.children.some((child) => child.id === activeID);
-    const expanded = expandedGroups[item.id] ?? groupActive;
+    const expanded = collapsed ? false : expandedGroups[item.id] ?? groupActive;
     return (
       <div className={`nav-group ${groupActive ? "nav-group-active" : ""}`} key={item.id}>
         <button
@@ -81,25 +96,38 @@ export function AppShell({ title, children }: AppShellProps) {
     );
   }
 
+  function renderAction(action: AppShellAction) {
+    const className = action.variant === "secondary" ? "secondary-button" : "primary-button";
+    if (action.href) {
+      return <Link className={className} href={action.href} key={action.label}>{action.label}</Link>;
+    }
+    return (
+      <button className={className} disabled={action.disabled} key={action.label} onClick={action.onClick} type="button">
+        {action.label}
+      </button>
+    );
+  }
+
   return (
     <div className={`app-layout source-app-layout ${collapsed ? "source-app-layout-collapsed" : ""}`}>
+      {isOpen ? <button className="mobile-sidebar-scrim" aria-label="Tutup menu" onClick={() => setIsOpen(false)} type="button" /> : null}
       <aside className={`sidebar source-sidebar ${isOpen ? "sidebar-open" : ""}`}>
         <div className="sidebar-head source-sidebar-head">
           <div className="source-shell-mark">
             <Image
               alt="Logo GIFT"
               className="source-shell-logo"
-              height={34}
+              height={40}
               priority
               src="/images/gift-logo.png"
-              width={34}
+              width={40}
             />
           </div>
           <div className="source-sidebar-brand">
-            <strong>Sistem Kelaikan Peti Kemas Terintegrasi</strong>
-            <span>PT Global Inspeksi Sertifikasi</span>
+            <strong>Sistem Kelaikan Peti Kemas</strong>
+            <span>PT Global Inspeksi Forensik Teknik</span>
           </div>
-          <button className="icon-button sidebar-close" onClick={() => setIsOpen(false)} title="Tutup menu">
+          <button className="icon-button sidebar-close" onClick={() => setIsOpen(false)} title="Tutup menu" type="button">
             <X size={18} />
           </button>
         </div>
@@ -113,7 +141,7 @@ export function AppShell({ title, children }: AppShellProps) {
           {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
         </button>
 
-        <nav className="sidebar-nav source-sidebar-nav">
+        <nav className="sidebar-nav source-sidebar-nav" aria-label="Navigasi utama">
           {workspaces.map((workspace) => (
             <div className="nav-section nav-workspace" key={workspace.id}>
               <p>{workspace.label}</p>
@@ -132,13 +160,15 @@ export function AppShell({ title, children }: AppShellProps) {
 
       <div className="main-area source-main-area">
         <header className="topbar source-topbar">
-          <button className="icon-button menu-button" onClick={() => setIsOpen(true)} title="Buka menu">
+          <button className="icon-button menu-button" onClick={() => setIsOpen(true)} title="Buka menu" type="button">
             <Menu size={19} />
           </button>
           <div className="topbar-title source-topbar-copy">
+            {breadcrumbs.length > 0 ? <Breadcrumb items={breadcrumbs} /> : null}
             <h1>{title}</h1>
-            <p>Selamat datang kembali, kelola inspeksi &amp; sertifikasi kontainer Anda.</p>
+            <p>{subtitle}</p>
           </div>
+          {actions.length > 0 ? <div className="source-page-actions">{actions.map(renderAction)}</div> : null}
           <div className="topbar-actions source-profile-actions">
             <span className="source-role-badge">{roleSummary}</span>
             <button className="source-notification-button" type="button" title="Notifikasi"><Bell size={17} /></button>

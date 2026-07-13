@@ -258,7 +258,7 @@ export const masterResources: Record<string, MasterResource> = {
   },
   "fitness-container-types": {
     id: "fitness-container-types",
-    title: "Jenis / Model Peti Kemas",
+    title: "Jenis Peti Kemas",
     description: "Master jenis, ukuran, ISO code, dan model peti kemas untuk checklist dan dokumen kelaikan.",
     endpoint: "/fitness/master-data/container-types",
     permissionModule: "container_types",
@@ -326,7 +326,7 @@ export const masterResources: Record<string, MasterResource> = {
   "fitness-inspection-areas": {
     id: "fitness-inspection-areas",
     title: "Area Pemeriksaan Peti Kemas",
-    description: "Master area peti kemas untuk referensi temuan, checklist, dan foto evidence.",
+    description: "Master area peti kemas untuk referensi temuan, checklist, dan bukti foto.",
     endpoint: "/fitness/master-data/inspection-areas",
     permissionModule: "inspection_areas",
     columns: [
@@ -375,7 +375,7 @@ export const masterResources: Record<string, MasterResource> = {
     columns: [
       { key: "code", label: "Kode" },
       { key: "criteria_name", label: "Kriteria" },
-      { key: "severity_default", label: "Severity" },
+      { key: "severity_default", label: "Tingkat Keparahan" },
       { key: "affects_fitness_default", label: "Pengaruh Kelaikan", type: "boolean" },
       { key: "status", label: "Status", type: "status" }
     ],
@@ -384,29 +384,29 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "criteria_name", label: "Nama Kriteria", required: true },
       { name: "component_id", label: "Komponen Terkait", type: "searchable-select", nullable: true, relation: { endpoint: "/fitness/master-data/structural-components", labelKeys: ["code", "component_name"] } },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
-      { name: "severity_default", label: "Tingkat Temuan Default", type: "select", omitWhenEmpty: true, defaultValue: "minor", options: ["minor", "major", "critical"].map((value) => ({ label: value, value })) },
+      { name: "severity_default", label: "Tingkat Keparahan Default", type: "select", omitWhenEmpty: true, defaultValue: "minor", options: ["minor", "major", "critical"].map((value) => ({ label: value, value })) },
       { name: "affects_fitness_default", label: "Default Memengaruhi Kelaikan", type: "checkbox", defaultValue: false },
-      { name: "repair_required_default", label: "Default Perlu Perbaikan", type: "checkbox", defaultValue: false },
+      { name: "perbaikan_required_default", label: "Default Perlu Perbaikan", type: "checkbox", defaultValue: false },
       { name: "inspection_note", label: "Catatan Pemeriksaan", type: "textarea", nullable: true },
       statusField
     ]
   },
   "fitness-finding-severities": {
     id: "fitness-finding-severities",
-    title: "Tingkat Temuan / Severity",
+    title: "Tingkat Keparahan",
     description: "Master tingkat temuan untuk menentukan risiko, review, dan keputusan kelaikan.",
     endpoint: "/fitness/master-data/finding-severities",
     permissionModule: "finding_severities",
     columns: [
       { key: "code", label: "Kode" },
-      { key: "name", label: "Severity" },
+      { key: "name", label: "Tingkat Keparahan" },
       { key: "level_no", label: "Level" },
       { key: "requires_supervisor_review", label: "Review", type: "boolean" },
       { key: "status", label: "Status", type: "status" }
     ],
     fields: [
-      { name: "code", label: "Kode Severity", required: true },
-      { name: "name", label: "Nama Severity", required: true },
+      { name: "code", label: "Kode Tingkat", required: true },
+      { name: "name", label: "Nama Tingkat", required: true },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
       { name: "level_no", label: "Level Angka", type: "number", min: 1, step: 1, required: true },
       { name: "affects_fitness_default", label: "Default Memengaruhi Kelaikan", type: "checkbox", defaultValue: false },
@@ -461,7 +461,7 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "template_code", label: "Kode Template", required: true },
       { name: "template_name", label: "Nama Template", required: true },
       { name: "approval_category_id", label: "Kategori Persetujuan", type: "searchable-select", nullable: true, relation: { endpoint: "/fitness/master-data/approval-categories", labelKeys: ["code", "name"] } },
-      { name: "container_type_id", label: "Jenis / Model Peti Kemas", type: "searchable-select", nullable: true, relation: { endpoint: "/fitness/master-data/container-types", labelKeys: ["code", "type"] } },
+      { name: "container_type_id", label: "Jenis Peti Kemas", type: "searchable-select", nullable: true, relation: { endpoint: "/fitness/master-data/container-types", labelKeys: ["code", "type"] } },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
       { name: "version_no", label: "Versi", type: "number", min: 1, step: 1, omitWhenEmpty: true, defaultValue: 1 },
       { name: "status", label: "Status", type: "select", defaultValue: "draft", options: checklistStatusOptions }
@@ -494,7 +494,7 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "expected_value", label: "Expected Value", nullable: true },
       { name: "is_required", label: "Wajib Diisi", type: "checkbox", defaultValue: true },
       { name: "is_critical", label: "Critical Item", type: "checkbox", defaultValue: false },
-      { name: "fail_requires_repair", label: "Jika Gagal Perlu Perbaikan", type: "checkbox", defaultValue: false },
+      { name: "fail_requires_perbaikan", label: "Jika Gagal Perlu Perbaikan", type: "checkbox", defaultValue: false },
       { name: "fail_marks_unfit", label: "Jika Gagal Tidak Layak", type: "checkbox", defaultValue: false },
       { name: "display_order", label: "Urutan Tampil", type: "number", min: 0, step: 1, omitWhenEmpty: true, defaultValue: 0 },
       statusField
@@ -502,8 +502,8 @@ export const masterResources: Record<string, MasterResource> = {
   },
   "fitness-photo-categories": {
     id: "fitness-photo-categories",
-    title: "Kategori Foto Evidence",
-    description: "Master kategori foto evidence untuk pemeriksaan, temuan, pengujian, repair, dan re-inspection.",
+    title: "Kategori Bukti Foto",
+    description: "Master kategori bukti foto untuk pemeriksaan, temuan, pengujian, perbaikan, dan pemeriksaan ulang.",
     endpoint: "/fitness/master-data/photo-categories",
     permissionModule: "evidence_photo_categories",
     columns: [
@@ -514,11 +514,11 @@ export const masterResources: Record<string, MasterResource> = {
       { key: "status", label: "Status", type: "status" }
     ],
     fields: [
-      { name: "code", label: "Kode Kategori Foto", required: true },
-      { name: "name", label: "Nama Kategori Foto", required: true },
+      { name: "code", label: "Kode Kategori Bukti Foto", required: true },
+      { name: "name", label: "Nama Kategori Bukti Foto", required: true },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
       { name: "is_required_default", label: "Wajib Default", type: "checkbox", defaultValue: false },
-      { name: "applies_to", label: "Berlaku Untuk", type: "select", nullable: true, options: ["inspection", "finding", "test", "repair", "reinspection", "document"].map((value) => ({ label: value, value })) },
+      { name: "applies_to", label: "Berlaku Untuk", type: "select", nullable: true, options: ["inspection", "finding", "test", "perbaikan", "reinspection", "document"].map((value) => ({ label: value, value })) },
       { name: "display_order", label: "Urutan Tampil", type: "number", min: 0, step: 1, omitWhenEmpty: true, defaultValue: 0 },
       statusField
     ]
@@ -540,9 +540,9 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "code", label: "Kode Rekomendasi", required: true },
       { name: "name", label: "Nama Rekomendasi", required: true },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
-      { name: "final_fitness_result_mapping", label: "Final Fitness Result Mapping", type: "select", omitWhenEmpty: true, defaultValue: "pending", options: ["pending", "fit", "unfit"].map((value) => ({ label: value, value })) },
-      { name: "workflow_status_mapping", label: "Workflow Status Mapping", nullable: true },
-      { name: "restriction_status_mapping", label: "Restriction Status Mapping", type: "select", nullable: true, options: ["none", "suspended", "prohibited", "released"].map((value) => ({ label: value, value })) },
+      { name: "final_fitness_result_mapping", label: "Hasil Akhir Kelaikan Mapping", type: "select", omitWhenEmpty: true, defaultValue: "pending", options: ["pending", "fit", "unfit"].map((value) => ({ label: value, value })) },
+      { name: "workflow_status_mapping", label: "Tahap Proses Mapping", nullable: true },
+      { name: "restriction_status_mapping", label: "Status Pembatasan Mapping", type: "select", nullable: true, options: ["none", "suspended", "prohibited", "released"].map((value) => ({ label: value, value })) },
       { name: "requires_supervisor_review", label: "Perlu Review Supervisor", type: "checkbox", defaultValue: true },
       statusField
     ]
@@ -649,7 +649,7 @@ export const masterResources: Record<string, MasterResource> = {
   },
   "cedex-components": codeNameResource("cedex-components", "Master CEDEX Component", "CEDEX component references for survey damage records.", "/master/cedex/components", "cedex_components", "component_name", "Component Name"),
   "cedex-damages": codeNameResource("cedex-damages", "Master CEDEX Damage", "Damage code references used by surveyors.", "/master/cedex/damages", "cedex_damages", "damage_name", "Damage Name"),
-  "cedex-repairs": codeNameResource("cedex-repairs", "Master CEDEX Repair", "Repair action code references used in damage records.", "/master/cedex/repairs", "cedex_repairs", "repair_name", "Repair Name"),
+  "cedex-perbaikans": codeNameResource("cedex-perbaikans", "Master CEDEX Repair", "Repair action code references used in damage records.", "/master/cedex/perbaikans", "cedex_perbaikans", "perbaikan_name", "Repair Name"),
   "cedex-materials": codeNameResource("cedex-materials", "Master CEDEX Material", "Material references used by survey damage records.", "/master/cedex/materials", "cedex_materials", "material_name", "Material Name"),
   "responsibility-codes": codeNameResource("responsibility-codes", "Master Responsibility Code", "Responsibility codes used by survey damage records.", "/master/responsibility-codes", "responsibility_codes", "name", "Name")
 };

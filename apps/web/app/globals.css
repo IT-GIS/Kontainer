@@ -1701,3 +1701,392 @@ pre {
     grid-template-columns: 1fr;
   }
 }
+
+/* UI-A Admin Kelaikan information architecture */
+.mobile-sidebar-scrim {
+  background: rgba(15, 23, 42, 0.32);
+  cursor: pointer;
+  inset: 0;
+  position: fixed;
+  z-index: 55;
+}
+
+.breadcrumb {
+  color: rgba(23, 33, 47, 0.56);
+  font-size: 12px;
+  margin-bottom: 5px;
+  max-width: 100%;
+}
+
+.breadcrumb ol {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+.breadcrumb li,
+.breadcrumb a {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+  min-width: 0;
+}
+
+.breadcrumb span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.breadcrumb a:hover {
+  color: #126d7d;
+  text-decoration: underline;
+}
+
+.breadcrumb-current {
+  color: #17212f;
+  font-weight: 700;
+}
+
+.source-page-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.feature-placeholder {
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 20px;
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+}
+
+.feature-placeholder-hero {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+}
+
+.feature-placeholder-icon,
+.fitness-card-icon {
+  align-items: center;
+  background: rgba(23, 127, 145, 0.11);
+  border-radius: 14px;
+  color: #126d7d;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.feature-placeholder-kicker {
+  margin-bottom: 10px;
+}
+
+.feature-placeholder h2,
+.fitness-section-header h2,
+.master-data-card h3 {
+  color: #17212f;
+  letter-spacing: 0;
+  margin: 0;
+}
+
+.feature-placeholder h2 {
+  font-size: 24px;
+}
+
+.feature-placeholder p,
+.fitness-section-header p,
+.master-data-card p,
+.fitness-action-card p {
+  color: rgba(23, 33, 47, 0.58);
+  line-height: 1.45;
+  margin: 6px 0 0;
+}
+
+.feature-summary-grid,
+.fitness-card-grid,
+.master-data-card-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.feature-summary-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.feature-summary-item {
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.46);
+  border: 1px solid rgba(255, 255, 255, 0.64);
+  border-radius: 12px;
+  color: #344054;
+  display: flex;
+  gap: 10px;
+  min-height: 72px;
+  padding: 12px;
+}
+
+.feature-summary-item svg {
+  color: #0f7a48;
+  flex: 0 0 auto;
+}
+
+.feature-placeholder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.page-tabs {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.page-tab {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.44);
+  border: 1px solid rgba(255, 255, 255, 0.64);
+  border-radius: 999px;
+  color: #36535b;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.page-tab strong {
+  background: rgba(23, 127, 145, 0.12);
+  border-radius: 999px;
+  color: #126d7d;
+  font-size: 11px;
+  min-width: 22px;
+  padding: 4px 6px;
+  text-align: center;
+}
+
+.page-tab-active,
+.page-tab:hover {
+  background: #177f91;
+  color: #fff;
+}
+
+.page-tab-active strong,
+.page-tab:hover strong {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.fitness-section-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.fitness-section-header svg {
+  color: #126d7d;
+  flex: 0 0 auto;
+}
+
+.fitness-card-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.fitness-action-card {
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  border-radius: 14px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 118px;
+  padding: 14px;
+}
+
+.fitness-action-card strong {
+  color: #17212f;
+  display: block;
+}
+
+.fitness-action-card:hover,
+.master-data-card:hover {
+  border-color: rgba(23, 127, 145, 0.34);
+  box-shadow: 0 12px 28px rgba(18, 70, 82, 0.12);
+}
+
+.master-index-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.master-data-card-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.master-data-card {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  border-radius: 14px;
+  display: grid;
+  gap: 14px;
+  min-height: 258px;
+  padding: 16px;
+}
+
+.master-data-card-head,
+.master-data-card-meta,
+.empty-development-note {
+  align-items: center;
+  display: flex;
+}
+
+.master-data-card-head {
+  justify-content: space-between;
+}
+
+.master-data-card h3 {
+  font-size: 16px;
+}
+
+.master-data-card-meta {
+  background: rgba(248, 250, 252, 0.74);
+  border: 1px solid rgba(216, 222, 230, 0.8);
+  border-radius: 12px;
+  gap: 10px;
+  justify-content: space-between;
+  margin: 0;
+  padding: 10px;
+}
+
+.master-data-card-meta div {
+  min-width: 0;
+}
+
+.master-data-card-meta dt {
+  color: rgba(23, 33, 47, 0.48);
+  font-size: 11px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.master-data-card-meta dd {
+  color: #17212f;
+  font-size: 13px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.master-data-card-action {
+  justify-self: start;
+}
+
+.empty-development-note {
+  background: rgba(255, 244, 223, 0.84);
+  border: 1px solid rgba(169, 92, 0, 0.22);
+  border-radius: 14px;
+  color: #7a4200;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.source-app-layout-collapsed .source-shell-mark {
+  height: 44px;
+  width: 44px;
+}
+
+.source-app-layout-collapsed .source-shell-logo {
+  height: 38px;
+  width: 38px;
+}
+
+@media (max-width: 1100px) {
+  .master-data-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .feature-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .mobile-sidebar-scrim {
+    display: block;
+  }
+
+  .source-page-actions {
+    display: none;
+  }
+}
+
+@media (min-width: 901px) {
+  .mobile-sidebar-scrim {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .feature-placeholder {
+    border-radius: 16px;
+    padding: 16px;
+  }
+
+  .feature-placeholder-hero,
+  .fitness-action-card {
+    grid-template-columns: 1fr;
+  }
+
+  .feature-placeholder-hero {
+    flex-direction: column;
+  }
+
+  .feature-placeholder h2 {
+    font-size: 20px;
+  }
+
+  .feature-summary-grid,
+  .fitness-card-grid,
+  .master-data-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .master-data-card-meta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .breadcrumb li:not(:first-child):not(:last-child) {
+    display: none;
+  }
+
+  .breadcrumb li:first-child span {
+    max-width: 116px;
+  }
+
+  .source-topbar {
+    align-items: flex-start;
+  }
+
+  .source-profile-actions {
+    margin-left: auto;
+  }
+}
