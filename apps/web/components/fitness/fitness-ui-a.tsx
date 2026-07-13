@@ -1,10 +1,24 @@
 import Link from "next/link";
-import type { ComponentType } from "react";
-import { ArrowRight, CheckCircle2, CircleAlert, RefreshCw, SearchX, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, CircleAlert, Sparkles } from "lucide-react";
+import { ActionCard } from "@/components/ui/action-card";
+import { ActivityTimeline } from "@/components/ui/activity-timeline";
+import { AttachmentPreview } from "@/components/ui/attachment-preview";
+import { AttachmentUploaderPlaceholder } from "@/components/ui/attachment-uploader-placeholder";
+import { CompletionBadge } from "@/components/ui/completion-badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { FilterBar } from "@/components/ui/filter-bar";
+import { MetricCard } from "@/components/ui/metric-card";
 import { PageTabs } from "@/components/ui/page-tabs";
+import { ProgressTracker } from "@/components/ui/progress-tracker";
+import { ResponsiveTableCards, type ResponsiveColumn } from "@/components/ui/responsive-table-cards";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Stepper } from "@/components/ui/stepper";
+import { StickyActionBar } from "@/components/ui/sticky-action-bar";
 import type {
-  FitnessMasterDataGroup, FitnessMockState, FitnessNavigationSummary, FitnessPlaceholder
+  FitnessMasterDataGroup, FitnessMockState, FitnessNavigationSummary, FitnessPlaceholder,
+  FitnessUiBPreview, FitnessUiBRecord
 } from "@/types/fitness-admin";
 
 type FeaturePlaceholderProps = {
@@ -31,10 +45,11 @@ export function FeaturePlaceholder({ item, activeHref }: FeaturePlaceholderProps
       {item.tabs ? <PageTabs tabs={item.tabs} activeHref={activeHref} /> : null}
 
       <div className="feature-summary-grid">
-        {item.features.map((feature) => (
+        {item.features.map((feature, index) => (
           <div className="feature-summary-item" key={feature}>
             <CheckCircle2 size={18} />
             <span>{feature}</span>
+            {index === 0 ? <CompletionBadge complete={2} total={3} label="UI-B" /> : null}
           </div>
         ))}
       </div>
@@ -59,7 +74,7 @@ type DashboardSummaryProps = {
 };
 
 export function DashboardSummary({ state }: DashboardSummaryProps) {
-  if (state.status === "loading") return <SkeletonState variant="cards" />;
+  if (state.status === "loading") return <Skeleton variant="cards" />;
   if (state.status === "error") return <ErrorState message={state.error} />;
   if (state.status === "empty" || state.data.length === 0) {
     return (
@@ -75,19 +90,17 @@ export function DashboardSummary({ state }: DashboardSummaryProps) {
     <section className="workspace-panel">
       <SectionHeader title="Ringkasan Navigasi" description="Akses cepat untuk pekerjaan Admin Kelaikan." />
       <div className="fitness-card-grid">
-        {state.data.map((item) => {
-          const Icon = item.icon as ComponentType<{ size?: number }>;
-          return (
-            <Link className="fitness-action-card" href={item.href} key={item.href}>
-              <div className="fitness-card-icon"><Icon size={20} /></div>
-              <div>
-                <strong>{item.label}</strong>
-                <p>{item.description}</p>
-              </div>
-              <StatusBadge tone={item.status === "Aktif" ? "success" : "warning"}>{item.status}</StatusBadge>
-            </Link>
-          );
-        })}
+        {state.data.map((item) => (
+          <ActionCard
+            description={item.description}
+            href={item.href}
+            icon={item.icon}
+            key={item.href}
+            status={item.status}
+            statusTone={item.status === "Aktif" ? "success" : "warning"}
+            title={item.label}
+          />
+        ))}
       </div>
     </section>
   );
@@ -98,7 +111,7 @@ type MasterDataIndexProps = {
 };
 
 export function MasterDataIndex({ state }: MasterDataIndexProps) {
-  if (state.status === "loading") return <SkeletonState variant="master" />;
+  if (state.status === "loading") return <Skeleton variant="master" />;
   if (state.status === "error") return <ErrorState message={state.error} />;
   if (state.status === "empty" || state.data.length === 0) {
     return (
@@ -121,6 +134,83 @@ export function MasterDataIndex({ state }: MasterDataIndexProps) {
         </section>
       ))}
     </div>
+  );
+}
+
+export function FitnessDesignPatternPreview({ state }: { state: FitnessMockState<FitnessUiBPreview> }) {
+  if (state.status === "loading") return <Skeleton variant="table" />;
+  if (state.status === "error") return <ErrorState message={state.error} />;
+  if (state.status === "empty" || state.data.records.length === 0) {
+    return (
+      <EmptyState
+        title="Data operasional belum tersedia"
+        description="Tampilan sudah menyiapkan state kosong sebelum data nyata dihubungkan."
+      />
+    );
+  }
+
+  const columns: ResponsiveColumn<FitnessUiBRecord>[] = [
+    { key: "code", header: "Kode", render: (row) => <strong>{row.code}</strong> },
+    { key: "owner", header: "Pemilik", render: (row) => row.owner },
+    { key: "stage", header: "Tahap Proses", render: (row) => row.stage },
+    { key: "status", header: "Status", render: (row) => <StatusBadge tone="info">{row.status}</StatusBadge> },
+    { key: "complete", header: "Kelengkapan", render: (row) => <CompletionBadge complete={row.complete} total={row.total} /> }
+  ];
+
+  return (
+    <section className="workspace-panel ui-b-preview-panel">
+      <SectionHeader title="Tampilan Operasional" description="Pola komponen siap untuk daftar, form bertahap, dan detail proses." />
+      <div className="ui-b-metric-grid">
+        {state.data.metrics.map((metric) => (
+          <MetricCard
+            description={metric.description}
+            icon={metric.icon}
+            key={metric.label}
+            label={metric.label}
+            tone={metric.tone}
+            trend={metric.trend}
+            value={metric.value}
+          />
+        ))}
+      </div>
+      <FilterBar fields={state.data.filters} resetHref="/fitness/dashboard" />
+      <div className="ui-b-flow-grid">
+        <Stepper steps={state.data.steps} />
+        <ProgressTracker items={state.data.progress} />
+      </div>
+      <ResponsiveTableCards
+        columns={columns}
+        getRowId={(row) => row.id}
+        getRowTitle={(row) => row.code}
+        rows={state.data.records}
+      />
+      <div className="ui-b-support-grid">
+        <div className="ui-b-support-panel">
+          <h3>Aktivitas</h3>
+          <ActivityTimeline items={state.data.activities} />
+        </div>
+        <div className="ui-b-support-panel">
+          <h3>Lampiran</h3>
+          <AttachmentUploaderPlaceholder
+            title="Area lampiran"
+            description="Siapkan dokumen permohonan, foto pemeriksaan, atau file pendukung."
+          />
+          {state.data.attachments.map((attachment) => (
+            <AttachmentPreview
+              key={attachment.name}
+              name={attachment.name}
+              sizeLabel={attachment.sizeLabel}
+              type={attachment.type}
+            />
+          ))}
+        </div>
+      </div>
+      <StickyActionBar
+        primary={{ label: "Lanjutkan", disabled: true }}
+        secondary={{ label: "Simpan Draf", disabled: true }}
+        summary={<CompletionBadge complete={3} total={5} label="Kesiapan" />}
+      />
+    </section>
   );
 }
 
@@ -161,63 +251,11 @@ export function SectionHeader({ title, description }: { title: string; descripti
   );
 }
 
-export function SkeletonState({ variant = "cards" }: { variant?: "cards" | "master" }) {
-  const count = variant === "master" ? 6 : 4;
-  return (
-    <section className="workspace-panel skeleton-panel" aria-busy="true" aria-label="Memuat data">
-      <div className="skeleton-line skeleton-title" />
-      <div className={variant === "master" ? "master-data-card-grid" : "fitness-card-grid"}>
-        {Array.from({ length: count }, (_, index) => (
-          <div className="skeleton-card" key={index}>
-            <div className="skeleton-icon" />
-            <div className="skeleton-line" />
-            <div className="skeleton-line skeleton-short" />
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-export function EmptyState({
-  title,
-  description,
-  action
-}: {
-  title: string;
-  description: string;
-  action?: { label: string; href: string };
-}) {
-  return (
-    <section className="ui-state-panel">
-      <div className="ui-state-icon"><SearchX size={22} /></div>
-      <div>
-        <h2>{title}</h2>
-        <p>{description}</p>
-      </div>
-      {action ? <Link className="secondary-button" href={action.href}>{action.label}</Link> : null}
-    </section>
-  );
-}
-
-export function ErrorState({ message }: { message: string }) {
-  return (
-    <section className="ui-state-panel ui-state-error">
-      <div className="ui-state-icon"><RefreshCw size={22} /></div>
-      <div>
-        <h2>Data belum dapat dimuat</h2>
-        <p>{message}</p>
-      </div>
-      <Link className="secondary-button" href="/fitness/dashboard">Kembali ke Dashboard</Link>
-    </section>
-  );
-}
-
 export function EmptyDevelopmentNote() {
   return (
     <div className="empty-development-note">
       <CircleAlert size={18} />
-      <span>Data operasional belum dihubungkan pada tahap UI-A.</span>
+      <span>Data operasional belum dihubungkan pada tahap UI-B.</span>
     </div>
   );
 }

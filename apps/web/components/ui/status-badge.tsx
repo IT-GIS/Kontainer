@@ -1,13 +1,14 @@
 type StatusBadgeProps = {
-  children: string;
-  tone?: "neutral" | "success" | "warning" | "danger";
+  children: React.ReactNode;
+  tone?: "neutral" | "success" | "warning" | "danger" | "info";
 };
 
 const toneClass = {
   neutral: "badge-neutral",
   success: "badge-success",
   warning: "badge-warning",
-  danger: "badge-danger"
+  danger: "badge-danger",
+  info: "badge-info"
 };
 
 export function StatusBadge({ children, tone = "neutral" }: StatusBadgeProps) {

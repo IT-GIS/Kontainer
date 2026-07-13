@@ -1,8 +1,8 @@
 import {
-  fitnessDashboardSummary, fitnessMasterDataGroups, fitnessPlaceholders
+  fitnessDashboardSummary, fitnessMasterDataGroups, fitnessPlaceholders, fitnessUiBPreview
 } from "@/mocks/fitness-admin";
 import type {
-  FitnessMasterDataGroup, FitnessMockMode, FitnessMockState, FitnessNavigationSummary, FitnessPlaceholder
+  FitnessMasterDataGroup, FitnessMockMode, FitnessMockState, FitnessNavigationSummary, FitnessPlaceholder, FitnessUiBPreview
 } from "@/types/fitness-admin";
 
 const delayMs = 40;
@@ -29,6 +29,13 @@ export async function getFitnessDashboardSummary(
   return mockState(fitnessDashboardSummary, [], mode);
 }
 
+
+export async function getFitnessUiBPreview(
+  mode: FitnessMockMode = "success"
+): Promise<FitnessMockState<FitnessUiBPreview>> {
+  await wait();
+  return mockState(fitnessUiBPreview, emptyUiBPreview(), mode);
+}
 export function createFitnessMockState<T>(
   data: T,
   emptyData: T,
@@ -56,6 +63,18 @@ export function normalizeFitnessPath(path: string): string {
   return orderedQuery ? `${normalizedPathname}?${orderedQuery}` : normalizedPathname;
 }
 
+
+function emptyUiBPreview(): FitnessUiBPreview {
+  return {
+    metrics: [],
+    steps: [],
+    progress: [],
+    activities: [],
+    records: [],
+    filters: [],
+    attachments: []
+  };
+}
 function mockState<T>(data: T, emptyData: T, mode: FitnessMockMode): FitnessMockState<T> {
   if (mode === "loading") return { status: "loading", data: null, isLoading: true, error: null };
   if (mode === "error") {

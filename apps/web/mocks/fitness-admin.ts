@@ -1,10 +1,10 @@
-﻿import {
-  Archive, BarChart3, Building2, ClipboardCheck, ClipboardList, Container, Database,
+import {
+  Archive, BarChart3, Building2, CalendarCheck, CheckCircle2, ClipboardCheck, ClipboardList, Clock3, Container, Database,
   FileText, Gauge, History, Upload, ListChecks, MapPin, PackageCheck, PenLine,
   Settings, ShieldCheck, Tags, UserRoundCheck, UsersRound, Wrench
 } from "lucide-react";
 import type {
-  FitnessMasterDataGroup, FitnessNavigationSummary, FitnessPlaceholder, PageTabItem
+  FitnessMasterDataGroup, FitnessNavigationSummary, FitnessPlaceholder, FitnessUiBPreview, PageTabItem
 } from "@/types/fitness-admin";
 
 export const fitnessDashboardSummary: FitnessNavigationSummary[] = [
@@ -107,6 +107,77 @@ export const fitnessMasterDataGroups: FitnessMasterDataGroup[] = [
     ]
   }
 ];
+
+
+export const fitnessUiBPreview: FitnessUiBPreview = {
+  metrics: [
+    {
+      label: "Kesiapan Tampilan",
+      value: "82%",
+      description: "Komponen utama siap dipakai lintas halaman Admin Kelaikan.",
+      tone: "success",
+      trend: "Stabil",
+      icon: CheckCircle2
+    },
+    {
+      label: "Data Menunggu",
+      value: "7",
+      description: "Baris contoh untuk filter, tabel, dan kartu mobile.",
+      tone: "warning",
+      trend: "Perlu tindak lanjut",
+      icon: Clock3
+    },
+    {
+      label: "Tahap Proses",
+      value: "3/5",
+      description: "Stepper dan progress tracker siap untuk UI-C.",
+      tone: "info",
+      trend: "Berjalan",
+      icon: CalendarCheck
+    }
+  ],
+  steps: [
+    { id: "request", label: "Permohonan", description: "Identitas dan lokasi pemeriksaan.", status: "complete" },
+    { id: "container", label: "Peti Kemas", description: "Data teknis dan lampiran awal.", status: "current" },
+    { id: "assignment", label: "Penugasan Surveyor", description: "Jadwal dan instruksi kerja.", status: "upcoming" },
+    { id: "review", label: "Review", description: "Keputusan dan dokumen final.", status: "upcoming" }
+  ],
+  progress: [
+    { id: "draft", label: "Draf", description: "Data awal sudah tersimpan.", status: "done" },
+    { id: "process", label: "Tahap Proses", description: "Kelengkapan teknis sedang disiapkan.", status: "current" },
+    { id: "result", label: "Hasil Akhir Kelaikan", description: "Menunggu hasil pemeriksaan.", status: "waiting" }
+  ],
+  activities: [
+    {
+      id: "activity-1",
+      title: "Permohonan diperbarui",
+      description: "Pemilik, lokasi, dan jenis peti kemas sudah dicek.",
+      time: "13 Juli 2026, 09:10",
+      tone: "success"
+    },
+    {
+      id: "activity-2",
+      title: "Kelengkapan teknis perlu dilanjutkan",
+      description: "Beberapa data peti kemas masih menunggu verifikasi Admin.",
+      time: "13 Juli 2026, 10:25",
+      tone: "warning"
+    }
+  ],
+  records: [
+    { id: "row-1", code: "REQ-2026-0713-001", owner: "PT Nusantara Logistik", stage: "Draf", status: "Data Awal", complete: 4, total: 5 },
+    { id: "row-2", code: "REQ-2026-0713-002", owner: "PT Samudra Jaya", stage: "Tahap Proses", status: "Teknis", complete: 3, total: 5 },
+    { id: "row-3", code: "REQ-2026-0713-003", owner: "PT Pelabuhan Sentosa", stage: "Penugasan Surveyor", status: "Siap Ditugaskan", complete: 5, total: 5 }
+  ],
+  filters: [
+    { id: "keyword", label: "Cari", value: "", placeholder: "Nomor permohonan atau pemilik" },
+    { id: "stage", label: "Tahap", value: "Tahap Proses", placeholder: "Pilih tahap" },
+    { id: "owner", label: "Pemilik", value: "", placeholder: "Pilih pemilik" }
+  ],
+  attachments: [
+    { name: "Surat Permohonan.pdf", type: "document", sizeLabel: "420 KB" },
+    { name: "Foto Peti Kemas.jpg", type: "image", sizeLabel: "1.2 MB" }
+  ]
+};
 
 export const fitnessPlaceholders: FitnessPlaceholder[] = [
   placeholder("/fitness/dashboard", "Dashboard", "Ringkasan tindakan Admin Kelaikan", "Pantau pekerjaan yang membutuhkan tindakan dan akses cepat ke menu utama.", Gauge, [

@@ -59,3 +59,69 @@ export type FitnessMasterDataGroup = {
   description: string;
   items: FitnessMasterDataCard[];
 };
+
+export type FitnessUiBTone = "neutral" | "success" | "warning" | "danger" | "info";
+
+export type FitnessUiBMetric = {
+  label: string;
+  value: string;
+  description: string;
+  tone: FitnessUiBTone;
+  trend: string;
+  icon: LucideIcon;
+};
+
+export type FitnessUiBStep = {
+  id: string;
+  label: string;
+  description: string;
+  status: "complete" | "current" | "upcoming";
+};
+
+export type FitnessUiBProgressItem = {
+  id: string;
+  label: string;
+  description: string;
+  status: "done" | "current" | "waiting";
+};
+
+export type FitnessUiBActivity = {
+  id: string;
+  title: string;
+  description: string;
+  time: string;
+  tone: "neutral" | "success" | "warning" | "danger";
+};
+
+export type FitnessUiBRecord = {
+  id: string;
+  code: string;
+  owner: string;
+  stage: string;
+  status: string;
+  complete: number;
+  total: number;
+};
+
+export type FitnessUiBFilter = {
+  id: string;
+  label: string;
+  value: string;
+  placeholder: string;
+};
+
+export type FitnessUiBAttachment = {
+  name: string;
+  type: "image" | "document";
+  sizeLabel: string;
+};
+
+export type FitnessUiBPreview = {
+  metrics: FitnessUiBMetric[];
+  steps: FitnessUiBStep[];
+  progress: FitnessUiBProgressItem[];
+  activities: FitnessUiBActivity[];
+  records: FitnessUiBRecord[];
+  filters: FitnessUiBFilter[];
+  attachments: FitnessUiBAttachment[];
+};

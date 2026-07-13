@@ -1,6 +1,6 @@
 import { ProtectedRoute } from "@/components/auth/protected-route";
-import { SkeletonState } from "@/components/fitness/fitness-ui-a";
 import { AppShell } from "@/components/layout/app-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function FitnessLoading() {
   return (
@@ -21,7 +21,7 @@ export default function FitnessLoading() {
               </div>
             </div>
           </section>
-          <SkeletonState variant="cards" />
+          <Skeleton variant="cards" />
         </div>
       </AppShell>
     </ProtectedRoute>

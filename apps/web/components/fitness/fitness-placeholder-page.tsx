@@ -1,10 +1,10 @@
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import {
-  DashboardSummary, EmptyDevelopmentNote, FeaturePlaceholder, MasterDataIndex
+  DashboardSummary, EmptyDevelopmentNote, FeaturePlaceholder, FitnessDesignPatternPreview, MasterDataIndex
 } from "@/components/fitness/fitness-ui-a";
 import { AppShell } from "@/components/layout/app-shell";
 import {
-  getFitnessDashboardSummary, getFitnessMasterDataGroups
+  getFitnessDashboardSummary, getFitnessMasterDataGroups, getFitnessUiBPreview
 } from "@/lib/fitness-admin-mock-service";
 import type { FitnessPlaceholder } from "@/types/fitness-admin";
 
@@ -14,9 +14,10 @@ type FitnessPlaceholderPageProps = {
 };
 
 export async function FitnessPlaceholderPage({ item, activeHref = item.path }: FitnessPlaceholderPageProps) {
-  const [dashboardSummary, masterDataGroups] = await Promise.all([
+  const [dashboardSummary, masterDataGroups, uiBPreview] = await Promise.all([
     getFitnessDashboardSummary(),
-    getFitnessMasterDataGroups()
+    getFitnessMasterDataGroups(),
+    getFitnessUiBPreview()
   ]);
   const isDashboard = item.path === "/fitness/dashboard";
   const isMasterDataIndex = item.path === "/fitness/master-data";
@@ -32,6 +33,7 @@ export async function FitnessPlaceholderPage({ item, activeHref = item.path }: F
           <FeaturePlaceholder item={item} activeHref={activeHref} />
           {isDashboard ? <DashboardSummary state={dashboardSummary} /> : null}
           {isMasterDataIndex ? <MasterDataIndex state={masterDataGroups} /> : null}
+          {!isDashboard && !isMasterDataIndex ? <FitnessDesignPatternPreview state={uiBPreview} /> : null}
           {!isDashboard && !isMasterDataIndex ? <EmptyDevelopmentNote /> : null}
         </div>
       </AppShell>
