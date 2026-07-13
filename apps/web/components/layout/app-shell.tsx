@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   Bell, ChevronDown, ChevronLeft, ChevronRight, LogOut, Menu, X
@@ -78,13 +78,23 @@ export function AppShell({ title, subtitle = defaultSubtitle, breadcrumbs = [], 
     const Icon = item.icon;
     const groupActive = item.children.some((child) => child.id === activeID);
     const expanded = collapsed ? false : expandedGroups[item.id] ?? groupActive;
+
+    function handleGroupClick() {
+      if (collapsed) {
+        setCollapsed(false);
+        setExpandedGroups((current) => ({ ...current, [item.id]: true }));
+        return;
+      }
+      setExpandedGroups((current) => ({ ...current, [item.id]: !expanded }));
+    }
+
     return (
       <div className={`nav-group ${groupActive ? "nav-group-active" : ""}`} key={item.id}>
         <button
           className="nav-group-trigger"
           type="button"
           aria-expanded={expanded}
-          onClick={() => setExpandedGroups((current) => ({ ...current, [item.id]: !expanded }))}
+          onClick={handleGroupClick}
           title={collapsed ? item.label : undefined}
         >
           <Icon size={17} />

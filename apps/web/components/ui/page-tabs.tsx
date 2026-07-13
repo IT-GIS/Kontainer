@@ -10,23 +10,22 @@ export function PageTabs({ tabs, activeHref }: PageTabsProps) {
   if (tabs.length === 0) return null;
 
   return (
-    <div className="page-tabs" role="tablist" aria-label="Filter halaman">
+    <nav className="page-tabs" aria-label="Filter halaman">
       {tabs.map((tab) => {
         const active = normalize(tab.href) === normalize(activeHref ?? tabs[0]?.href ?? "");
         return (
           <Link
-            aria-selected={active}
+            aria-current={active ? "page" : undefined}
             className={`page-tab ${active ? "page-tab-active" : ""}`}
             href={tab.href}
             key={tab.id}
-            role="tab"
           >
             <span>{tab.label}</span>
             {typeof tab.count === "number" ? <strong>{tab.count}</strong> : null}
           </Link>
         );
       })}
-    </div>
+    </nav>
   );
 }
 

@@ -12,12 +12,13 @@ export type PageTabItem = {
   count?: number;
 };
 
-export type FitnessMockState<T> = {
-  status: "success";
-  data: T;
-  isLoading: false;
-  error: null;
-};
+export type FitnessMockMode = "success" | "empty" | "error" | "loading";
+
+export type FitnessMockState<T> =
+  | { status: "success"; data: T; isLoading: false; error: null }
+  | { status: "empty"; data: T; isLoading: false; error: null }
+  | { status: "error"; data: null; isLoading: false; error: string }
+  | { status: "loading"; data: null; isLoading: true; error: null };
 
 export type FitnessNavigationSummary = {
   label: string;

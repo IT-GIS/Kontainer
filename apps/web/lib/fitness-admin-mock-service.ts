@@ -2,39 +2,39 @@ import {
   fitnessDashboardSummary, fitnessMasterDataGroups, fitnessPlaceholders
 } from "@/mocks/fitness-admin";
 import type {
-  FitnessMasterDataGroup, FitnessMockState, FitnessNavigationSummary, FitnessPlaceholder
+  FitnessMasterDataGroup, FitnessMockMode, FitnessMockState, FitnessNavigationSummary, FitnessPlaceholder
 } from "@/types/fitness-admin";
 
 const delayMs = 40;
 
-export async function getFitnessPlaceholder(path: string): Promise<FitnessMockState<FitnessPlaceholder | null>> {
+export async function getFitnessPlaceholder(
+  path: string,
+  mode: FitnessMockMode = "success"
+): Promise<FitnessMockState<FitnessPlaceholder | null>> {
   await wait();
-  return {
-    status: "success",
-    data: findFitnessPlaceholder(path),
-    isLoading: false,
-    error: null
-  };
+  return mockState(findFitnessPlaceholder(path), null, mode);
 }
 
-export async function getFitnessMasterDataGroups(): Promise<FitnessMockState<FitnessMasterDataGroup[]>> {
+export async function getFitnessMasterDataGroups(
+  mode: FitnessMockMode = "success"
+): Promise<FitnessMockState<FitnessMasterDataGroup[]>> {
   await wait();
-  return {
-    status: "success",
-    data: fitnessMasterDataGroups,
-    isLoading: false,
-    error: null
-  };
+  return mockState(fitnessMasterDataGroups, [], mode);
 }
 
-export async function getFitnessDashboardSummary(): Promise<FitnessMockState<FitnessNavigationSummary[]>> {
+export async function getFitnessDashboardSummary(
+  mode: FitnessMockMode = "success"
+): Promise<FitnessMockState<FitnessNavigationSummary[]>> {
   await wait();
-  return {
-    status: "success",
-    data: fitnessDashboardSummary,
-    isLoading: false,
-    error: null
-  };
+  return mockState(fitnessDashboardSummary, [], mode);
+}
+
+export function createFitnessMockState<T>(
+  data: T,
+  emptyData: T,
+  mode: FitnessMockMode = "success"
+): FitnessMockState<T> {
+  return mockState(data, emptyData, mode);
 }
 
 export function findFitnessPlaceholder(path: string): FitnessPlaceholder | null {
@@ -54,6 +54,20 @@ export function normalizeFitnessPath(path: string): string {
     .map(([key, value]) => `${key}=${value}`)
     .join("&");
   return orderedQuery ? `${normalizedPathname}?${orderedQuery}` : normalizedPathname;
+}
+
+function mockState<T>(data: T, emptyData: T, mode: FitnessMockMode): FitnessMockState<T> {
+  if (mode === "loading") return { status: "loading", data: null, isLoading: true, error: null };
+  if (mode === "error") {
+    return {
+      status: "error",
+      data: null,
+      isLoading: false,
+      error: "Data tampilan belum dapat dimuat. Silakan coba lagi beberapa saat lagi."
+    };
+  }
+  if (mode === "empty") return { status: "empty", data: emptyData, isLoading: false, error: null };
+  return { status: "success", data, isLoading: false, error: null };
 }
 
 function wait() {

@@ -2090,3 +2090,97 @@ pre {
     margin-left: auto;
   }
 }
+/* UI-A.1 state panels */
+.skeleton-panel {
+  overflow: hidden;
+}
+
+.skeleton-card,
+.ui-state-panel {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.skeleton-card {
+  display: grid;
+  gap: 12px;
+  min-height: 118px;
+}
+
+.skeleton-copy {
+  display: grid;
+  flex: 1;
+  gap: 10px;
+  min-width: 0;
+}
+
+.skeleton-line,
+.skeleton-icon {
+  animation: skeleton-pulse 1300ms ease-in-out infinite;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.46), rgba(23, 127, 145, 0.12), rgba(255, 255, 255, 0.46));
+  background-size: 220% 100%;
+}
+
+.skeleton-line {
+  border-radius: 999px;
+  height: 12px;
+  width: 100%;
+}
+
+.skeleton-title {
+  height: 18px;
+  max-width: 260px;
+}
+
+.skeleton-short {
+  max-width: 150px;
+}
+
+.skeleton-icon {
+  border-radius: 14px;
+  height: 44px;
+  width: 44px;
+}
+
+.ui-state-panel {
+  align-items: flex-start;
+  display: grid;
+  gap: 14px;
+  justify-items: start;
+}
+
+.ui-state-panel h2 {
+  color: #17212f;
+  font-size: 18px;
+  letter-spacing: 0;
+  margin: 0;
+}
+
+.ui-state-panel p {
+  color: rgba(23, 33, 47, 0.58);
+  line-height: 1.45;
+  margin: 6px 0 0;
+}
+
+.ui-state-icon {
+  align-items: center;
+  background: rgba(23, 127, 145, 0.11);
+  border-radius: 14px;
+  color: #126d7d;
+  display: inline-flex;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.ui-state-error .ui-state-icon {
+  background: rgba(180, 35, 24, 0.1);
+  color: #b42318;
+}
+
+@keyframes skeleton-pulse {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}

@@ -1,4 +1,4 @@
-﻿import { ProtectedRoute } from "@/components/auth/protected-route";
+import { ProtectedRoute } from "@/components/auth/protected-route";
 import {
   DashboardSummary, EmptyDevelopmentNote, FeaturePlaceholder, MasterDataIndex
 } from "@/components/fitness/fitness-ui-a";
@@ -27,12 +27,11 @@ export async function FitnessPlaceholderPage({ item, activeHref = item.path }: F
         title={item.title}
         subtitle={item.subtitle}
         breadcrumbs={item.breadcrumbs}
-        actions={item.secondaryCta ? [{ label: item.secondaryCta.label, href: item.secondaryCta.href, variant: "secondary" }] : []}
       >
         <div className="page-stack">
           <FeaturePlaceholder item={item} activeHref={activeHref} />
-          {isDashboard ? <DashboardSummary items={dashboardSummary.data} /> : null}
-          {isMasterDataIndex ? <MasterDataIndex groups={masterDataGroups.data} /> : null}
+          {isDashboard ? <DashboardSummary state={dashboardSummary} /> : null}
+          {isMasterDataIndex ? <MasterDataIndex state={masterDataGroups} /> : null}
           {!isDashboard && !isMasterDataIndex ? <EmptyDevelopmentNote /> : null}
         </div>
       </AppShell>

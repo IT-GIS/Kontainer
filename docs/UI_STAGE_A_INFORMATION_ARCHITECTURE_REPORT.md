@@ -118,3 +118,55 @@ Master Data index aktif sebagai halaman navigasi. Sub-route Master Data CRUD exi
 - Samakan empty, loading, error, dan success state lintas halaman.
 - Siapkan pattern filter bar dan responsive table/card view.
 - Tambahkan state visual yang lebih kaya untuk form tahap berikutnya.
+## 13. Koreksi UI-A.1
+
+- Sidebar collapsed diperbaiki: klik group saat collapsed sekarang memperluas sidebar dan langsung membuka group yang diklik.
+- `aria-expanded` group mengikuti state submenu yang benar; mobile drawer tetap memakai perilaku sebelumnya.
+- Active navigation diperbaiki untuk detail route Permohonan, Peti Kemas, Penugasan, dan seluruh sub-route Master Data.
+- Route spesifik seperti `/fitness/applications/create` dan `/fitness/containers/import` tetap menang dari pattern umum.
+- Secondary CTA tidak lagi otomatis dikirim ke `AppShell`; CTA placeholder hanya tampil di `FeaturePlaceholder`.
+- Loading state ditambahkan lewat route loading fitness dan skeleton card/shell.
+- Empty state dan error state reusable ditambahkan pada komponen UI-A fitness.
+- Mock service kini mendukung `success`, `empty`, `error`, dan `loading` lewat helper internal tanpa query publik.
+- PageTabs diperbaiki menjadi navigasi link biasa dengan `aria-current="page"`, bukan ARIA tab pattern tanpa keyboard behavior lengkap.
+
+File yang diubah pada koreksi UI-A.1:
+
+- `apps/web/components/layout/app-shell.tsx`
+- `apps/web/constants/navigation-admin-fitness.ts`
+- `apps/web/components/ui/page-tabs.tsx`
+- `apps/web/components/fitness/fitness-placeholder-page.tsx`
+- `apps/web/components/fitness/fitness-ui-a.tsx`
+- `apps/web/lib/fitness-admin-mock-service.ts`
+- `apps/web/types/fitness-admin.ts`
+- `apps/web/app/fitness/loading.tsx`
+- `apps/web/app/globals.css`
+- `docs/UI_STAGE_A_INFORMATION_ARCHITECTURE_REPORT.md`
+
+## 14. Hasil Validasi
+
+- `npm run typecheck --workspace apps/web`: lulus.
+- `npm run build --workspace apps/web`: lulus.
+- `apps/web/next-env.d.ts`: sempat berubah karena build dan sudah direstore.
+- `git diff --check`: dijalankan setelah koreksi dokumen.
+- Forbidden-term scan pada file UI-A.1: bersih untuk daftar istilah terlarang dari brief, nama perusahaan lama, dan istilah UI lama yang dilarang.
+- Backend/database guard: tidak ada perubahan pada `services/api` atau `database`.
+- Route smoke check HTTP 200:
+  - `/fitness/dashboard`
+  - `/fitness/applications`
+  - `/fitness/applications/create`
+  - `/fitness/applications?status=incomplete`
+  - `/fitness/containers`
+  - `/fitness/containers/import`
+  - `/fitness/containers?filter=technical-incomplete`
+  - `/fitness/assignments?status=unassigned`
+  - `/fitness/assignments?status=active`
+  - `/fitness/assignments?status=history`
+  - `/fitness/inspections`
+  - `/fitness/reviews`
+  - `/fitness/repair-followups`
+  - `/fitness/documents`
+  - `/fitness/reports`
+  - `/fitness/master-data`
+  - seluruh sub-route Master Data aktif, termasuk route item template checklist
+  - `/fitness/legacy-archive`

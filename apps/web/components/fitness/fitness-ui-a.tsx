@@ -1,9 +1,11 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import type { ComponentType } from "react";
-import { ArrowRight, CheckCircle2, CircleAlert, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, CircleAlert, RefreshCw, SearchX, Sparkles } from "lucide-react";
 import { PageTabs } from "@/components/ui/page-tabs";
 import { StatusBadge } from "@/components/ui/status-badge";
-import type { FitnessMasterDataGroup, FitnessPlaceholder } from "@/types/fitness-admin";
+import type {
+  FitnessMasterDataGroup, FitnessMockState, FitnessNavigationSummary, FitnessPlaceholder
+} from "@/types/fitness-admin";
 
 type FeaturePlaceholderProps = {
   item: FitnessPlaceholder;
@@ -53,22 +55,28 @@ export function FeaturePlaceholder({ item, activeHref }: FeaturePlaceholderProps
 }
 
 type DashboardSummaryProps = {
-  items: Array<{
-    label: string;
-    href: string;
-    description: string;
-    status: "Aktif" | "Dalam Pengembangan";
-    icon: ComponentType<{ size?: number }>;
-  }>;
+  state: FitnessMockState<FitnessNavigationSummary[]>;
 };
 
-export function DashboardSummary({ items }: DashboardSummaryProps) {
+export function DashboardSummary({ state }: DashboardSummaryProps) {
+  if (state.status === "loading") return <SkeletonState variant="cards" />;
+  if (state.status === "error") return <ErrorState message={state.error} />;
+  if (state.status === "empty" || state.data.length === 0) {
+    return (
+      <EmptyState
+        title="Ringkasan belum tersedia"
+        description="Belum ada ringkasan navigasi yang dapat ditampilkan untuk tahap ini."
+        action={{ label: "Kembali ke Dashboard", href: "/fitness/dashboard" }}
+      />
+    );
+  }
+
   return (
     <section className="workspace-panel">
       <SectionHeader title="Ringkasan Navigasi" description="Akses cepat untuk pekerjaan Admin Kelaikan." />
       <div className="fitness-card-grid">
-        {items.map((item) => {
-          const Icon = item.icon;
+        {state.data.map((item) => {
+          const Icon = item.icon as ComponentType<{ size?: number }>;
           return (
             <Link className="fitness-action-card" href={item.href} key={item.href}>
               <div className="fitness-card-icon"><Icon size={20} /></div>
@@ -86,13 +94,25 @@ export function DashboardSummary({ items }: DashboardSummaryProps) {
 }
 
 type MasterDataIndexProps = {
-  groups: FitnessMasterDataGroup[];
+  state: FitnessMockState<FitnessMasterDataGroup[]>;
 };
 
-export function MasterDataIndex({ groups }: MasterDataIndexProps) {
+export function MasterDataIndex({ state }: MasterDataIndexProps) {
+  if (state.status === "loading") return <SkeletonState variant="master" />;
+  if (state.status === "error") return <ErrorState message={state.error} />;
+  if (state.status === "empty" || state.data.length === 0) {
+    return (
+      <EmptyState
+        title="Master Data belum tersedia"
+        description="Kelompok master data belum dapat ditampilkan pada tahap ini."
+        action={{ label: "Kembali ke Dashboard", href: "/fitness/dashboard" }}
+      />
+    );
+  }
+
   return (
     <div className="master-index-stack">
-      {groups.map((group) => (
+      {state.data.map((group) => (
         <section className="workspace-panel master-data-group" key={group.title}>
           <SectionHeader title={group.title} description={group.description} />
           <div className="master-data-card-grid">
@@ -138,6 +158,58 @@ export function SectionHeader({ title, description }: { title: string; descripti
       </div>
       <Sparkles aria-hidden="true" size={18} />
     </div>
+  );
+}
+
+export function SkeletonState({ variant = "cards" }: { variant?: "cards" | "master" }) {
+  const count = variant === "master" ? 6 : 4;
+  return (
+    <section className="workspace-panel skeleton-panel" aria-busy="true" aria-label="Memuat data">
+      <div className="skeleton-line skeleton-title" />
+      <div className={variant === "master" ? "master-data-card-grid" : "fitness-card-grid"}>
+        {Array.from({ length: count }, (_, index) => (
+          <div className="skeleton-card" key={index}>
+            <div className="skeleton-icon" />
+            <div className="skeleton-line" />
+            <div className="skeleton-line skeleton-short" />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export function EmptyState({
+  title,
+  description,
+  action
+}: {
+  title: string;
+  description: string;
+  action?: { label: string; href: string };
+}) {
+  return (
+    <section className="ui-state-panel">
+      <div className="ui-state-icon"><SearchX size={22} /></div>
+      <div>
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </div>
+      {action ? <Link className="secondary-button" href={action.href}>{action.label}</Link> : null}
+    </section>
+  );
+}
+
+export function ErrorState({ message }: { message: string }) {
+  return (
+    <section className="ui-state-panel ui-state-error">
+      <div className="ui-state-icon"><RefreshCw size={22} /></div>
+      <div>
+        <h2>Data belum dapat dimuat</h2>
+        <p>{message}</p>
+      </div>
+      <Link className="secondary-button" href="/fitness/dashboard">Kembali ke Dashboard</Link>
+    </section>
   );
 }
 

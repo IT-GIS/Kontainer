@@ -37,14 +37,20 @@ export const containerFitnessAdminWorkspace: NavigationWorkspace = {
   items: [
     n("Dashboard", "/fitness/dashboard", Gauge, readOnly),
     g("Permohonan", ClipboardList, admin, [
-      n("Daftar Permohonan", "/fitness/applications", ClipboardList, admin, [{ path: "/fitness/applications" }]),
+      n("Daftar Permohonan", "/fitness/applications", ClipboardList, admin, [
+        { path: "/fitness/applications" },
+        { path: "/fitness/applications/:id", mode: "pattern" }
+      ]),
       n("Buat Permohonan", "/fitness/applications/create", PenLine, admin),
       n("Permohonan Belum Lengkap", "/fitness/applications?status=incomplete", ClipboardCheck, admin, [
         { path: "/fitness/applications", query: { status: "incomplete" } }
       ])
     ]),
     g("Peti Kemas", Container, admin, [
-      n("Daftar Peti Kemas", "/fitness/containers", Container, admin, [{ path: "/fitness/containers" }]),
+      n("Daftar Peti Kemas", "/fitness/containers", Container, admin, [
+        { path: "/fitness/containers" },
+        { path: "/fitness/containers/:id", mode: "pattern" }
+      ]),
       n("Import Peti Kemas", "/fitness/containers/import", Upload, admin),
       n("Validasi Data Teknis", "/fitness/containers?filter=technical-incomplete", ClipboardCheck, admin, [
         { path: "/fitness/containers", query: { filter: "technical-incomplete" } }
@@ -53,7 +59,8 @@ export const containerFitnessAdminWorkspace: NavigationWorkspace = {
     g("Penugasan", UserRoundCheck, admin, [
       n("Belum Ditugaskan", "/fitness/assignments?status=unassigned", UserRoundCheck, admin, [
         { path: "/fitness/assignments", query: { status: "unassigned" } },
-        { path: "/fitness/assignments" }
+        { path: "/fitness/assignments" },
+        { path: "/fitness/assignments/:id", mode: "pattern" }
       ]),
       n("Penugasan Aktif", "/fitness/assignments?status=active", ClipboardCheck, admin, [
         { path: "/fitness/assignments", query: { status: "active" } }
@@ -67,7 +74,7 @@ export const containerFitnessAdminWorkspace: NavigationWorkspace = {
     n("Tindak Lanjut Perbaikan", "/fitness/repair-followups", Wrench, reviewer),
     n("Dokumen Kelaikan", "/fitness/documents", FileText, reporter),
     n("Laporan", "/fitness/reports", BarChart3, reporter),
-    n("Master Data", "/fitness/master-data", Database, admin, [{ path: "/fitness/master-data" }]),
+    n("Master Data", "/fitness/master-data", Database, admin, [{ path: "/fitness/master-data", mode: "prefix" }]),
     g("Pengaturan", Settings, admin, [
       n("Profil Badan Usaha", "/settings/company-profile", Building2, admin),
       n("Pengaturan Penomoran", "/settings/numbering", ListChecks, admin),
