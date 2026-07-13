@@ -124,6 +124,19 @@ var Resources = map[string]Resource{
 		Filters:       map[string]string{"status": "status", "approval_category_id": "approval_category_id", "container_type_id": "container_type_id"},
 		DefaultSort:   "template_name",
 	},
+	"fitness_checklist_template_items": {
+		Name: "fitness_checklist_template_items", PermissionModule: "fitness_checklist_templates", Table: "fitness_checklist_template_items", CodeField: "item_code",
+		DuplicateFields: []string{"template_id", "item_code"},
+		Fields: []Field{
+			{Name: "template_id", Required: true}, {Name: "item_code", Required: true}, {Name: "item_label", Required: true}, {Name: "description"},
+			{Name: "inspection_area_id"}, {Name: "structural_component_id"}, {Name: "test_parameter_id"}, {Name: "response_type", Required: true},
+			{Name: "expected_value"}, {Name: "is_required"}, {Name: "is_critical"}, {Name: "fail_requires_repair"}, {Name: "fail_marks_unfit"},
+			{Name: "display_order"}, {Name: "status"},
+		},
+		SearchColumns: []string{"item_code", "item_label", "description", "expected_value"},
+		Filters:       map[string]string{"status": "status", "template_id": "template_id", "inspection_area_id": "inspection_area_id", "structural_component_id": "structural_component_id", "test_parameter_id": "test_parameter_id"},
+		DefaultSort:   "display_order",
+	},
 	"evidence_photo_categories": {
 		Name: "evidence_photo_categories", Table: "evidence_photo_categories", CodeField: "code",
 		Fields: []Field{

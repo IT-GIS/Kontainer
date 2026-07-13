@@ -1,7 +1,8 @@
 "use client";
 
-import { Edit, Eye, Plus, Search, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { ClipboardList, Edit, Eye, Plus, Search, Trash2, X } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { masterResources, type MasterField, type MasterResource } from "@/constants/master-data";
 import { useAuth } from "@/hooks/use-auth";
 import { apiData, apiPaginated, buildQuery } from "@/lib/api-client";
@@ -12,14 +13,20 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 
 type MasterRow = Record<string, string | number | boolean | null | undefined>;
-type UserOption = { value: string; label: string };
+type SelectOption = { value: string; label: string };
+type RelationOptions = Record<string, SelectOption[]>;
 
 type MasterDataPageProps = {
   resourceId: keyof typeof masterResources;
+  endpointOverride?: string;
+  fixedValues?: MasterRow;
+  backHref?: string;
 };
 
-export function MasterDataPage({ resourceId }: MasterDataPageProps) {
+export function MasterDataPage({ resourceId, endpointOverride, fixedValues, backHref }: MasterDataPageProps) {
   const resource = masterResources[resourceId];
+  const resourceEndpoint = endpointOverride ?? resource.endpoint;
+  const fixedPayload = useMemo(() => fixedValues ?? {}, [fixedValues]);
   const { accessToken, user } = useAuth();
   const [rows, setRows] = useState<MasterRow[]>([]);
   const [page, setPage] = useState(1);
@@ -31,13 +38,15 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
   const [dialogMode, setDialogMode] = useState<"create" | "edit" | null>(null);
   const [selected, setSelected] = useState<MasterRow | null>(null);
   const [detailRow, setDetailRow] = useState<MasterRow | null>(null);
-  const [formData, setFormData] = useState<MasterRow>(() => defaultFormData(resource));
+  const [formData, setFormData] = useState<MasterRow>(() => ({ ...defaultFormData(resource), ...fixedPayload }));
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [surveyorUsers, setSurveyorUsers] = useState<UserOption[]>([]);
+  const [surveyorUsers, setSurveyorUsers] = useState<SelectOption[]>([]);
+  const [relationOptions, setRelationOptions] = useState<RelationOptions>({});
 
   const canCreate = can(user, `${resource.permissionModule}.create.all`);
   const canUpdate = can(user, `${resource.permissionModule}.update.all`);
   const canDelete = can(user, `${resource.permissionModule}.delete.all`);
+  const fieldByName = useMemo(() => Object.fromEntries(resource.fields.map((field) => [field.name, field])), [resource.fields]);
 
   const loadRows = useCallback(async () => {
     if (!accessToken) {
@@ -47,7 +56,7 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
     setError(null);
     try {
       const result = await apiPaginated<MasterRow>(
-        `${resource.endpoint}${buildQuery({ page, per_page: 10, search, status })}`,
+        `${resourceEndpoint}${buildQuery({ page, per_page: 10, search, status })}`,
         { accessToken }
       );
       setRows(result.rows);
@@ -57,12 +66,19 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken, page, resource.endpoint, search, status]);
+  }, [accessToken, page, resourceEndpoint, search, status]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadRows(), 0);
     return () => window.clearTimeout(timer);
   }, [loadRows]);
+
+  useEffect(() => {
+    setFormData({ ...defaultFormData(resource), ...fixedPayload });
+    setSelected(null);
+    setDetailRow(null);
+    setPage(1);
+  }, [fixedPayload, resource, resourceEndpoint]);
 
   useEffect(() => {
     if (!accessToken || (resourceId !== "surveyors" && resourceId !== "fitness-surveyors")) return;
@@ -73,11 +89,32 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
       .catch(() => setSurveyorUsers([]));
   }, [accessToken, resourceId]);
 
+  useEffect(() => {
+    if (!accessToken) return;
+    const relationFields = resource.fields.filter((field) => field.relation);
+    if (relationFields.length === 0) {
+      setRelationOptions({});
+      return;
+    }
+    let active = true;
+    void Promise.all(relationFields.map(async (field) => {
+      const relation = field.relation;
+      if (!relation) return [field.name, []] as const;
+      const result = await apiPaginated<MasterRow>(`${relation.endpoint}${buildQuery({ page: 1, per_page: 100, status: "active" })}`, { accessToken });
+      return [field.name, result.rows.map((row) => ({ value: String(row.id ?? ""), label: relationLabel(row, relation.labelKeys) })).filter((option) => option.value)] as const;
+    })).then((entries) => {
+      if (active) setRelationOptions(Object.fromEntries(entries));
+    }).catch(() => {
+      if (active) setRelationOptions({});
+    });
+    return () => { active = false; };
+  }, [accessToken, resource.fields]);
+
   const columns = [
     ...resource.columns.map((column) => ({
       key: column.key,
       header: column.label,
-      render: (row: MasterRow) => renderCell(row[column.key], column.type)
+      render: (row: MasterRow) => renderCell(displayValue(row[column.key], fieldByName[column.key], relationOptions), column.type)
     })),
     {
       key: "actions",
@@ -87,6 +124,11 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
           <button className="icon-button" onClick={() => setDetailRow(row)} title="Detail">
             <Eye size={16} />
           </button>
+          {resourceId === "fitness-checklist-templates" && row.id ? (
+            <Link className="icon-button" href={`/fitness/master-data/checklist-templates/${row.id}/items`} title="Item checklist">
+              <ClipboardList size={16} />
+            </Link>
+          ) : null}
           {canUpdate ? (
             <button className="icon-button" onClick={() => openEdit(row)} title="Edit">
               <Edit size={16} />
@@ -104,20 +146,20 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
 
   function openCreate() {
     setSelected(null);
-    setFormData(defaultFormData(resource));
+    setFormData({ ...defaultFormData(resource), ...fixedPayload });
     setDialogMode("create");
   }
 
   function openEdit(row: MasterRow) {
     setSelected(row);
-    setFormData(formDataFromRow(resource, row));
+    setFormData({ ...formDataFromRow(resource, row), ...fixedPayload });
     setDialogMode("edit");
   }
 
   function closeDialog() {
     setDialogMode(null);
     setSelected(null);
-    setFormData(defaultFormData(resource));
+    setFormData({ ...defaultFormData(resource), ...fixedPayload });
   }
 
   async function handleSubmit() {
@@ -127,10 +169,11 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
     setIsSubmitting(true);
     setError(null);
     try {
+      const payload = cleanPayload({ ...formData, ...fixedPayload });
       if (dialogMode === "create") {
-        await apiData(resource.endpoint, { method: "POST", accessToken, body: JSON.stringify(cleanPayload(formData)) });
+        await apiData(resourceEndpoint, { method: "POST", accessToken, body: JSON.stringify(payload) });
       } else if (selected?.id) {
-        await apiData(`${resource.endpoint}/${selected.id}`, { method: "PUT", accessToken, body: JSON.stringify(cleanPayload(formData)) });
+        await apiData(`${resourceEndpoint}/${selected.id}`, { method: "PUT", accessToken, body: JSON.stringify(payload) });
       }
       closeDialog();
       await loadRows();
@@ -147,7 +190,7 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
     }
     setError(null);
     try {
-      await apiData(`${resource.endpoint}/${row.id}`, { method: "DELETE", accessToken });
+      await apiData(`${resourceEndpoint}/${row.id}`, { method: "DELETE", accessToken });
       await loadRows();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menonaktifkan data.");
@@ -156,6 +199,7 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
 
   return (
     <div className="page-stack">
+      {backHref ? <Link className="secondary-button" href={backHref}>Kembali</Link> : null}
       <PageHeader
         title={resource.title}
         description={resource.description}
@@ -185,10 +229,10 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
             <button className="icon-button" onClick={() => setDetailRow(null)} title="Tutup detail"><X size={16} /></button>
           </div>
           <div className="detail-grid">
-            {resource.fields.map((field) => (
+            {resource.fields.filter((field) => field.type !== "hidden").map((field) => (
               <div className="detail-item" key={field.name}>
                 <span>{field.label}</span>
-                <strong>{renderDetailValue(detailRow[field.name], field.type)}</strong>
+                <strong>{renderDetailValue(displayValue(detailRow[field.name], field, relationOptions), field.type)}</strong>
               </div>
             ))}
           </div>
@@ -209,7 +253,7 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
               field={field}
               key={field.name}
               value={formData[field.name]}
-              optionsOverride={(resourceId === "surveyors" || resourceId === "fitness-surveyors") && field.name === "user_id" ? surveyorUserOptions(surveyorUsers, selected) : undefined}
+              optionsOverride={(resourceId === "surveyors" || resourceId === "fitness-surveyors") && field.name === "user_id" ? surveyorUserOptions(surveyorUsers, selected) : relationOptions[field.name]}
               onChange={(value) => setFormData((current) => ({ ...current, [field.name]: value }))}
             />
           ))}
@@ -219,12 +263,17 @@ export function MasterDataPage({ resourceId }: MasterDataPageProps) {
   );
 }
 
-function FieldInput({ field, value, onChange, optionsOverride }: { field: MasterField; value: MasterRow[string]; onChange: (value: MasterRow[string]) => void; optionsOverride?: UserOption[] }) {
+function FieldInput({ field, value, onChange, optionsOverride }: { field: MasterField; value: MasterRow[string]; onChange: (value: MasterRow[string]) => void; optionsOverride?: SelectOption[] }) {
+  if (field.type === "hidden") {
+    return null;
+  }
+
   if (field.type === "checkbox") {
     return (
       <label className="check-row form-check">
         <input checked={Boolean(value)} onChange={(event) => onChange(event.target.checked)} type="checkbox" />
         <span>{field.label}</span>
+        {field.helpText ? <small className="muted-text">{field.helpText}</small> : null}
       </label>
     );
   }
@@ -247,11 +296,12 @@ function FieldInput({ field, value, onChange, optionsOverride }: { field: Master
           type={field.type ?? "text"}
         />
       )}
+      {field.helpText ? <small className="muted-text">{field.helpText}</small> : null}
     </label>
   );
 }
 
-function surveyorUserOptions(options: UserOption[], selected: MasterRow | null) {
+function surveyorUserOptions(options: SelectOption[], selected: MasterRow | null) {
   const currentID = String(selected?.user_id ?? "");
   if (!currentID || options.some((option) => option.value === currentID)) return options;
   return [{ value: currentID, label: `${String(selected?.name ?? "Current user")} - current profile` }, ...options];
@@ -312,4 +362,14 @@ function numberOrEmpty(value: string) {
     return "";
   }
   return Number(value);
+}
+
+function displayValue(value: MasterRow[string], field: MasterField | undefined, relationOptions: RelationOptions) {
+  if (!field?.relation || value === undefined || value === null || value === "") return value;
+  return relationOptions[field.name]?.find((option) => option.value === String(value))?.label ?? value;
+}
+
+function relationLabel(row: MasterRow, labelKeys: string[]) {
+  const label = labelKeys.map((key) => String(row[key] ?? "").trim()).filter(Boolean).join(" - ");
+  return label || String(row.id ?? "");
 }

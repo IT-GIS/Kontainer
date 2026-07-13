@@ -29,8 +29,10 @@ func (f Field) RequestName() string {
 
 type Resource struct {
 	Name                string
+	PermissionModule    string
 	Table               string
 	CodeField           string
+	DuplicateFields     []string
 	ScopedCode          bool
 	SoftDelete          bool
 	StatusField         string

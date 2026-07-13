@@ -1,9 +1,11 @@
 export type MasterField = {
   name: string;
   label: string;
-  type?: "text" | "number" | "select" | "checkbox" | "email";
+  type?: "text" | "number" | "select" | "checkbox" | "email" | "hidden";
   required?: boolean;
   options?: Array<{ label: string; value: string }>;
+  relation?: { endpoint: string; labelKeys: string[] };
+  helpText?: string;
   defaultValue?: string | number | boolean;
 };
 
@@ -232,7 +234,7 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "name", label: "Nama Lengkap", required: true },
       { name: "phone", label: "Telepon" },
       { name: "area", label: "Area Tugas" },
-      { name: "signature_file_id", label: "ID File Tanda Tangan" },
+      { name: "signature_file_id", label: "ID File Tanda Tangan", helpText: "Upload tanda tangan belum aktif - gunakan file ID sementara." },
       statusField
     ]
   },
@@ -339,7 +341,7 @@ export const masterResources: Record<string, MasterResource> = {
     fields: [
       { name: "code", label: "Kode Komponen", required: true },
       { name: "component_name", label: "Nama Komponen", required: true },
-      { name: "inspection_area_id", label: "ID Area Pemeriksaan" },
+      { name: "inspection_area_id", label: "Area Pemeriksaan", type: "select", relation: { endpoint: "/fitness/master-data/inspection-areas", labelKeys: ["code", "area_name"] } },
       { name: "is_structural_critical", label: "Komponen Struktural Kritis", type: "checkbox" },
       { name: "description", label: "Deskripsi" },
       { name: "display_order", label: "Urutan Tampil", type: "number" },
@@ -362,7 +364,7 @@ export const masterResources: Record<string, MasterResource> = {
     fields: [
       { name: "code", label: "Kode Kriteria", required: true },
       { name: "criteria_name", label: "Nama Kriteria", required: true },
-      { name: "component_id", label: "ID Komponen Terkait" },
+      { name: "component_id", label: "Komponen Terkait", type: "select", relation: { endpoint: "/fitness/master-data/structural-components", labelKeys: ["code", "component_name"] } },
       { name: "description", label: "Deskripsi" },
       { name: "severity_default", label: "Tingkat Temuan Default", type: "select", options: ["minor", "major", "critical"].map((value) => ({ label: value, value })) },
       { name: "affects_fitness_default", label: "Default Memengaruhi Kelaikan", type: "checkbox" },
@@ -425,7 +427,7 @@ export const masterResources: Record<string, MasterResource> = {
   "fitness-checklist-templates": {
     id: "fitness-checklist-templates",
     title: "Template Checklist Kelaikan",
-    description: "CRUD header template checklist kelaikan. Item checklist tetap menjadi placeholder terpisah untuk tahap berikutnya.",
+    description: "CRUD header template checklist kelaikan. Item checklist dapat dikelola dari halaman detail item, tetapi belum mengaktifkan flow Surveyor.",
     endpoint: "/fitness/master-data/checklist-templates",
     permissionModule: "fitness_checklist_templates",
     columns: [
@@ -437,11 +439,44 @@ export const masterResources: Record<string, MasterResource> = {
     fields: [
       { name: "template_code", label: "Kode Template", required: true },
       { name: "template_name", label: "Nama Template", required: true },
-      { name: "approval_category_id", label: "ID Kategori Persetujuan" },
-      { name: "container_type_id", label: "ID Jenis / Model Peti Kemas" },
+      { name: "approval_category_id", label: "Kategori Persetujuan", type: "select", relation: { endpoint: "/fitness/master-data/approval-categories", labelKeys: ["code", "name"] } },
+      { name: "container_type_id", label: "Jenis / Model Peti Kemas", type: "select", relation: { endpoint: "/fitness/master-data/container-types", labelKeys: ["code", "type"] } },
       { name: "description", label: "Deskripsi" },
       { name: "version_no", label: "Versi", type: "number", defaultValue: 1 },
       { name: "status", label: "Status", type: "select", defaultValue: "draft", options: [{ label: "Draft", value: "draft" }, { label: "Active", value: "active" }, { label: "Inactive", value: "inactive" }] }
+    ]
+  },
+  "fitness-checklist-template-items": {
+    id: "fitness-checklist-template-items",
+    title: "Item Template Checklist Kelaikan",
+    description: "CRUD item checklist untuk membangun form Surveyor dari master data pada tahap berikutnya. Flow Surveyor belum aktif.",
+    endpoint: "/fitness/master-data/checklist-templates",
+    permissionModule: "fitness_checklist_templates",
+    columns: [
+      { key: "item_code", label: "Kode" },
+      { key: "item_label", label: "Item" },
+      { key: "inspection_area_id", label: "Area" },
+      { key: "structural_component_id", label: "Komponen" },
+      { key: "response_type", label: "Response" },
+      { key: "is_required", label: "Wajib", type: "boolean" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "template_id", label: "Template ID", type: "hidden" },
+      { name: "item_code", label: "Kode Item", required: true },
+      { name: "item_label", label: "Label Pertanyaan", required: true },
+      { name: "description", label: "Deskripsi" },
+      { name: "inspection_area_id", label: "Area Pemeriksaan", type: "select", relation: { endpoint: "/fitness/master-data/inspection-areas", labelKeys: ["code", "area_name"] } },
+      { name: "structural_component_id", label: "Komponen Struktur", type: "select", relation: { endpoint: "/fitness/master-data/structural-components", labelKeys: ["code", "component_name"] } },
+      { name: "test_parameter_id", label: "Parameter Pengujian", type: "select", relation: { endpoint: "/fitness/master-data/test-parameters", labelKeys: ["code", "parameter_name"] } },
+      { name: "response_type", label: "Response Type", type: "select", required: true, defaultValue: "ok_not_ok", options: ["ok_not_ok", "yes_no", "text", "number", "date", "photo_required", "not_applicable"].map((value) => ({ label: value, value })) },
+      { name: "expected_value", label: "Expected Value" },
+      { name: "is_required", label: "Wajib Diisi", type: "checkbox", defaultValue: true },
+      { name: "is_critical", label: "Critical Item", type: "checkbox" },
+      { name: "fail_requires_repair", label: "Jika Gagal Perlu Perbaikan", type: "checkbox" },
+      { name: "fail_marks_unfit", label: "Jika Gagal Tidak Layak", type: "checkbox" },
+      { name: "display_order", label: "Urutan Tampil", type: "number" },
+      statusField
     ]
   },
   "fitness-photo-categories": {
@@ -510,7 +545,7 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "employee_no", label: "NIP / ID Pegawai" },
       { name: "email", label: "Email", type: "email" },
       { name: "phone", label: "Nomor Telepon" },
-      { name: "signature_file_id", label: "ID File Tanda Tangan" },
+      { name: "signature_file_id", label: "ID File Tanda Tangan", helpText: "Upload tanda tangan belum aktif - gunakan file ID sementara." },
       { name: "valid_from", label: "Berlaku Mulai" },
       { name: "valid_until", label: "Berlaku Sampai" },
       statusField
@@ -537,8 +572,8 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "email", label: "Email", type: "email" },
       { name: "website", label: "Website" },
       { name: "tax_no", label: "Nomor Pajak" },
-      { name: "logo_file_id", label: "ID File Logo" },
-      { name: "default_signature_file_id", label: "ID File Tanda Tangan Default" },
+      { name: "logo_file_id", label: "ID File Logo", helpText: "Upload file belum aktif - gunakan file ID sementara." },
+      { name: "default_signature_file_id", label: "ID File Tanda Tangan Default", helpText: "Upload file belum aktif - gunakan file ID sementara." },
       { name: "is_active", label: "Status Aktif", type: "checkbox", defaultValue: true }
     ]
   },

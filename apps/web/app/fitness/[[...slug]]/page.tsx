@@ -44,6 +44,23 @@ export default async function FitnessRoutePage({ params }: FitnessRouteProps) {
   const path = `/fitness/${slug.join("/")}`;
   const activeResourceId = activeMasterDataRoutes[path];
 
+  const checklistTemplateItemsMatch = slug.length === 4 && slug[0] === "master-data" && slug[1] === "checklist-templates" && slug[3] === "items";
+  if (checklistTemplateItemsMatch) {
+    const templateId = slug[2];
+    return (
+      <ProtectedRoute>
+        <AppShell title="Item Template Checklist Kelaikan">
+          <MasterDataPage
+            resourceId="fitness-checklist-template-items"
+            endpointOverride={`/fitness/master-data/checklist-templates/${templateId}/items`}
+            fixedValues={{ template_id: templateId }}
+            backHref="/fitness/master-data/checklist-templates"
+          />
+        </AppShell>
+      </ProtectedRoute>
+    );
+  }
+
   if (activeResourceId) {
     const item = getFitnessPlaceholderByPath(path) ?? fallbackPlaceholder;
     return (

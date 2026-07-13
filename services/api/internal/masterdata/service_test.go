@@ -87,3 +87,26 @@ func TestCompanyProfileUsesIsActiveAsStatusFilter(t *testing.T) {
 		t.Fatalf("expected inactive status to map to false, got %#v", args)
 	}
 }
+func TestValidateChecklistTemplateItemResponseType(t *testing.T) {
+	payload := normalizePayload(Resources["fitness_checklist_template_items"], map[string]any{
+		"template_id": "template-1", "item_code": "ITM-001", "item_label": "Periksa corner post", "response_type": "bad_choice",
+	})
+	if err := validatePayload(Resources["fitness_checklist_template_items"], payload, true); err == nil {
+		t.Fatal("expected invalid response_type to fail")
+	}
+
+	payload["response_type"] = "ok_not_ok"
+	if err := validatePayload(Resources["fitness_checklist_template_items"], payload, true); err != nil {
+		t.Fatalf("expected valid checklist item payload, got %v", err)
+	}
+}
+
+func TestChecklistTemplateItemBuildWhereIncludesTemplateFilter(t *testing.T) {
+	where, args := buildWhere(Resources["fitness_checklist_template_items"], ListParams{
+		Status:  "active",
+		Filters: map[string]string{"template_id": "template-1"},
+	})
+	if where == "" || len(args) != 2 {
+		t.Fatalf("expected status and template_id filters, got where=%q args=%#v", where, args)
+	}
+}

@@ -142,7 +142,7 @@ Setiap halaman aktif menyediakan list, pencarian, filter status, tambah, detail,
 
 Menu yang masih placeholder:
 
-- Item Template Checklist Kelaikan belum menjadi CRUD nested aktif dan belum dipakai flow Surveyor.
+- Item Template Checklist Kelaikan sudah menjadi CRUD nested sederhana, tetapi belum dipakai flow Surveyor.
 - Assign Surveyor menunggu tahap Assignment Surveyor.
 - Pemeriksaan & Pengujian menunggu tahap Surveyor Inspection Flow.
 - Review & Keputusan menunggu tahap Review & Approval.
@@ -165,7 +165,7 @@ Tahap ini mengaktifkan CRUD nyata untuk 11 master data pendukung Surveyor lapang
 4. Kriteria Kerusakan / Ketidaksesuaian (`/fitness/master-data/damage-criteria`) memakai tabel `structural_damage_criteria`.
 5. Tingkat Temuan / Severity (`/fitness/master-data/finding-severities`) memakai tabel `finding_severities`.
 6. Parameter Pengujian Kelaikan (`/fitness/master-data/test-parameters`) memakai tabel `inspection_test_parameters`.
-7. Template Checklist Kelaikan (`/fitness/master-data/checklist-templates`) memakai tabel `fitness_checklist_templates` untuk header template saja.
+7. Template Checklist Kelaikan (`/fitness/master-data/checklist-templates`) memakai tabel `fitness_checklist_templates` untuk header dan route `/fitness/master-data/checklist-templates/[id]/items` untuk item `fitness_checklist_template_items`.
 8. Kategori Foto Evidence (`/fitness/master-data/photo-categories`) memakai tabel `evidence_photo_categories`.
 9. Rekomendasi Hasil Pemeriksaan (`/fitness/master-data/inspection-recommendations`) memakai tabel `inspection_recommendations`.
 10. Pejabat Penandatangan (`/fitness/master-data/authorized-signers`) memakai tabel `authorized_signers`.
@@ -175,7 +175,23 @@ Setiap halaman Stage 2 aktif menyediakan list, pencarian, filter status, tambah,
 
 Batasan Stage 2:
 
-- Item checklist pada `fitness_checklist_template_items` belum menjadi CRUD nested aktif.
+- Item checklist pada `fitness_checklist_template_items` sudah menjadi CRUD nested sederhana melalui `/fitness/master-data/checklist-templates/[id]/items`, namun belum dipakai oleh flow Surveyor.
 - Tidak mengaktifkan Assignment Surveyor, Pemeriksaan Lapangan, Review/Approval final, Dokumen PDF/QR final, Import Excel proses nyata, Finance, atau workflow transaksi lain.
 - Tidak mengubah tabel legacy, tidak drop/rename tabel, dan tidak mengubah patch `0015` maupun `0016`.
 - Patch `0017_container_fitness_master_stage2_permissions.sql` menyelaraskan permission granular `view.all`, `create.all`, `update.all`, dan `delete.all` untuk 11 master Stage 2 dan mapping `super_admin`/`admin`.
+
+## Finishing Admin Master Data Kelaikan
+
+Tahap finishing ini menambahkan dropdown untuk field relasi master data agar Admin tidak perlu menginput UUID manual pada Komponen Struktur, Kriteria Kerusakan, dan Template Checklist Kelaikan.
+
+Template checklist item sudah tersedia sebagai CRUD sederhana di `/fitness/master-data/checklist-templates/[id]/items` dengan relasi ke area pemeriksaan, komponen struktur, dan parameter pengujian. Data ini disiapkan agar nanti form Surveyor dapat dibangun dari master data.
+
+Tahap finishing ini belum mengaktifkan Assignment Surveyor, Pemeriksaan Lapangan, Review, Dokumen, PDF, QR, Import aktif, Finance, atau workflow transaksi Permohonan Kelaikan.
+
+## Admin Deploy Readiness
+
+Deploy Admin Kelaikan memakai default `NEXT_PUBLIC_APP_SCOPE=container_fitness` dan `NEXT_PUBLIC_APP_NAME=Sistem Kelaikan Peti Kemas`.
+
+Database deploy baru menggunakan `database/kontainer_db.sql` sebagai dump canonical yang sudah memuat foundation Kelaikan, Admin Master Data Stage 1/2, dan patch deploy readiness `0018_container_fitness_deploy_readiness.sql`. Database existing dapat menjalankan patch sampai `0018` untuk menyiapkan `numbering_sequences` Kelaikan periode `2026`.
+
+Mode deploy readiness ini belum mengaktifkan Assignment Surveyor, Surveyor inspection flow, Review final, Dokumen PDF/QR, Import Excel aktif, Finance, Repair/re-inspection workflow, atau Upload MinIO aktif.

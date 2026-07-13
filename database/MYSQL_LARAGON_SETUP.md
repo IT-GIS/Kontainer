@@ -28,8 +28,7 @@ Untuk database baru, cukup import:
 
 1. `database/kontainer_db.sql`
 
-Dump utama sudah memuat permission workspace Admin, Surveyor, dan Finance serta
-seluruh akun demo.
+Dump utama sudah memuat permission workspace Admin, Surveyor, Finance, foundation Sistem Kelaikan Peti Kemas, Admin Master Data Kelaikan, deploy readiness numbering sequence 2026, serta seluruh akun demo. Data runtime `refresh_tokens` dan `audit_logs` tidak ikut disimpan sebagai data deploy.
 
 ## Database yang sudah terlanjur dibuat
 
@@ -44,6 +43,7 @@ Jalankan patch berikut secara berurutan:
 7. `database/patches/0015_container_fitness_foundation.sql`
 8. `database/patches/0016_container_fitness_master_stage1_permissions.sql`
 9. `database/patches/0017_container_fitness_master_stage2_permissions.sql`
+10. `database/patches/0018_container_fitness_deploy_readiness.sql`
 
 Patch aman dijalankan berulang sejauh memungkinkan. Patch `0009`
 menyelaraskan permission menu dan role. Patch `0010` menambahkan akun demo,
@@ -59,8 +59,8 @@ Management untuk UAT, termasuk akses read-only User Management dan Monitoring
 Survey bagi Admin.
 
 Patch `0015` menambahkan database foundation Sistem Kelaikan Peti Kemas
-tanpa menghapus workflow legacy, tanpa memakai `container_import_batches`
-untuk kelaikan, dan tanpa mengubah dump canonical.
+tanpa menghapus workflow legacy dan tanpa memakai `container_import_batches`
+untuk kelaikan. Dump canonical sekarang sudah diperbarui untuk deploy Admin Kelaikan.
 
 Patch `0016` menyelaraskan permission granular CRUD untuk master baru Stage 1,
 yaitu pabrik pembuat peti kemas dan kategori persetujuan kelaikan, tanpa
@@ -71,6 +71,13 @@ skema pemeliharaan, area pemeriksaan, komponen struktur, kriteria kerusakan,
 severity, parameter pengujian kelaikan, template checklist header, kategori foto
 evidence, rekomendasi hasil pemeriksaan, pejabat penandatangan, dan profil
 badan usaha.
+
+Patch `0018` menyiapkan `numbering_sequences` periode `2026` untuk document
+type Kelaikan: `fitness_application`, `fitness_container_import`,
+`fitness_assignment`, `fitness_inspection`, `repair_followup`,
+`fitness_review`, `fitness_approval`, `approval_document`, dan
+`release_letter`. Patch ini tidak menghapus data runtime dan tidak
+mengaktifkan workflow lapangan.
 
 Jangan menyalin skema dari dokumentasi lain. Jika ada perbedaan, gunakan
 `database/kontainer_db.sql` sebagai acuan.

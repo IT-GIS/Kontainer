@@ -156,7 +156,7 @@ func normalizeFieldValue(field string, value any) any {
 				return parsed
 			}
 		}
-	case "is_mvp_active", "requires_next_examination_date", "is_structural_critical", "affects_fitness_default", "repair_required_default", "requires_supervisor_review", "applies_to_new_container", "applies_to_existing_container", "requires_numeric_result", "requires_attachment", "is_required_default", "is_active":
+	case "is_mvp_active", "requires_next_examination_date", "is_structural_critical", "affects_fitness_default", "repair_required_default", "requires_supervisor_review", "applies_to_new_container", "applies_to_existing_container", "requires_numeric_result", "requires_attachment", "is_required_default", "is_required", "is_critical", "fail_requires_repair", "fail_marks_unfit", "is_active":
 		switch v := value.(type) {
 		case bool:
 			return v
@@ -200,6 +200,11 @@ func validatePayload(resource Resource, payload map[string]any, create bool) err
 			if _, err := mail.ParseAddress(stringValue(email)); err != nil {
 				return fmt.Errorf("%w: %s tidak valid", ErrInvalidInput, emailField)
 			}
+		}
+	}
+	if value, ok := payload["response_type"]; ok && !isEmpty(value) {
+		if !oneOf(stringValue(value), []string{"ok_not_ok", "yes_no", "text", "number", "date", "photo_required", "not_applicable"}) {
+			return fmt.Errorf("%w: response_type tidak valid", ErrInvalidInput)
 		}
 	}
 	if value, ok := payload["container_lifecycle"]; ok && !isEmpty(value) {

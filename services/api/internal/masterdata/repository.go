@@ -172,12 +172,26 @@ func (r Repository) Delete(ctx context.Context, resource Resource, id uuid.UUID)
 }
 
 func (r Repository) DuplicateExists(ctx context.Context, resource Resource, payload map[string]any, excludeID *uuid.UUID) (bool, error) {
-	if resource.CodeField == "" {
-		return false, nil
-	}
 	args := []any{}
 	where := ""
-	if resource.ScopedCode {
+	if len(resource.DuplicateFields) > 0 {
+		parts := []string{}
+		for _, field := range resource.DuplicateFields {
+			args = append(args, stringValue(payload[field]))
+			operator := "="
+			if field == resource.CodeField || strings.HasSuffix(field, "_code") || field == "code" {
+				operator = "LOWER"
+			}
+			if operator == "LOWER" {
+				parts = append(parts, fmt.Sprintf("LOWER(%s) = LOWER($%d)", field, len(args)))
+			} else {
+				parts = append(parts, fmt.Sprintf("%s = $%d", field, len(args)))
+			}
+		}
+		where = strings.Join(parts, " AND ")
+	} else if resource.CodeField == "" {
+		return false, nil
+	} else if resource.ScopedCode {
 		code := stringValue(payload["code"])
 		face := stringValue(payload["face"])
 		containerSize := stringValue(payload["container_size"])

@@ -52,6 +52,8 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	handler.resource(fitnessMaster, authService, "/finding-severities", Resources["finding_severities"])
 	handler.resource(fitnessMaster, authService, "/test-parameters", Resources["inspection_test_parameters"])
 	handler.resource(fitnessMaster, authService, "/checklist-templates", Resources["fitness_checklist_templates"])
+	checklistTemplateItems := Resources["fitness_checklist_template_items"]
+	handler.resourceItems(fitnessMaster, authService, "/checklist-templates/:id/items", checklistTemplateItems, "template_id")
 	handler.resource(fitnessMaster, authService, "/photo-categories", Resources["evidence_photo_categories"])
 	handler.resource(fitnessMaster, authService, "/inspection-recommendations", Resources["inspection_recommendations"])
 	handler.resource(fitnessMaster, authService, "/authorized-signers", Resources["authorized_signers"])
@@ -59,16 +61,31 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 }
 
 func (h Handler) resource(group *gin.RouterGroup, authService *auth.Service, path string, resource Resource) {
-	view := middleware.RequirePermission(authService, resource.Name+".view.all")
-	create := middleware.RequirePermission(authService, resource.Name+".create.all")
-	update := middleware.RequirePermission(authService, resource.Name+".update.all")
-	deletePermission := middleware.RequirePermission(authService, resource.Name+".delete.all")
+	module := resource.permissionModule()
+	view := middleware.RequirePermission(authService, module+".view.all")
+	create := middleware.RequirePermission(authService, module+".create.all")
+	update := middleware.RequirePermission(authService, module+".update.all")
+	deletePermission := middleware.RequirePermission(authService, module+".delete.all")
 
 	group.GET(path, view, h.List(resource))
 	group.POST(path, create, h.Create(resource))
 	group.GET(path+"/:id", view, h.Get(resource))
 	group.PUT(path+"/:id", update, h.Update(resource))
 	group.DELETE(path+"/:id", deletePermission, h.Delete(resource))
+}
+
+func (h Handler) resourceItems(group *gin.RouterGroup, authService *auth.Service, path string, resource Resource, parentField string) {
+	module := resource.permissionModule()
+	view := middleware.RequirePermission(authService, module+".view.all")
+	create := middleware.RequirePermission(authService, module+".create.all")
+	update := middleware.RequirePermission(authService, module+".update.all")
+	deletePermission := middleware.RequirePermission(authService, module+".delete.all")
+
+	group.GET(path, view, h.ListForParent(resource, parentField))
+	group.POST(path, create, h.CreateForParent(resource, parentField))
+	group.GET(path+"/:item_id", view, h.GetForParent(resource, parentField))
+	group.PUT(path+"/:item_id", update, h.UpdateForParent(resource, parentField))
+	group.DELETE(path+"/:item_id", deletePermission, h.DeleteForParent(resource, parentField))
 }
 
 func (h Handler) List(resource Resource) gin.HandlerFunc {
@@ -149,6 +166,130 @@ func (h Handler) Delete(resource Resource) gin.HandlerFunc {
 	}
 }
 
+func (h Handler) ListForParent(resource Resource, parentField string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		parentID, ok := parseUUIDParam(c, "id")
+		if !ok {
+			return
+		}
+		params := listParams(c, resource)
+		params.Filters[parentField] = parentID.String()
+		result, err := h.service.List(c.Request.Context(), resource, params)
+		if err != nil {
+			h.writeError(c, err)
+			return
+		}
+		apphttp.Paginated(c, "Data berhasil diambil.", result.Rows, apphttp.PaginationMeta{
+			Page: result.Meta.Page, PerPage: result.Meta.PerPage, Total: result.Meta.Total,
+			TotalPages: result.Meta.TotalPages, HasNext: result.Meta.HasNext, HasPrev: result.Meta.HasPrev,
+		})
+	}
+}
+
+func (h Handler) GetForParent(resource Resource, parentField string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		parentID, ok := parseUUIDParam(c, "id")
+		if !ok {
+			return
+		}
+		id, ok := parseUUIDParam(c, "item_id")
+		if !ok {
+			return
+		}
+		item, err := h.service.Get(c.Request.Context(), resource, id)
+		if err != nil {
+			h.writeError(c, err)
+			return
+		}
+		if !belongsToParent(item, parentField, parentID) {
+			h.writeError(c, ErrNotFound)
+			return
+		}
+		apphttp.OK(c, "Data berhasil diambil.", item)
+	}
+}
+
+func (h Handler) CreateForParent(resource Resource, parentField string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		parentID, ok := parseUUIDParam(c, "id")
+		if !ok {
+			return
+		}
+		payload, ok := parsePayload(c)
+		if !ok {
+			return
+		}
+		payload[parentField] = parentID.String()
+		item, err := h.service.Create(c.Request.Context(), resource, payload, actorFromContext(c))
+		if err != nil {
+			h.writeError(c, err)
+			return
+		}
+		apphttp.Created(c, "Data berhasil dibuat.", item)
+	}
+}
+
+func (h Handler) UpdateForParent(resource Resource, parentField string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		parentID, ok := parseUUIDParam(c, "id")
+		if !ok {
+			return
+		}
+		id, ok := parseUUIDParam(c, "item_id")
+		if !ok {
+			return
+		}
+		current, err := h.service.Get(c.Request.Context(), resource, id)
+		if err != nil {
+			h.writeError(c, err)
+			return
+		}
+		if !belongsToParent(current, parentField, parentID) {
+			h.writeError(c, ErrNotFound)
+			return
+		}
+		payload, ok := parsePayload(c)
+		if !ok {
+			return
+		}
+		payload[parentField] = parentID.String()
+		item, err := h.service.Update(c.Request.Context(), resource, id, payload, actorFromContext(c))
+		if err != nil {
+			h.writeError(c, err)
+			return
+		}
+		apphttp.OK(c, "Data berhasil diperbarui.", item)
+	}
+}
+
+func (h Handler) DeleteForParent(resource Resource, parentField string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		parentID, ok := parseUUIDParam(c, "id")
+		if !ok {
+			return
+		}
+		id, ok := parseUUIDParam(c, "item_id")
+		if !ok {
+			return
+		}
+		current, err := h.service.Get(c.Request.Context(), resource, id)
+		if err != nil {
+			h.writeError(c, err)
+			return
+		}
+		if !belongsToParent(current, parentField, parentID) {
+			h.writeError(c, ErrNotFound)
+			return
+		}
+		item, err := h.service.Delete(c.Request.Context(), resource, id, actorFromContext(c))
+		if err != nil {
+			h.writeError(c, err)
+			return
+		}
+		apphttp.OK(c, "Data berhasil dinonaktifkan.", item)
+	}
+}
+
 func (h Handler) writeError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, ErrNotFound):
@@ -185,6 +326,26 @@ func parseID(c *gin.Context) (uuid.UUID, bool) {
 		return uuid.Nil, false
 	}
 	return id, true
+}
+
+func parseUUIDParam(c *gin.Context, name string) (uuid.UUID, bool) {
+	id, err := uuid.Parse(c.Param(name))
+	if err != nil {
+		apphttp.Fail(c, http.StatusBadRequest, "ID tidak valid.", "VALIDATION_ERROR", []apphttp.ErrorDetail{{Field: name, Message: "ID harus UUID."}})
+		return uuid.Nil, false
+	}
+	return id, true
+}
+
+func belongsToParent(item map[string]any, parentField string, parentID uuid.UUID) bool {
+	return strings.EqualFold(strings.TrimSpace(stringValue(item[parentField])), parentID.String())
+}
+
+func (resource Resource) permissionModule() string {
+	if strings.TrimSpace(resource.PermissionModule) != "" {
+		return resource.PermissionModule
+	}
+	return resource.Name
 }
 
 func parsePayload(c *gin.Context) (map[string]any, bool) {
