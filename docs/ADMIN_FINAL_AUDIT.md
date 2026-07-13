@@ -492,3 +492,17 @@ Tidak ada dump lokal mentah yang disalin ke Git dan tidak ada perubahan pada `da
 | Audit log mutation | Mutation master data sudah memanggil audit log, tetapi error audit awal diabaikan dan tidak ikut menentukan sukses/gagal mutation. |
 | Relation dropdown dibatasi 100 data | Relation option awal mengambil `per_page=100` dan dapat gagal menampilkan data lama/inactive atau data di luar halaman pertama. |
 | Status runtime | `ACTIVE_DB_CONNECTED` belum membuktikan create/read/update/nonaktifkan berhasil pada runtime API nyata. |
+## Tahap 1.1 - Corrective Hardening
+
+Corrective Tahap 1.1 menutup blocker hardening generic Master Data Admin Kelaikan:
+
+- empty field semantics kini membedakan required, nullable, non-null default, dan omitted field;
+- default database seperti `display_order=0`, `version_no=1`, `severity_default=minor`, dan `final_fitness_result_mapping=pending` dijaga;
+- mutation master data dan audit log dibungkus dalam satu transaction;
+- relation fetch tidak lagi dipicu oleh perubahan field non-relation;
+- list search memakai debounce 350 ms;
+- user Surveyor memakai searchable relation `/users`;
+- aksi Nonaktifkan disembunyikan untuk row inactive dan backend mencegah audit deactivate berulang.
+
+Laporan detail: `docs/ADMIN_STAGE_1_1_CORRECTIVE_REPORT.md`.
+Matrix field: `docs/ADMIN_STAGE_1_FIELD_NULLABILITY_MATRIX.md`.

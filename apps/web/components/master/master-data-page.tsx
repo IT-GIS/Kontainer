@@ -2,7 +2,7 @@
 
 import { ClipboardList, Edit, Eye, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { masterResources, type MasterField, type MasterResource } from "@/constants/master-data";
 import { useAuth } from "@/hooks/use-auth";
 import { apiData, apiPaginated, buildQuery } from "@/lib/api-client";
@@ -37,7 +37,8 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
   const [rows, setRows] = useState<MasterRow[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,39 +49,55 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
   const [formData, setFormData] = useState<MasterRow>(() => ({ ...defaultFormData(resource), ...fixedPayload }));
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [surveyorUsers, setSurveyorUsers] = useState<SelectOption[]>([]);
   const [relationOptions, setRelationOptions] = useState<RelationOptions>({});
   const [relationSearch, setRelationSearch] = useState<Record<string, string>>({});
+  const listRequestSeq = useRef(0);
+  const relationRequestSeq = useRef(0);
 
   const statusOptions = resource.statusOptions ?? defaultStatusOptions;
   const canCreate = can(user, `${resource.permissionModule}.create.all`);
   const canUpdate = can(user, `${resource.permissionModule}.update.all`);
   const canDelete = can(user, `${resource.permissionModule}.delete.all`);
   const fieldByName = useMemo(() => Object.fromEntries(resource.fields.map((field) => [field.name, field])), [resource.fields]);
+  const relationFields = useMemo(() => resource.fields.filter((field) => field.relation), [resource.fields]);
+  const selectedRelationValuesKey = relationFields.map((field) => String(formData[field.name] ?? selected?.[field.name] ?? "")).join("|");
 
   const loadRows = useCallback(async () => {
     if (!accessToken) {
       return;
     }
+    const requestID = ++listRequestSeq.current;
     setIsLoading(true);
     setError(null);
     try {
       const result = await apiPaginated<MasterRow>(
-        `${resourceEndpoint}${buildQuery({ page, per_page: 10, search, status })}`,
+        `${resourceEndpoint}${buildQuery({ page, per_page: 10, search: debouncedSearch, status })}`,
         { accessToken }
       );
+      if (requestID !== listRequestSeq.current) return;
       setRows(result.rows);
       setTotalPages(Number(result.meta.total_pages ?? 1));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mengambil data.");
+      if (requestID === listRequestSeq.current) {
+        setError(err instanceof Error ? err.message : "Gagal mengambil data.");
+      }
     } finally {
-      setIsLoading(false);
+      if (requestID === listRequestSeq.current) {
+        setIsLoading(false);
+      }
     }
-  }, [accessToken, page, resourceEndpoint, search, status]);
+  }, [accessToken, debouncedSearch, page, resourceEndpoint, status]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void loadRows(), 0);
+    const timer = window.setTimeout(() => {
+      setPage(1);
+      setDebouncedSearch(searchInput);
+    }, 350);
     return () => window.clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
+    void loadRows();
   }, [loadRows]);
 
   useEffect(() => {
@@ -88,26 +105,20 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
     setSelected(null);
     setDetailRow(null);
     setPage(1);
+    setSearchInput("");
+    setDebouncedSearch("");
     setSuccess(null);
     setFormError(null);
+    setRelationSearch({});
+    setRelationOptions({});
   }, [fixedPayload, resource, resourceEndpoint]);
 
   useEffect(() => {
-    if (!accessToken || (resourceId !== "surveyors" && resourceId !== "fitness-surveyors")) return;
-    void apiPaginated<{ id: string; name: string; email: string }>(
-      "/users?page=1&per_page=100&status=active&role=surveyor&without_surveyor_profile=true",
-      { accessToken }
-    ).then((result) => setSurveyorUsers(result.rows.map((item) => ({ value: item.id, label: `${item.name} - ${item.email}` }))))
-      .catch(() => setSurveyorUsers([]));
-  }, [accessToken, resourceId]);
-
-  useEffect(() => {
-    if (!accessToken) return;
-    const relationFields = resource.fields.filter((field) => field.relation);
-    if (relationFields.length === 0) {
-      setRelationOptions({});
+    if (!accessToken || !dialogMode || relationFields.length === 0) {
+      if (!dialogMode) setRelationOptions({});
       return;
     }
+    const requestID = ++relationRequestSeq.current;
     setRelationOptions((current) => {
       const next = { ...current };
       for (const field of relationFields) {
@@ -115,33 +126,36 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
       }
       return next;
     });
-    let active = true;
+
     const timer = window.setTimeout(() => {
       void Promise.all(relationFields.map(async (field) => {
         const relation = field.relation;
         if (!relation) return [field.name, { options: [], isLoading: false, error: null }] as const;
         try {
           const currentValue = String(formData[field.name] ?? selected?.[field.name] ?? "");
-          const result = await apiPaginated<MasterRow>(`${relation.endpoint}${buildQuery({ page: 1, per_page: 20, search: relationSearch[field.name] ?? "", status: "active" })}`, { accessToken });
+          const query: Record<string, string | number> = { page: 1, per_page: 20, ...(relation.query ?? {}), search: relationSearch[field.name] ?? "" };
+          if (!relation.query?.status) query.status = "active";
+          const result = await apiPaginated<MasterRow>(`${relation.endpoint}${buildQuery(query)}`, { accessToken });
           const options = result.rows.map((row) => ({ value: String(row.id ?? ""), label: relationLabel(row, relation.labelKeys) })).filter((option) => option.value);
           if (currentValue && !options.some((option) => option.value === currentValue)) {
-            try {
-              const current = await apiData<MasterRow>(`${relation.endpoint}/${currentValue}`, { accessToken });
-              options.unshift({ value: currentValue, label: relationLabel(current, relation.labelKeys) });
-            } catch {
-              options.unshift({ value: currentValue, label: `Data referensi tidak ditemukan: ${currentValue}` });
-            }
+            const currentOption = await currentRelationOption(field, currentValue, selected, accessToken);
+            options.unshift(currentOption);
           }
           return [field.name, { options, isLoading: false, error: null }] as const;
         } catch (err) {
           return [field.name, { options: [], isLoading: false, error: err instanceof Error ? err.message : "Gagal mengambil data referensi." }] as const;
         }
       })).then((entries) => {
-        if (active) setRelationOptions((current) => ({ ...current, ...Object.fromEntries(entries) }));
+        if (requestID === relationRequestSeq.current) {
+          setRelationOptions((current) => ({ ...current, ...Object.fromEntries(entries) }));
+        }
       });
-    }, 250);
-    return () => { active = false; window.clearTimeout(timer); };
-  }, [accessToken, resource.fields, relationSearch, selected, formData]);
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [accessToken, dialogMode, relationFields, relationSearch, resourceEndpoint, selected, selectedRelationValuesKey]);
 
   const columns = [
     ...resource.columns.map((column) => ({
@@ -167,7 +181,12 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
               <Edit size={16} />
             </button>
           ) : null}
-          {canDelete ? (
+          {canUpdate && isInactiveRow(resource, row) ? (
+            <button className="icon-button" onClick={() => void handleActivate(row)} title="Aktifkan">
+              <RotateCcw size={16} />
+            </button>
+          ) : null}
+          {canDelete && !isInactiveRow(resource, row) ? (
             <button className="icon-button danger-action" onClick={() => void handleDelete(row)} title="Nonaktifkan">
               <Trash2 size={16} />
             </button>
@@ -180,6 +199,7 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
   function openCreate() {
     setSelected(null);
     setFormData({ ...defaultFormData(resource), ...fixedPayload });
+    setRelationSearch({});
     setDialogMode("create");
     setError(null);
     setFormError(null);
@@ -189,6 +209,7 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
   function openEdit(row: MasterRow) {
     setSelected(row);
     setFormData({ ...formDataFromRow(resource, row), ...fixedPayload });
+    setRelationSearch({});
     setDialogMode("edit");
     setError(null);
     setFormError(null);
@@ -199,6 +220,8 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
     setDialogMode(null);
     setSelected(null);
     setFormData({ ...defaultFormData(resource), ...fixedPayload });
+    setRelationSearch({});
+    setRelationOptions({});
     setFormError(null);
   }
 
@@ -216,7 +239,7 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
     setFormError(null);
     setSuccess(null);
     try {
-      const payload = serializePayload(resource, { ...formData, ...fixedPayload });
+      const payload = serializePayload(resource, { ...formData, ...fixedPayload }, dialogMode);
       if (dialogMode === "create") {
         await apiData(resourceEndpoint, { method: "POST", accessToken, body: JSON.stringify(payload) });
         setSuccess("Data berhasil dibuat.");
@@ -234,6 +257,7 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
   }
 
   async function handleDelete(row: MasterRow) {
+    if (isInactiveRow(resource, row)) return;
     const recordName = recordLabel(resource, row);
     if (!accessToken || !row.id || !window.confirm(`Nonaktifkan ${recordName}? Data tetap bisa ditemukan melalui filter Tidak Aktif.`)) {
       return;
@@ -249,6 +273,22 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
     }
   }
 
+  async function handleActivate(row: MasterRow) {
+    const recordName = recordLabel(resource, row);
+    if (!accessToken || !row.id || !window.confirm(`Aktifkan ${recordName}?`)) {
+      return;
+    }
+    setError(null);
+    setSuccess(null);
+    try {
+      await apiData(`${resourceEndpoint}/${row.id}`, { method: "PUT", accessToken, body: JSON.stringify(activePayload(resource)) });
+      setSuccess("Data berhasil diaktifkan.");
+      await loadRows();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal mengaktifkan data.");
+    }
+  }
+
   return (
     <div className="page-stack">
       {backHref ? <Link className="secondary-button" href={backHref}>Kembali</Link> : null}
@@ -261,13 +301,13 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
       <div className="toolbar">
         <label className="search-box">
           <Search size={17} />
-          <input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Cari" />
+          <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Cari" />
         </label>
         <select value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }}>
           <option value="">Semua Status</option>
           {statusOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
         </select>
-        <button className="secondary-button" onClick={() => void loadRows()} type="button"><RotateCcw size={16} /> Retry</button>
+        {error ? <button className="secondary-button" onClick={() => void loadRows()} type="button"><RotateCcw size={16} /> Retry</button> : null}
       </div>
 
       {success ? <div className="alert alert-success">{success}</div> : null}
@@ -307,7 +347,7 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
               field={field}
               key={field.name}
               value={formData[field.name]}
-              optionsOverride={(resourceId === "surveyors" || resourceId === "fitness-surveyors") && field.name === "user_id" ? surveyorUserOptions(surveyorUsers, selected) : relationOptions[field.name]?.options}
+              optionsOverride={relationOptions[field.name]?.options}
               relationState={relationOptions[field.name]}
               relationSearch={relationSearch[field.name] ?? ""}
               onRelationSearch={(value) => setRelationSearch((current) => ({ ...current, [field.name]: value }))}
@@ -377,10 +417,19 @@ function FieldInput({ field, value, onChange, optionsOverride, relationState, re
   );
 }
 
-function surveyorUserOptions(options: SelectOption[], selected: MasterRow | null) {
-  const currentID = String(selected?.user_id ?? "");
-  if (!currentID || options.some((option) => option.value === currentID)) return options;
-  return [{ value: currentID, label: `${String(selected?.name ?? "User saat ini")} - profil saat ini` }, ...options];
+async function currentRelationOption(field: MasterField, currentValue: string, selected: MasterRow | null, accessToken: string): Promise<SelectOption> {
+  const relation = field.relation;
+  if (!relation) return { value: currentValue, label: "Data referensi saat ini" };
+  if (relation.endpoint === "/users" && selected) {
+    const name = String(selected.name ?? selected.full_name ?? "User saat ini");
+    return { value: currentValue, label: `${name} - profil saat ini` };
+  }
+  try {
+    const current = await apiData<MasterRow>(`${relation.endpoint}/${currentValue}`, { accessToken });
+    return { value: currentValue, label: relationLabel(current, relation.labelKeys) };
+  } catch {
+    return { value: currentValue, label: "Data referensi saat ini" };
+  }
 }
 
 function renderDetailValue(value: MasterRow[string], type?: MasterField["type"]) {
@@ -406,7 +455,9 @@ function renderCell(value: MasterRow[string], type?: "status" | "boolean") {
 function defaultFormData(resource: MasterResource): MasterRow {
   const data: MasterRow = {};
   for (const field of resource.fields) {
-    if (field.defaultValue !== undefined) {
+    if (field.omitWhenEmpty && (field.type === "number" || field.type === "decimal")) {
+      data[field.name] = "";
+    } else if (field.defaultValue !== undefined) {
       data[field.name] = field.defaultValue;
     } else if (field.type === "checkbox") {
       data[field.name] = false;
@@ -427,13 +478,21 @@ function formDataFromRow(resource: MasterResource, row: MasterRow): MasterRow {
   return data;
 }
 
-function serializePayload(resource: MasterResource, data: MasterRow) {
+function serializePayload(resource: MasterResource, data: MasterRow, mode: "create" | "edit") {
   const payload: MasterRow = {};
   for (const field of resource.fields) {
     const value = data[field.name];
     if (field.type === "hidden" && value === undefined) continue;
     if (value === "" || value === undefined) {
-      payload[field.name] = field.required ? "" : field.clearValue ?? null;
+      if (field.required) {
+        payload[field.name] = "";
+      } else if (field.omitWhenEmpty && mode === "create") {
+        continue;
+      } else if (field.omitWhenEmpty && mode === "edit" && field.defaultValue !== undefined) {
+        payload[field.name] = field.defaultValue;
+      } else if (field.nullable) {
+        payload[field.name] = field.clearValue ?? null;
+      }
       continue;
     }
     payload[field.name] = typeof value === "string" && field.trim !== false ? value.trim() : value;
@@ -459,15 +518,25 @@ function numberOrEmpty(value: string) {
 
 function displayValue(value: MasterRow[string], field: MasterField | undefined, relationOptions: RelationOptions) {
   if (!field?.relation || value === undefined || value === null || value === "") return value;
-  return relationOptions[field.name]?.options.find((option) => option.value === String(value))?.label ?? `Data referensi tidak ditemukan: ${value}`;
+  return relationOptions[field.name]?.options.find((option) => option.value === String(value))?.label ?? "Data referensi saat ini";
 }
 
 function relationLabel(row: MasterRow, labelKeys: string[]) {
   const label = labelKeys.map((key) => String(row[key] ?? "").trim()).filter(Boolean).join(" - ");
-  return label || `Data referensi tidak ditemukan: ${String(row.id ?? "")}`;
+  return label || "Data referensi saat ini";
 }
 
 function recordLabel(resource: MasterResource, row: MasterRow) {
   const firstTextField = resource.fields.find((field) => field.name !== "status" && field.type !== "hidden" && typeof row[field.name] === "string" && String(row[field.name]).trim() !== "");
   return firstTextField ? String(row[firstTextField.name]) : "data ini";
+}
+
+function isInactiveRow(resource: MasterResource, row: MasterRow) {
+  if ("is_active" in row) return row.is_active === false || row.is_active === 0 || row.is_active === "0";
+  return String(row.status ?? "").toLowerCase() === "inactive";
+}
+
+function activePayload(resource: MasterResource) {
+  if (resource.fields.some((field) => field.name === "is_active")) return { is_active: true };
+  return { status: "active" };
 }

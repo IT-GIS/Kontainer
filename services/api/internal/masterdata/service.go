@@ -20,11 +20,26 @@ type Actor struct {
 	UserAgent  string
 }
 
+type repositoryPort interface {
+	List(context.Context, Resource, ListParams) (ListResult, error)
+	Get(context.Context, Resource, uuid.UUID) (map[string]any, error)
+	Create(context.Context, Resource, map[string]any) (map[string]any, error)
+	Update(context.Context, Resource, uuid.UUID, map[string]any) (map[string]any, error)
+	Delete(context.Context, Resource, uuid.UUID) (map[string]any, error)
+	DuplicateExists(context.Context, Resource, map[string]any, *uuid.UUID) (bool, error)
+	InsertAudit(context.Context, AuditEntry) error
+	WithTx(context.Context, func(repositoryPort) error) error
+}
+
 type Service struct {
-	repo Repository
+	repo repositoryPort
 }
 
 func NewService(repo Repository) *Service {
+	return &Service{repo: repo}
+}
+
+func NewServiceWithRepository(repo repositoryPort) *Service {
 	return &Service{repo: repo}
 }
 
@@ -40,30 +55,31 @@ func (s *Service) Create(ctx context.Context, resource Resource, payload map[str
 	if err := validateKnownFields(resource, payload); err != nil {
 		return nil, err
 	}
-	normalized := normalizePayload(resource, payload)
+	normalized, err := normalizePayload(resource, payload, true)
+	if err != nil {
+		return nil, err
+	}
 	if err := validatePayload(resource, normalized, true); err != nil {
 		return nil, err
 	}
-	exists, err := s.repo.DuplicateExists(ctx, resource, normalized, nil)
-	if err != nil {
-		return nil, err
-	}
-	if exists {
-		return nil, ErrDuplicate
-	}
 
-	created, err := s.repo.Create(ctx, resource, normalized)
+	var created map[string]any
+	err = s.repo.WithTx(ctx, func(repo repositoryPort) error {
+		exists, err := repo.DuplicateExists(ctx, resource, normalized, nil)
+		if err != nil {
+			return err
+		}
+		if exists {
+			return ErrDuplicate
+		}
+		created, err = repo.Create(ctx, resource, normalized)
+		if err != nil {
+			return err
+		}
+		return auditWithRepo(ctx, repo, resource, "create", actor, nil, created)
+	})
 	if err != nil {
-		if isDuplicateDBError(err) {
-			return nil, ErrDuplicate
-		}
-		if isForeignKeyDBError(err) {
-			return nil, ErrForeignKey
-		}
-		return nil, err
-	}
-	if err := s.audit(ctx, resource, "create", actor, nil, created); err != nil {
-		return nil, err
+		return nil, classifyMutationError(err)
 	}
 	return created, nil
 }
@@ -72,55 +88,68 @@ func (s *Service) Update(ctx context.Context, resource Resource, id uuid.UUID, p
 	if err := validateKnownFields(resource, payload); err != nil {
 		return nil, err
 	}
-	oldValue, err := s.repo.Get(ctx, resource, id)
+	normalized, err := normalizePayload(resource, payload, false)
 	if err != nil {
 		return nil, err
 	}
-	normalized := normalizePayload(resource, payload)
 	if err := validatePayload(resource, normalized, false); err != nil {
 		return nil, err
 	}
-	merged := mergeForDuplicate(resource, oldValue, normalized)
-	exists, err := s.repo.DuplicateExists(ctx, resource, merged, &id)
-	if err != nil {
-		return nil, err
-	}
-	if exists {
-		return nil, ErrDuplicate
-	}
 
-	updated, err := s.repo.Update(ctx, resource, id, normalized)
+	var updated map[string]any
+	err = s.repo.WithTx(ctx, func(repo repositoryPort) error {
+		oldValue, err := repo.Get(ctx, resource, id)
+		if err != nil {
+			return err
+		}
+		merged := mergeForDuplicate(resource, oldValue, normalized)
+		exists, err := repo.DuplicateExists(ctx, resource, merged, &id)
+		if err != nil {
+			return err
+		}
+		if exists {
+			return ErrDuplicate
+		}
+		updated, err = repo.Update(ctx, resource, id, normalized)
+		if err != nil {
+			return err
+		}
+		return auditWithRepo(ctx, repo, resource, "update", actor, oldValue, updated)
+	})
 	if err != nil {
-		if isDuplicateDBError(err) {
-			return nil, ErrDuplicate
-		}
-		if isForeignKeyDBError(err) {
-			return nil, ErrForeignKey
-		}
-		return nil, err
-	}
-	if err := s.audit(ctx, resource, "update", actor, oldValue, updated); err != nil {
-		return nil, err
+		return nil, classifyMutationError(err)
 	}
 	return updated, nil
 }
 
 func (s *Service) Delete(ctx context.Context, resource Resource, id uuid.UUID, actor Actor) (map[string]any, error) {
-	oldValue, err := s.repo.Get(ctx, resource, id)
+	var deleted map[string]any
+	err := s.repo.WithTx(ctx, func(repo repositoryPort) error {
+		oldValue, err := repo.Get(ctx, resource, id)
+		if err != nil {
+			return err
+		}
+		if isInactiveRecord(resource, oldValue) {
+			deleted = oldValue
+			return nil
+		}
+		deleted, err = repo.Delete(ctx, resource, id)
+		if err != nil {
+			return err
+		}
+		return auditWithRepo(ctx, repo, resource, "deactivate", actor, oldValue, deleted)
+	})
 	if err != nil {
-		return nil, err
-	}
-	deleted, err := s.repo.Delete(ctx, resource, id)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.audit(ctx, resource, "deactivate", actor, oldValue, deleted); err != nil {
-		return nil, err
+		return nil, classifyMutationError(err)
 	}
 	return deleted, nil
 }
 
 func (s *Service) audit(ctx context.Context, resource Resource, action string, actor Actor, oldValue any, newValue any) error {
+	return auditWithRepo(ctx, s.repo, resource, action, actor, oldValue, newValue)
+}
+
+func auditWithRepo(ctx context.Context, repo repositoryPort, resource Resource, action string, actor Actor, oldValue any, newValue any) error {
 	userID := actor.UserID
 	activeRole := actor.ActiveRole
 	var entityID *uuid.UUID
@@ -136,14 +165,14 @@ func (s *Service) audit(ctx context.Context, resource Resource, action string, a
 			}
 		}
 	}
-	return s.repo.InsertAudit(ctx, AuditEntry{
+	return repo.InsertAudit(ctx, AuditEntry{
 		UserID: &userID, ActiveRole: &activeRole, Action: resource.Name + "." + action, EntityType: resource.Name,
 		EntityID: entityID, OldValue: mustJSON(oldValue), NewValue: mustJSON(newValue), RequestID: actor.RequestID,
 		IPAddress: actor.IPAddress, UserAgent: actor.UserAgent,
 	})
 }
 
-func normalizePayload(resource Resource, payload map[string]any) map[string]any {
+func normalizePayload(resource Resource, payload map[string]any, create bool) (map[string]any, error) {
 	result := map[string]any{}
 	for _, field := range resource.Fields {
 		value, ok := payload[field.Name]
@@ -153,19 +182,25 @@ func normalizePayload(resource Resource, payload map[string]any) map[string]any 
 		if !ok {
 			continue
 		}
-		result[field.Name] = normalizeFieldValue(resource, field, value)
+		normalized, include, err := normalizeFieldValue(resource, field, value, create)
+		if err != nil {
+			return nil, err
+		}
+		if include {
+			result[field.Name] = normalized
+		}
 	}
-	return result
+	return result, nil
 }
 
-func normalizeFieldValue(resource Resource, field Field, value any) any {
+func normalizeFieldValue(resource Resource, field Field, value any, create bool) (any, bool, error) {
 	if value == nil {
-		return nil
+		return normalizeEmptyField(resource, field, create)
 	}
 	if text, ok := value.(string); ok {
 		trimmed := strings.TrimSpace(text)
-		if trimmed == "" && !field.Required && field.Name != resource.statusField() {
-			return nil
+		if trimmed == "" {
+			return normalizeEmptyField(resource, field, create)
 		}
 		value = trimmed
 	}
@@ -173,33 +208,54 @@ func normalizeFieldValue(resource Resource, field Field, value any) any {
 	case "payment_term_days", "display_order", "default_interval_months", "level_no", "version_no":
 		switch v := value.(type) {
 		case float64:
-			return int(v)
+			return int(v), true, nil
 		case int:
-			return v
+			return v, true, nil
 		case string:
-			if strings.TrimSpace(v) == "" {
-				return nil
-			}
-			parsed, err := strconv.Atoi(v)
+			parsed, err := strconv.Atoi(strings.TrimSpace(v))
 			if err == nil {
-				return parsed
+				return parsed, true, nil
 			}
 		}
 	case "is_mvp_active", "requires_next_examination_date", "is_structural_critical", "affects_fitness_default", "repair_required_default", "requires_supervisor_review", "applies_to_new_container", "applies_to_existing_container", "requires_numeric_result", "requires_attachment", "is_required_default", "is_required", "is_critical", "fail_requires_repair", "fail_marks_unfit", "is_active":
 		switch v := value.(type) {
 		case bool:
-			return v
+			return v, true, nil
 		case float64:
-			return v != 0
+			return v != 0, true, nil
+		case int:
+			return v != 0, true, nil
 		case string:
 			trimmed := strings.TrimSpace(v)
-			if trimmed == "" {
-				return nil
-			}
-			return trimmed == "1" || strings.EqualFold(trimmed, "true") || strings.EqualFold(trimmed, "yes")
+			return trimmed == "1" || strings.EqualFold(trimmed, "true") || strings.EqualFold(trimmed, "yes"), true, nil
 		}
 	}
-	return value
+	return value, true, nil
+}
+
+func normalizeEmptyField(resource Resource, field Field, create bool) (any, bool, error) {
+	if field.Required {
+		return "", true, nil
+	}
+	if field.UseDatabaseDefault {
+		if create {
+			return nil, false, nil
+		}
+		if field.DefaultValue != nil {
+			return field.DefaultValue, true, nil
+		}
+		return nil, false, fmt.Errorf("%w: %s tidak boleh dikosongkan", ErrInvalidInput, field.RequestName())
+	}
+	if field.Nullable {
+		return nil, true, nil
+	}
+	if field.Name == resource.statusField() {
+		if create {
+			return nil, false, nil
+		}
+		return resource.activeStatusValue(), true, nil
+	}
+	return "", true, nil
 }
 
 func validateKnownFields(resource Resource, payload map[string]any) error {
@@ -224,13 +280,28 @@ func validatePayload(resource Resource, payload map[string]any, create bool) err
 	}
 	for _, field := range resource.Fields {
 		value, exists := payload[field.Name]
-		if create && field.Required && isEmpty(value) {
+		if create && field.Required && (!exists || isEmpty(value)) {
 			return fmt.Errorf("%w: %s wajib diisi", ErrInvalidInput, field.RequestName())
 		}
 		if !create && exists && field.Required && isEmpty(value) {
 			return fmt.Errorf("%w: %s wajib diisi", ErrInvalidInput, field.RequestName())
 		}
-		if !exists || isEmpty(value) {
+		if !exists {
+			continue
+		}
+		if value == nil {
+			if field.Nullable {
+				continue
+			}
+			return fmt.Errorf("%w: %s tidak boleh kosong", ErrInvalidInput, field.RequestName())
+		}
+		if isEmpty(value) {
+			if field.Nullable || field.UseDatabaseDefault {
+				continue
+			}
+			if field.Required {
+				return fmt.Errorf("%w: %s wajib diisi", ErrInvalidInput, field.RequestName())
+			}
 			continue
 		}
 		if err := validateFieldValue(resource, field, value); err != nil {
@@ -421,6 +492,43 @@ func mergeForDuplicate(resource Resource, oldValue map[string]any, payload map[s
 		}
 	}
 	return merged
+}
+
+func isInactiveRecord(resource Resource, row map[string]any) bool {
+	statusField := resource.statusField()
+	if statusField == "" {
+		return false
+	}
+	value := row[statusField]
+	if statusField == "is_active" {
+		switch v := value.(type) {
+		case bool:
+			return !v
+		case int:
+			return v == 0
+		case int64:
+			return v == 0
+		case float64:
+			return v == 0
+		case string:
+			return v == "0" || strings.EqualFold(v, "false") || strings.EqualFold(v, "inactive")
+		}
+		return false
+	}
+	return stringValue(value) == stringValue(resource.inactiveStatusValue())
+}
+
+func classifyMutationError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if isDuplicateDBError(err) {
+		return ErrDuplicate
+	}
+	if isForeignKeyDBError(err) {
+		return ErrForeignKey
+	}
+	return err
 }
 
 func isEmpty(value any) bool {

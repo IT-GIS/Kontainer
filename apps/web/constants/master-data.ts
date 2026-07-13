@@ -4,10 +4,11 @@ export type MasterField = {
   type?: "text" | "textarea" | "number" | "decimal" | "email" | "tel" | "url" | "date" | "datetime-local" | "select" | "searchable-select" | "checkbox" | "hidden";
   required?: boolean;
   options?: Array<{ label: string; value: string }>;
-  relation?: { endpoint: string; labelKeys: string[]; preload?: boolean };
+  relation?: { endpoint: string; labelKeys: string[]; preload?: boolean; query?: Record<string, string> };
   helpText?: string;
   defaultValue?: string | number | boolean;
   nullable?: boolean;
+  omitWhenEmpty?: boolean;
   clearValue?: string | number | boolean | null;
   trim?: boolean;
   min?: number;
@@ -126,7 +127,7 @@ export const masterResources: Record<string, MasterResource> = {
     ],
     fields: [
       { name: "surveyor_code", label: "Surveyor Code", required: true },
-      { name: "user_id", label: "User Surveyor", required: true },
+      { name: "user_id", label: "User Surveyor", type: "searchable-select", required: true, relation: { endpoint: "/users", labelKeys: ["name", "email"], query: { role: "surveyor", status: "active", without_surveyor_profile: "true" } } },
       { name: "name", label: "Full Name", required: true },
       { name: "phone", label: "Phone", type: "tel", nullable: true, maxLength: 50 },
       { name: "area", label: "Area" },
@@ -246,7 +247,7 @@ export const masterResources: Record<string, MasterResource> = {
       { key: "status", label: "Status", type: "status" }
     ],
     fields: [
-      { name: "user_id", label: "User Akun", required: true },
+      { name: "user_id", label: "User Akun", type: "searchable-select", required: true, relation: { endpoint: "/users", labelKeys: ["name", "email"], query: { role: "surveyor", status: "active", without_surveyor_profile: "true" } } },
       { name: "surveyor_code", label: "Kode Surveyor", required: true },
       { name: "name", label: "Nama Lengkap", required: true },
       { name: "phone", label: "Telepon", type: "tel", nullable: true, maxLength: 50 },
@@ -295,8 +296,8 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "name", label: "Nama Kategori", required: true },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
       { name: "container_lifecycle", label: "Berlaku Untuk", type: "select", required: true, options: [{ label: "Peti Kemas Baru", value: "new" }, { label: "Peti Kemas Lama", value: "existing" }] },
-      { name: "is_mvp_active", label: "Aktif di MVP", type: "checkbox" },
-      { name: "display_order", label: "Display Order", type: "number", min: 0, step: 1, nullable: true },
+      { name: "is_mvp_active", label: "Aktif di MVP", type: "checkbox", defaultValue: true },
+      { name: "display_order", label: "Display Order", type: "number", min: 0, step: 1, omitWhenEmpty: true, defaultValue: 0 },
       statusField
     ]
   },
@@ -317,7 +318,7 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "code", label: "Kode Skema", required: true },
       { name: "name", label: "Nama Skema", required: true },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
-      { name: "requires_next_examination_date", label: "Membutuhkan Next Examination Date", type: "checkbox" },
+      { name: "requires_next_examination_date", label: "Membutuhkan Next Examination Date", type: "checkbox", defaultValue: false },
       { name: "default_interval_months", label: "Interval Pemeriksaan Default (bulan)", type: "number", min: 1, step: 1 },
       statusField
     ]
@@ -338,7 +339,7 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "code", label: "Kode Area", required: true },
       { name: "area_name", label: "Nama Area", required: true },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
-      { name: "display_order", label: "Urutan Tampil", type: "number", min: 0, step: 1, nullable: true },
+      { name: "display_order", label: "Urutan Tampil", type: "number", min: 0, step: 1, omitWhenEmpty: true, defaultValue: 0 },
       statusField
     ]
   },
@@ -359,9 +360,9 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "code", label: "Kode Komponen", required: true },
       { name: "component_name", label: "Nama Komponen", required: true },
       { name: "inspection_area_id", label: "Area Pemeriksaan", type: "searchable-select", relation: { endpoint: "/fitness/master-data/inspection-areas", labelKeys: ["code", "area_name"] } },
-      { name: "is_structural_critical", label: "Komponen Struktural Kritis", type: "checkbox" },
+      { name: "is_structural_critical", label: "Komponen Struktural Kritis", type: "checkbox", defaultValue: false },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
-      { name: "display_order", label: "Urutan Tampil", type: "number", min: 0, step: 1, nullable: true },
+      { name: "display_order", label: "Urutan Tampil", type: "number", min: 0, step: 1, omitWhenEmpty: true, defaultValue: 0 },
       statusField
     ]
   },
@@ -383,9 +384,9 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "criteria_name", label: "Nama Kriteria", required: true },
       { name: "component_id", label: "Komponen Terkait", type: "searchable-select", relation: { endpoint: "/fitness/master-data/structural-components", labelKeys: ["code", "component_name"] } },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
-      { name: "severity_default", label: "Tingkat Temuan Default", type: "select", options: ["minor", "major", "critical"].map((value) => ({ label: value, value })) },
-      { name: "affects_fitness_default", label: "Default Memengaruhi Kelaikan", type: "checkbox" },
-      { name: "repair_required_default", label: "Default Perlu Perbaikan", type: "checkbox" },
+      { name: "severity_default", label: "Tingkat Temuan Default", type: "select", omitWhenEmpty: true, defaultValue: "minor", options: ["minor", "major", "critical"].map((value) => ({ label: value, value })) },
+      { name: "affects_fitness_default", label: "Default Memengaruhi Kelaikan", type: "checkbox", defaultValue: false },
+      { name: "repair_required_default", label: "Default Perlu Perbaikan", type: "checkbox", defaultValue: false },
       { name: "inspection_note", label: "Catatan Pemeriksaan", type: "textarea", nullable: true },
       statusField
     ]
@@ -408,8 +409,8 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "name", label: "Nama Severity", required: true },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
       { name: "level_no", label: "Level Angka", type: "number", min: 1, step: 1, required: true },
-      { name: "affects_fitness_default", label: "Default Memengaruhi Kelaikan", type: "checkbox" },
-      { name: "requires_supervisor_review", label: "Default Perlu Review Supervisor", type: "checkbox" },
+      { name: "affects_fitness_default", label: "Default Memengaruhi Kelaikan", type: "checkbox", defaultValue: false },
+      { name: "requires_supervisor_review", label: "Default Perlu Review Supervisor", type: "checkbox", defaultValue: true },
       { name: "badge_tone", label: "Warna Badge", type: "select", options: ["neutral", "success", "warning", "danger"].map((value) => ({ label: value, value })) },
       statusField
     ]
@@ -435,9 +436,9 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "standard_reference", label: "Referensi Standar" },
       { name: "applies_to_new_container", label: "Berlaku untuk Peti Kemas Baru", type: "checkbox", defaultValue: true },
       { name: "applies_to_existing_container", label: "Berlaku untuk Peti Kemas Lama", type: "checkbox", defaultValue: true },
-      { name: "requires_numeric_result", label: "Wajib Hasil Angka", type: "checkbox" },
-      { name: "requires_attachment", label: "Wajib Lampiran/Foto", type: "checkbox" },
-      { name: "display_order", label: "Urutan Tampil", type: "number", min: 0, step: 1, nullable: true },
+      { name: "requires_numeric_result", label: "Wajib Hasil Angka", type: "checkbox", defaultValue: false },
+      { name: "requires_attachment", label: "Wajib Lampiran/Foto", type: "checkbox", defaultValue: false },
+      { name: "display_order", label: "Urutan Tampil", type: "number", min: 0, step: 1, omitWhenEmpty: true, defaultValue: 0 },
       statusField
     ]
   },
@@ -460,7 +461,7 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "approval_category_id", label: "Kategori Persetujuan", type: "searchable-select", relation: { endpoint: "/fitness/master-data/approval-categories", labelKeys: ["code", "name"] } },
       { name: "container_type_id", label: "Jenis / Model Peti Kemas", type: "searchable-select", relation: { endpoint: "/fitness/master-data/container-types", labelKeys: ["code", "type"] } },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
-      { name: "version_no", label: "Versi", type: "number", min: 1, step: 1, defaultValue: 1 },
+      { name: "version_no", label: "Versi", type: "number", min: 1, step: 1, omitWhenEmpty: true, defaultValue: 1 },
       { name: "status", label: "Status", type: "select", defaultValue: "draft", options: checklistStatusOptions }
     ]
   },
@@ -490,10 +491,10 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "response_type", label: "Response Type", type: "select", required: true, defaultValue: "ok_not_ok", options: ["ok_not_ok", "yes_no", "text", "number", "date", "photo_required", "not_applicable"].map((value) => ({ label: value, value })) },
       { name: "expected_value", label: "Expected Value" },
       { name: "is_required", label: "Wajib Diisi", type: "checkbox", defaultValue: true },
-      { name: "is_critical", label: "Critical Item", type: "checkbox" },
-      { name: "fail_requires_repair", label: "Jika Gagal Perlu Perbaikan", type: "checkbox" },
-      { name: "fail_marks_unfit", label: "Jika Gagal Tidak Layak", type: "checkbox" },
-      { name: "display_order", label: "Urutan Tampil", type: "number", min: 0, step: 1, nullable: true },
+      { name: "is_critical", label: "Critical Item", type: "checkbox", defaultValue: false },
+      { name: "fail_requires_repair", label: "Jika Gagal Perlu Perbaikan", type: "checkbox", defaultValue: false },
+      { name: "fail_marks_unfit", label: "Jika Gagal Tidak Layak", type: "checkbox", defaultValue: false },
+      { name: "display_order", label: "Urutan Tampil", type: "number", min: 0, step: 1, omitWhenEmpty: true, defaultValue: 0 },
       statusField
     ]
   },
@@ -514,9 +515,9 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "code", label: "Kode Kategori Foto", required: true },
       { name: "name", label: "Nama Kategori Foto", required: true },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
-      { name: "is_required_default", label: "Wajib Default", type: "checkbox" },
+      { name: "is_required_default", label: "Wajib Default", type: "checkbox", defaultValue: false },
       { name: "applies_to", label: "Berlaku Untuk", type: "select", options: ["inspection", "finding", "test", "repair", "reinspection", "document"].map((value) => ({ label: value, value })) },
-      { name: "display_order", label: "Urutan Tampil", type: "number", min: 0, step: 1, nullable: true },
+      { name: "display_order", label: "Urutan Tampil", type: "number", min: 0, step: 1, omitWhenEmpty: true, defaultValue: 0 },
       statusField
     ]
   },
@@ -537,7 +538,7 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "code", label: "Kode Rekomendasi", required: true },
       { name: "name", label: "Nama Rekomendasi", required: true },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
-      { name: "final_fitness_result_mapping", label: "Final Fitness Result Mapping", type: "select", options: ["pending", "fit", "unfit"].map((value) => ({ label: value, value })) },
+      { name: "final_fitness_result_mapping", label: "Final Fitness Result Mapping", type: "select", omitWhenEmpty: true, defaultValue: "pending", options: ["pending", "fit", "unfit"].map((value) => ({ label: value, value })) },
       { name: "workflow_status_mapping", label: "Workflow Status Mapping", nullable: true },
       { name: "restriction_status_mapping", label: "Restriction Status Mapping", type: "select", options: ["none", "suspended", "prohibited", "released"].map((value) => ({ label: value, value })) },
       { name: "requires_supervisor_review", label: "Perlu Review Supervisor", type: "checkbox", defaultValue: true },

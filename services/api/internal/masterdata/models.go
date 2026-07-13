@@ -16,15 +16,17 @@ var (
 )
 
 type Field struct {
-	Name          string
-	APIName       string
-	Type          string
-	Required      bool
-	Nullable      bool
-	Min           *float64
-	Max           *float64
-	MaxLength     int
-	AllowedValues []string
+	Name               string
+	APIName            string
+	Type               string
+	Required           bool
+	Nullable           bool
+	UseDatabaseDefault bool
+	DefaultValue       any
+	Min                *float64
+	Max                *float64
+	MaxLength          int
+	AllowedValues      []string
 }
 
 func (f Field) RequestName() string {

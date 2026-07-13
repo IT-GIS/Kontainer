@@ -377,3 +377,17 @@ Perubahan teknis utama:
 - Mutation master data sekarang tidak lagi mengabaikan error audit log.
 
 Catatan: hardening ini belum mengaktifkan workflow transaksi Kelaikan dan belum membuktikan CRUD runtime terhadap database kerja utama.
+## Tahap 1.1 - Corrective Hardening
+
+Corrective Tahap 1.1 menutup blocker hardening generic Master Data Admin Kelaikan:
+
+- empty field semantics kini membedakan required, nullable, non-null default, dan omitted field;
+- default database seperti `display_order=0`, `version_no=1`, `severity_default=minor`, dan `final_fitness_result_mapping=pending` dijaga;
+- mutation master data dan audit log dibungkus dalam satu transaction;
+- relation fetch tidak lagi dipicu oleh perubahan field non-relation;
+- list search memakai debounce 350 ms;
+- user Surveyor memakai searchable relation `/users`;
+- aksi Nonaktifkan disembunyikan untuk row inactive dan backend mencegah audit deactivate berulang.
+
+Laporan detail: `docs/ADMIN_STAGE_1_1_CORRECTIVE_REPORT.md`.
+Matrix field: `docs/ADMIN_STAGE_1_FIELD_NULLABILITY_MATRIX.md`.

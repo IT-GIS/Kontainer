@@ -13,12 +13,43 @@ import (
 	"github.com/google/uuid"
 )
 
+type queryExecutor interface {
+	Exec(context.Context, string, ...any) (database.CommandTag, error)
+	Query(context.Context, string, ...any) (database.Rows, error)
+	QueryRow(context.Context, string, ...any) database.Row
+}
+
 type Repository struct {
-	pool *database.Pool
+	pool     *database.Pool
+	executor queryExecutor
 }
 
 func NewRepository(pool *database.Pool) Repository {
-	return Repository{pool: pool}
+	return Repository{pool: pool, executor: pool}
+}
+
+func (r Repository) runner() queryExecutor {
+	if r.executor != nil {
+		return r.executor
+	}
+	return r.pool
+}
+
+func (r Repository) WithTx(ctx context.Context, fn func(repositoryPort) error) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	txRepo := Repository{pool: r.pool, executor: tx}
+	if err := fn(txRepo); err != nil {
+		_ = tx.Rollback(ctx)
+		return err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		_ = tx.Rollback(ctx)
+		return err
+	}
+	return nil
 }
 
 func (r Repository) List(ctx context.Context, resource Resource, params ListParams) (ListResult, error) {
@@ -47,7 +78,7 @@ func (r Repository) List(ctx context.Context, resource Resource, params ListPara
 		resource.selectColumns(), resource.Table, where, sortBy, sortOrder, len(args)-1, len(args),
 	)
 
-	rows, err := r.pool.Query(ctx, query, args...)
+	rows, err := r.runner().Query(ctx, query, args...)
 	if err != nil {
 		return ListResult{}, err
 	}
@@ -75,7 +106,7 @@ func (r Repository) Get(ctx context.Context, resource Resource, id uuid.UUID) (m
 		where += " AND deleted_at IS NULL"
 	}
 	query := fmt.Sprintf("SELECT %s FROM %s %s LIMIT 1", resource.selectColumns(), resource.Table, where)
-	rows, err := r.pool.Query(ctx, query, id)
+	rows, err := r.runner().Query(ctx, query, id)
 	if err != nil {
 		return nil, err
 	}
@@ -211,14 +242,14 @@ func (r Repository) DuplicateExists(ctx context.Context, resource Resource, payl
 	}
 	query := fmt.Sprintf("SELECT EXISTS (SELECT 1 FROM %s WHERE %s)", resource.Table, where)
 	var exists bool
-	if err := r.pool.QueryRow(ctx, query, args...).Scan(&exists); err != nil {
+	if err := r.runner().QueryRow(ctx, query, args...).Scan(&exists); err != nil {
 		return false, err
 	}
 	return exists, nil
 }
 
 func (r Repository) InsertAudit(ctx context.Context, entry AuditEntry) error {
-	_, err := r.pool.Exec(ctx, `
+	_, err := r.runner().Exec(ctx, `
 		INSERT INTO audit_logs (
 			user_id, active_role, action, entity_type, entity_id, old_value, new_value,
 			request_id, ip_address, user_agent
@@ -230,14 +261,14 @@ func (r Repository) InsertAudit(ctx context.Context, entry AuditEntry) error {
 func (r Repository) count(ctx context.Context, resource Resource, where string, args []any) (int, error) {
 	query := fmt.Sprintf("SELECT COUNT(*) FROM %s %s", resource.Table, where)
 	var total int
-	if err := r.pool.QueryRow(ctx, query, args...).Scan(&total); err != nil {
+	if err := r.runner().QueryRow(ctx, query, args...).Scan(&total); err != nil {
 		return 0, err
 	}
 	return total, nil
 }
 
 func (r Repository) queryOne(ctx context.Context, query string, args ...any) (map[string]any, error) {
-	rows, err := r.pool.Query(ctx, query, args...)
+	rows, err := r.runner().Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
