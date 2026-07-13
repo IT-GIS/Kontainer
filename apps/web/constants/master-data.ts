@@ -71,10 +71,10 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "customer_code", label: "Customer Code", required: true },
       { name: "customer_name", label: "Customer Name", required: true },
       { name: "address", label: "Address", type: "textarea", nullable: true },
-      { name: "npwp", label: "NPWP" },
-      { name: "pic_name", label: "PIC Name" },
+      { name: "npwp", label: "NPWP", nullable: true },
+      { name: "pic_name", label: "PIC Name", nullable: true },
       { name: "pic_phone", label: "PIC Phone", type: "tel", nullable: true, maxLength: 50 },
-      { name: "pic_email", label: "PIC Email", type: "email" },
+      { name: "pic_email", label: "PIC Email", type: "email", nullable: true },
       { name: "billing_address", label: "Billing Address", type: "textarea", nullable: true },
       { name: "payment_term_days", label: "Payment Term Days", type: "number", min: 0, step: 1, nullable: true },
       statusField
@@ -104,10 +104,10 @@ export const masterResources: Record<string, MasterResource> = {
         options: ["depot", "yard", "port", "warehouse", "factory", "customer_site", "other"].map((value) => ({ label: value, value }))
       },
       { name: "address", label: "Address", type: "textarea", nullable: true },
-      { name: "city", label: "City" },
+      { name: "city", label: "City", nullable: true },
       { name: "gps_latitude", label: "GPS Latitude", type: "decimal", min: -90, max: 90, step: "0.000001", nullable: true },
       { name: "gps_longitude", label: "GPS Longitude", type: "decimal", min: -180, max: 180, step: "0.000001", nullable: true },
-      { name: "pic_name", label: "PIC Name" },
+      { name: "pic_name", label: "PIC Name", nullable: true },
       { name: "pic_phone", label: "PIC Phone", type: "tel", nullable: true, maxLength: 50 },
       statusField
     ]
@@ -130,7 +130,7 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "user_id", label: "User Surveyor", type: "searchable-select", required: true, relation: { endpoint: "/users", labelKeys: ["name", "email"], query: { role: "surveyor", status: "active", without_surveyor_profile: "true" } } },
       { name: "name", label: "Full Name", required: true },
       { name: "phone", label: "Phone", type: "tel", nullable: true, maxLength: 50 },
-      { name: "area", label: "Area" },
+      { name: "area", label: "Area", nullable: true },
       statusField
     ]
   },
@@ -149,7 +149,7 @@ export const masterResources: Record<string, MasterResource> = {
     ],
     fields: [
       { name: "code", label: "Code", required: true },
-      { name: "iso_code", label: "ISO Code" },
+      { name: "iso_code", label: "ISO Code", nullable: true },
       { name: "size", label: "Size", required: true },
       { name: "type", label: "Type", required: true },
       { name: "description", label: "Description", type: "textarea", nullable: true },
@@ -173,10 +173,10 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "customer_code", label: "Kode Pemilik", required: true },
       { name: "customer_name", label: "Nama Pemilik Peti Kemas", required: true },
       { name: "address", label: "Alamat", type: "textarea", nullable: true },
-      { name: "npwp", label: "NPWP" },
-      { name: "pic_name", label: "Nama PIC" },
+      { name: "npwp", label: "NPWP", nullable: true },
+      { name: "pic_name", label: "Nama PIC", nullable: true },
       { name: "pic_phone", label: "Telepon PIC", type: "tel", nullable: true, maxLength: 50 },
-      { name: "pic_email", label: "Email PIC", type: "email" },
+      { name: "pic_email", label: "Email PIC", type: "email", nullable: true },
       { name: "billing_address", label: "Alamat Billing", type: "textarea", nullable: true },
       statusField
     ]
@@ -198,10 +198,10 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "manufacturer_code", label: "Kode Pabrik", required: true },
       { name: "manufacturer_name", label: "Nama Pabrik Pembuat", required: true },
       { name: "address", label: "Alamat", type: "textarea", nullable: true },
-      { name: "country", label: "Negara" },
-      { name: "pic_name", label: "Nama PIC" },
+      { name: "country", label: "Negara", nullable: true },
+      { name: "pic_name", label: "Nama PIC", nullable: true },
       { name: "pic_phone", label: "Telepon PIC", type: "tel", nullable: true, maxLength: 50 },
-      { name: "pic_email", label: "Email PIC", type: "email" },
+      { name: "pic_email", label: "Email PIC", type: "email", nullable: true },
       { name: "website", label: "Website", type: "url", nullable: true, maxLength: 150 },
       { name: "note", label: "Catatan", type: "textarea", nullable: true },
       statusField
@@ -225,10 +225,10 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "location_name", label: "Nama Lokasi", required: true },
       { name: "location_type", label: "Jenis Lokasi", type: "select", required: true, options: ["depot", "yard", "port", "warehouse", "factory", "customer_site", "other"].map((value) => ({ label: value, value })) },
       { name: "address", label: "Alamat", type: "textarea", nullable: true },
-      { name: "city", label: "Kota" },
+      { name: "city", label: "Kota", nullable: true },
       { name: "gps_latitude", label: "Latitude", type: "decimal", min: -90, max: 90, step: "0.000001", nullable: true },
       { name: "gps_longitude", label: "Longitude", type: "decimal", min: -180, max: 180, step: "0.000001", nullable: true },
-      { name: "pic_name", label: "Nama PIC" },
+      { name: "pic_name", label: "Nama PIC", nullable: true },
       { name: "pic_phone", label: "Telepon PIC", type: "tel", nullable: true, maxLength: 50 },
       statusField
     ]
@@ -251,8 +251,8 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "surveyor_code", label: "Kode Surveyor", required: true },
       { name: "name", label: "Nama Lengkap", required: true },
       { name: "phone", label: "Telepon", type: "tel", nullable: true, maxLength: 50 },
-      { name: "area", label: "Area Tugas" },
-      { name: "signature_file_id", label: "ID File Tanda Tangan", helpText: "Upload tanda tangan belum aktif - gunakan file ID sementara." },
+      { name: "area", label: "Area Tugas", nullable: true },
+      { name: "signature_file_id", label: "ID File Tanda Tangan", nullable: true, helpText: "Upload tanda tangan belum aktif - gunakan file ID sementara." },
       statusField
     ]
   },
@@ -271,7 +271,7 @@ export const masterResources: Record<string, MasterResource> = {
     ],
     fields: [
       { name: "code", label: "Kode Jenis", required: true },
-      { name: "iso_code", label: "ISO Code" },
+      { name: "iso_code", label: "ISO Code", nullable: true },
       { name: "size", label: "Ukuran", required: true },
       { name: "type", label: "Nama Tipe", required: true },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
@@ -319,7 +319,7 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "name", label: "Nama Skema", required: true },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
       { name: "requires_next_examination_date", label: "Membutuhkan Next Examination Date", type: "checkbox", defaultValue: false },
-      { name: "default_interval_months", label: "Interval Pemeriksaan Default (bulan)", type: "number", min: 1, step: 1 },
+      { name: "default_interval_months", label: "Interval Pemeriksaan Default (bulan)", type: "number", min: 1, step: 1, nullable: true },
       statusField
     ]
   },
@@ -352,14 +352,14 @@ export const masterResources: Record<string, MasterResource> = {
     columns: [
       { key: "code", label: "Kode" },
       { key: "component_name", label: "Komponen" },
-      { key: "inspection_area_id", label: "ID Area" },
+      { key: "inspection_area_label", label: "Area" },
       { key: "is_structural_critical", label: "Kritis", type: "boolean" },
       { key: "status", label: "Status", type: "status" }
     ],
     fields: [
       { name: "code", label: "Kode Komponen", required: true },
       { name: "component_name", label: "Nama Komponen", required: true },
-      { name: "inspection_area_id", label: "Area Pemeriksaan", type: "searchable-select", relation: { endpoint: "/fitness/master-data/inspection-areas", labelKeys: ["code", "area_name"] } },
+      { name: "inspection_area_id", label: "Area Pemeriksaan", type: "searchable-select", nullable: true, relation: { endpoint: "/fitness/master-data/inspection-areas", labelKeys: ["code", "area_name"] } },
       { name: "is_structural_critical", label: "Komponen Struktural Kritis", type: "checkbox", defaultValue: false },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
       { name: "display_order", label: "Urutan Tampil", type: "number", min: 0, step: 1, omitWhenEmpty: true, defaultValue: 0 },
@@ -382,7 +382,7 @@ export const masterResources: Record<string, MasterResource> = {
     fields: [
       { name: "code", label: "Kode Kriteria", required: true },
       { name: "criteria_name", label: "Nama Kriteria", required: true },
-      { name: "component_id", label: "Komponen Terkait", type: "searchable-select", relation: { endpoint: "/fitness/master-data/structural-components", labelKeys: ["code", "component_name"] } },
+      { name: "component_id", label: "Komponen Terkait", type: "searchable-select", nullable: true, relation: { endpoint: "/fitness/master-data/structural-components", labelKeys: ["code", "component_name"] } },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
       { name: "severity_default", label: "Tingkat Temuan Default", type: "select", omitWhenEmpty: true, defaultValue: "minor", options: ["minor", "major", "critical"].map((value) => ({ label: value, value })) },
       { name: "affects_fitness_default", label: "Default Memengaruhi Kelaikan", type: "checkbox", defaultValue: false },
@@ -410,8 +410,8 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
       { name: "level_no", label: "Level Angka", type: "number", min: 1, step: 1, required: true },
       { name: "affects_fitness_default", label: "Default Memengaruhi Kelaikan", type: "checkbox", defaultValue: false },
-      { name: "requires_supervisor_review", label: "Default Perlu Review Supervisor", type: "checkbox", defaultValue: true },
-      { name: "badge_tone", label: "Warna Badge", type: "select", options: ["neutral", "success", "warning", "danger"].map((value) => ({ label: value, value })) },
+      { name: "requires_supervisor_review", label: "Default Perlu Review Supervisor", type: "checkbox", defaultValue: false },
+      { name: "badge_tone", label: "Warna Badge", type: "select", nullable: true, options: ["neutral", "success", "warning", "danger"].map((value) => ({ label: value, value })) },
       statusField
     ]
   },
@@ -432,8 +432,8 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "code", label: "Kode Parameter", required: true },
       { name: "parameter_name", label: "Nama Parameter", required: true },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
-      { name: "unit", label: "Satuan" },
-      { name: "standard_reference", label: "Referensi Standar" },
+      { name: "unit", label: "Satuan", nullable: true },
+      { name: "standard_reference", label: "Referensi Standar", nullable: true },
       { name: "applies_to_new_container", label: "Berlaku untuk Peti Kemas Baru", type: "checkbox", defaultValue: true },
       { name: "applies_to_existing_container", label: "Berlaku untuk Peti Kemas Lama", type: "checkbox", defaultValue: true },
       { name: "requires_numeric_result", label: "Wajib Hasil Angka", type: "checkbox", defaultValue: false },
@@ -452,14 +452,16 @@ export const masterResources: Record<string, MasterResource> = {
       { key: "template_code", label: "Kode" },
       { key: "template_name", label: "Template" },
       { key: "version_no", label: "Versi" },
+      { key: "approval_category_label", label: "Kategori" },
+      { key: "container_type_label", label: "Jenis" },
       { key: "status", label: "Status", type: "status" }
     ],
     statusOptions: checklistStatusOptions,
     fields: [
       { name: "template_code", label: "Kode Template", required: true },
       { name: "template_name", label: "Nama Template", required: true },
-      { name: "approval_category_id", label: "Kategori Persetujuan", type: "searchable-select", relation: { endpoint: "/fitness/master-data/approval-categories", labelKeys: ["code", "name"] } },
-      { name: "container_type_id", label: "Jenis / Model Peti Kemas", type: "searchable-select", relation: { endpoint: "/fitness/master-data/container-types", labelKeys: ["code", "type"] } },
+      { name: "approval_category_id", label: "Kategori Persetujuan", type: "searchable-select", nullable: true, relation: { endpoint: "/fitness/master-data/approval-categories", labelKeys: ["code", "name"] } },
+      { name: "container_type_id", label: "Jenis / Model Peti Kemas", type: "searchable-select", nullable: true, relation: { endpoint: "/fitness/master-data/container-types", labelKeys: ["code", "type"] } },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
       { name: "version_no", label: "Versi", type: "number", min: 1, step: 1, omitWhenEmpty: true, defaultValue: 1 },
       { name: "status", label: "Status", type: "select", defaultValue: "draft", options: checklistStatusOptions }
@@ -474,8 +476,8 @@ export const masterResources: Record<string, MasterResource> = {
     columns: [
       { key: "item_code", label: "Kode" },
       { key: "item_label", label: "Item" },
-      { key: "inspection_area_id", label: "Area" },
-      { key: "structural_component_id", label: "Komponen" },
+      { key: "inspection_area_label", label: "Area" },
+      { key: "component_label", label: "Komponen" },
       { key: "response_type", label: "Response" },
       { key: "is_required", label: "Wajib", type: "boolean" },
       { key: "status", label: "Status", type: "status" }
@@ -485,11 +487,11 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "item_code", label: "Kode Item", required: true },
       { name: "item_label", label: "Label Pertanyaan", required: true },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
-      { name: "inspection_area_id", label: "Area Pemeriksaan", type: "searchable-select", relation: { endpoint: "/fitness/master-data/inspection-areas", labelKeys: ["code", "area_name"] } },
-      { name: "structural_component_id", label: "Komponen Struktur", type: "searchable-select", relation: { endpoint: "/fitness/master-data/structural-components", labelKeys: ["code", "component_name"] } },
-      { name: "test_parameter_id", label: "Parameter Pengujian", type: "searchable-select", relation: { endpoint: "/fitness/master-data/test-parameters", labelKeys: ["code", "parameter_name"] } },
+      { name: "inspection_area_id", label: "Area Pemeriksaan", type: "searchable-select", nullable: true, relation: { endpoint: "/fitness/master-data/inspection-areas", labelKeys: ["code", "area_name"] } },
+      { name: "structural_component_id", label: "Komponen Struktur", type: "searchable-select", nullable: true, relation: { endpoint: "/fitness/master-data/structural-components", labelKeys: ["code", "component_name"] } },
+      { name: "test_parameter_id", label: "Parameter Pengujian", type: "searchable-select", nullable: true, relation: { endpoint: "/fitness/master-data/test-parameters", labelKeys: ["code", "parameter_name"] } },
       { name: "response_type", label: "Response Type", type: "select", required: true, defaultValue: "ok_not_ok", options: ["ok_not_ok", "yes_no", "text", "number", "date", "photo_required", "not_applicable"].map((value) => ({ label: value, value })) },
-      { name: "expected_value", label: "Expected Value" },
+      { name: "expected_value", label: "Expected Value", nullable: true },
       { name: "is_required", label: "Wajib Diisi", type: "checkbox", defaultValue: true },
       { name: "is_critical", label: "Critical Item", type: "checkbox", defaultValue: false },
       { name: "fail_requires_repair", label: "Jika Gagal Perlu Perbaikan", type: "checkbox", defaultValue: false },
@@ -516,7 +518,7 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "name", label: "Nama Kategori Foto", required: true },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
       { name: "is_required_default", label: "Wajib Default", type: "checkbox", defaultValue: false },
-      { name: "applies_to", label: "Berlaku Untuk", type: "select", options: ["inspection", "finding", "test", "repair", "reinspection", "document"].map((value) => ({ label: value, value })) },
+      { name: "applies_to", label: "Berlaku Untuk", type: "select", nullable: true, options: ["inspection", "finding", "test", "repair", "reinspection", "document"].map((value) => ({ label: value, value })) },
       { name: "display_order", label: "Urutan Tampil", type: "number", min: 0, step: 1, omitWhenEmpty: true, defaultValue: 0 },
       statusField
     ]
@@ -540,7 +542,7 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
       { name: "final_fitness_result_mapping", label: "Final Fitness Result Mapping", type: "select", omitWhenEmpty: true, defaultValue: "pending", options: ["pending", "fit", "unfit"].map((value) => ({ label: value, value })) },
       { name: "workflow_status_mapping", label: "Workflow Status Mapping", nullable: true },
-      { name: "restriction_status_mapping", label: "Restriction Status Mapping", type: "select", options: ["none", "suspended", "prohibited", "released"].map((value) => ({ label: value, value })) },
+      { name: "restriction_status_mapping", label: "Restriction Status Mapping", type: "select", nullable: true, options: ["none", "suspended", "prohibited", "released"].map((value) => ({ label: value, value })) },
       { name: "requires_supervisor_review", label: "Perlu Review Supervisor", type: "checkbox", defaultValue: true },
       statusField
     ]
@@ -561,10 +563,10 @@ export const masterResources: Record<string, MasterResource> = {
     fields: [
       { name: "signer_name", label: "Nama Pejabat", required: true },
       { name: "position_title", label: "Jabatan", required: true },
-      { name: "employee_no", label: "NIP / ID Pegawai" },
-      { name: "email", label: "Email", type: "email" },
+      { name: "employee_no", label: "NIP / ID Pegawai", nullable: true },
+      { name: "email", label: "Email", type: "email", nullable: true },
       { name: "phone", label: "Nomor Telepon", type: "tel", nullable: true, maxLength: 50 },
-      { name: "signature_file_id", label: "ID File Tanda Tangan", helpText: "Upload tanda tangan belum aktif - gunakan file ID sementara." },
+      { name: "signature_file_id", label: "ID File Tanda Tangan", nullable: true, helpText: "Upload tanda tangan belum aktif - gunakan file ID sementara." },
       { name: "valid_from", label: "Berlaku Mulai", type: "date", nullable: true },
       { name: "valid_until", label: "Berlaku Sampai", type: "date", nullable: true },
       statusField
@@ -586,14 +588,14 @@ export const masterResources: Record<string, MasterResource> = {
     statusOptions: commonStatusOptions,
     fields: [
       { name: "company_name", label: "Nama Badan Usaha", required: true },
-      { name: "brand_name", label: "Brand" },
+      { name: "brand_name", label: "Brand", nullable: true },
       { name: "address", label: "Alamat", type: "textarea", nullable: true },
       { name: "phone", label: "Telepon", type: "tel", nullable: true, maxLength: 50 },
-      { name: "email", label: "Email", type: "email" },
+      { name: "email", label: "Email", type: "email", nullable: true },
       { name: "website", label: "Website", type: "url", nullable: true, maxLength: 150 },
-      { name: "tax_no", label: "Nomor Pajak" },
-      { name: "logo_file_id", label: "ID File Logo", helpText: "Upload file belum aktif - gunakan file ID sementara." },
-      { name: "default_signature_file_id", label: "ID File Tanda Tangan Default", helpText: "Upload file belum aktif - gunakan file ID sementara." },
+      { name: "tax_no", label: "Nomor Pajak", nullable: true },
+      { name: "logo_file_id", label: "ID File Logo", nullable: true, helpText: "Upload file belum aktif - gunakan file ID sementara." },
+      { name: "default_signature_file_id", label: "ID File Tanda Tangan Default", nullable: true, helpText: "Upload file belum aktif - gunakan file ID sementara." },
       { name: "is_active", label: "Status Aktif", type: "checkbox", defaultValue: true }
     ]
   },

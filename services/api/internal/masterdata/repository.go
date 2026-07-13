@@ -372,20 +372,25 @@ func (resource Resource) selectColumns() string {
 			outputName = field.APIName
 		}
 		expression := field.Name
-		if strings.HasSuffix(field.Name, "_id") {
-			expression = field.Name + ""
-		}
-		if field.Name == "gps_latitude" || field.Name == "gps_longitude" {
-			expression = field.Name + ""
-		}
-		if outputName != field.Name || expression != field.Name {
+		if outputName != field.Name {
 			columns = append(columns, fmt.Sprintf("%s AS %s", expression, outputName))
 		} else {
 			columns = append(columns, field.Name)
 		}
 	}
+	for _, relation := range resource.RelationDisplays {
+		columns = append(columns, relationDisplayExpression(resource, relation))
+	}
 	columns = append(columns, "created_at", "updated_at")
 	return strings.Join(columns, ", ")
+}
+
+func relationDisplayExpression(resource Resource, relation RelationDisplay) string {
+	alias := "rel_" + relation.Alias
+	return fmt.Sprintf(
+		"(SELECT CONCAT_WS(' - ', %s.%s, %s.%s) FROM %s %s WHERE %s.id = %s.%s) AS %s",
+		alias, relation.CodeColumn, alias, relation.NameColumn, relation.Table, alias, alias, resource.Table, relation.Field, relation.Alias,
+	)
 }
 
 func (resource Resource) hasField(name string) bool {

@@ -3,6 +3,7 @@ package masterdata
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -437,4 +438,25 @@ func cloneMap(input map[string]any) map[string]any {
 
 func testActor() Actor {
 	return Actor{UserID: uuid.New(), ActiveRole: "admin", RequestID: "req-test", IPAddress: "127.0.0.1", UserAgent: "test"}
+}
+
+func TestRelationDisplaySelectColumns(t *testing.T) {
+	selectColumns := Resources["structural_components"].selectColumns()
+	if !strings.Contains(selectColumns, "inspection_area_label") || !strings.Contains(selectColumns, "inspection_areas") {
+		t.Fatalf("expected structural component select to include inspection_area_label, got %s", selectColumns)
+	}
+
+	itemColumns := Resources["fitness_checklist_template_items"].selectColumns()
+	for _, label := range []string{"inspection_area_label", "component_label", "test_parameter_label"} {
+		if !strings.Contains(itemColumns, label) {
+			t.Fatalf("expected checklist item select to include %s, got %s", label, itemColumns)
+		}
+	}
+}
+
+func TestFindingSeveritySupervisorReviewDefaultIsFalse(t *testing.T) {
+	payload := mustNormalize(t, Resources["finding_severities"], map[string]any{"requires_supervisor_review": ""}, false)
+	if payload["requires_supervisor_review"] != false {
+		t.Fatalf("expected requires_supervisor_review default false, got %#v", payload["requires_supervisor_review"])
+	}
 }

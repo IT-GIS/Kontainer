@@ -85,7 +85,7 @@ Matrix ini disusun untuk corrective hardening Tahap 1.1 berdasarkan `database/ko
 | finding_severities | description | text | YES | NULL | NO | YES | null | null | textarea |
 | finding_severities | level_no | int | NO | none | YES | NO | reject | reject | minimum 1 |
 | finding_severities | affects_fitness_default | tinyint | NO | 0 | NO | NO | omit/default false | default false | non-null default |
-| finding_severities | requires_supervisor_review | tinyint | NO | 1 | NO | NO | omit/default true | default true | non-null default |
+| finding_severities | requires_supervisor_review | tinyint | NO | 0/false | NO | NO | omit/default false | default false | non-null default; aturan critical wajib review masuk Tahap 2 |
 | finding_severities | badge_tone | varchar | YES | NULL | NO | YES | null | null | enum optional |
 | finding_severities | status | varchar | NO | active | NO | NO | omit/default active | active if emptied | status resource |
 | test_parameters | code | varchar | NO | none | YES | NO | reject | reject | kode unik |
@@ -155,3 +155,12 @@ Matrix ini disusun untuk corrective hardening Tahap 1.1 berdasarkan `database/ko
 | company_profile | logo_file_id | char(36) | YES | NULL | NO | YES | null | null | upload belum aktif |
 | company_profile | default_signature_file_id | char(36) | YES | NULL | NO | YES | null | null | upload belum aktif |
 | company_profile | is_active | tinyint | NO | 1 | NO | NO | omit/default true | default true | boolean status |
+## Addendum Tahap 1.2
+
+Koreksi Tahap 1.2:
+
+- Frontend nullable ditambahkan untuk field optional DDL `NULL`, termasuk `npwp`, `pic_name`, `pic_email`, `country`, `city`, `area`, `signature_file_id`, `iso_code`, seluruh FK nullable master, `employee_no`, `email`, `brand_name`, `tax_no`, `logo_file_id`, dan `default_signature_file_id`.
+- Empty update untuk field nullable tetap dikirim sebagai `null` lewat `serializePayload`, sehingga backend menyimpan `NULL`.
+- Relation FK nullable tetap memakai create empty `null` dan update empty `null`.
+- Relation display backend mengembalikan label DB: `inspection_area_label`, `component_label`, `test_parameter_label`, `approval_category_label`, dan `container_type_label`.
+- `finding_severities.requires_supervisor_review` mengikuti DDL patch 0015 dan canonical dump: default `0/false`.

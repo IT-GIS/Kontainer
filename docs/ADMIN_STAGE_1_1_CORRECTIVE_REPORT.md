@@ -102,3 +102,20 @@ Frontend tidak memiliki test runner terpasang di workspace. Validasi frontend di
 - Runtime CRUD dengan database utama belum dijalankan agar tidak melakukan mutation data kerja.
 - Current user detail Surveyor tidak memiliki endpoint detail `/users/:id`, sehingga label edit memakai data row Surveyor saat ini.
 - Business rule Tahap 2 seperti singleton company profile dan template aktif wajib punya item belum diaktifkan.
+## Addendum Tahap 1.2 - Final Correction Generic Master Data
+
+Tahap 1.2 melanjutkan corrective hardening tanpa membuat workflow transaksi, patch SQL, migration, tabel baru, commit, atau push.
+
+Perubahan final:
+
+- field optional frontend yang sesuai DDL nullable diberi `nullable: true`, sehingga edit kosong mengirim `null`;
+- list/detail relation tidak memakai `relationOptions` dialog sebagai sumber label tabel;
+- backend generic master data menambahkan relation display metadata dan mengembalikan label DB `code - name` untuk area, komponen, parameter uji, kategori persetujuan, dan jenis peti kemas;
+- `finding_severities.requires_supervisor_review` diselaraskan ke default database `0/false`;
+- smoke test DB test terpisah tersedia sebagai `TestMasterDataSmokeWithTestDatabase` dan hanya berjalan dengan `MASTERDATA_SMOKE_DSN` yang mengarah ke database test.
+
+Catatan runtime:
+
+- smoke test tidak memakai database kerja utama;
+- jika `MASTERDATA_SMOKE_DSN` tidak tersedia, test di-skip dan tidak melakukan mutation DB;
+- aturan business critical wajib review supervisor tetap ditunda ke Tahap 2.

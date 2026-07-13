@@ -58,7 +58,6 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
   const canCreate = can(user, `${resource.permissionModule}.create.all`);
   const canUpdate = can(user, `${resource.permissionModule}.update.all`);
   const canDelete = can(user, `${resource.permissionModule}.delete.all`);
-  const fieldByName = useMemo(() => Object.fromEntries(resource.fields.map((field) => [field.name, field])), [resource.fields]);
   const relationFields = useMemo(() => resource.fields.filter((field) => field.relation), [resource.fields]);
   const selectedRelationValuesKey = relationFields.map((field) => String(formData[field.name] ?? selected?.[field.name] ?? "")).join("|");
 
@@ -161,7 +160,7 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
     ...resource.columns.map((column) => ({
       key: column.key,
       header: column.label,
-      render: (row: MasterRow) => renderCell(displayValue(row[column.key], fieldByName[column.key], relationOptions), column.type)
+      render: (row: MasterRow) => renderCell(row[column.key], column.type)
     })),
     {
       key: "actions",
@@ -325,7 +324,7 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
             {resource.fields.filter((field) => field.type !== "hidden").map((field) => (
               <div className="detail-item" key={field.name}>
                 <span>{field.label}</span>
-                <strong>{renderDetailValue(displayValue(detailRow[field.name], field, relationOptions), field.type)}</strong>
+                <strong>{renderDetailValue(detailValue(detailRow, field, relationOptions), field.type)}</strong>
               </div>
             ))}
           </div>
@@ -419,7 +418,7 @@ function FieldInput({ field, value, onChange, optionsOverride, relationState, re
 
 async function currentRelationOption(field: MasterField, currentValue: string, selected: MasterRow | null, accessToken: string): Promise<SelectOption> {
   const relation = field.relation;
-  if (!relation) return { value: currentValue, label: "Data referensi saat ini" };
+  if (!relation) return { value: currentValue, label: "Referensi saat ini" };
   if (relation.endpoint === "/users" && selected) {
     const name = String(selected.name ?? selected.full_name ?? "User saat ini");
     return { value: currentValue, label: `${name} - profil saat ini` };
@@ -428,7 +427,7 @@ async function currentRelationOption(field: MasterField, currentValue: string, s
     const current = await apiData<MasterRow>(`${relation.endpoint}/${currentValue}`, { accessToken });
     return { value: currentValue, label: relationLabel(current, relation.labelKeys) };
   } catch {
-    return { value: currentValue, label: "Data referensi saat ini" };
+    return { value: currentValue, label: "Referensi lama tidak ditemukan" };
   }
 }
 
@@ -516,16 +515,33 @@ function numberOrEmpty(value: string) {
   return Number(value);
 }
 
+function detailValue(row: MasterRow, field: MasterField, relationOptions: RelationOptions) {
+  const labelKey = relationLabelKey(field.name);
+  if (field.relation && labelKey && row[labelKey]) return row[labelKey];
+  return displayValue(row[field.name], field, relationOptions);
+}
+
 function displayValue(value: MasterRow[string], field: MasterField | undefined, relationOptions: RelationOptions) {
   if (!field?.relation || value === undefined || value === null || value === "") return value;
-  return relationOptions[field.name]?.options.find((option) => option.value === String(value))?.label ?? "Data referensi saat ini";
+  return relationOptions[field.name]?.options.find((option) => option.value === String(value))?.label ?? "Referensi tidak ditemukan";
+}
+
+function relationLabelKey(fieldName: string) {
+  const mapping: Record<string, string> = {
+    inspection_area_id: "inspection_area_label",
+    component_id: "component_label",
+    structural_component_id: "component_label",
+    test_parameter_id: "test_parameter_label",
+    approval_category_id: "approval_category_label",
+    container_type_id: "container_type_label"
+  };
+  return mapping[fieldName];
 }
 
 function relationLabel(row: MasterRow, labelKeys: string[]) {
   const label = labelKeys.map((key) => String(row[key] ?? "").trim()).filter(Boolean).join(" - ");
-  return label || "Data referensi saat ini";
+  return label || "Referensi tidak ditemukan";
 }
-
 function recordLabel(resource: MasterResource, row: MasterRow) {
   const firstTextField = resource.fields.find((field) => field.name !== "status" && field.type !== "hidden" && typeof row[field.name] === "string" && String(row[field.name]).trim() !== "");
   return firstTextField ? String(row[firstTextField.name]) : "data ini";

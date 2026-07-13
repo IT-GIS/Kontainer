@@ -506,3 +506,21 @@ Corrective Tahap 1.1 menutup blocker hardening generic Master Data Admin Kelaika
 
 Laporan detail: `docs/ADMIN_STAGE_1_1_CORRECTIVE_REPORT.md`.
 Matrix field: `docs/ADMIN_STAGE_1_FIELD_NULLABILITY_MATRIX.md`.
+## Tahap 1.2 - Final Correction Generic Master Data
+
+Tahap 1.2 memperbaiki koreksi akhir generic Master Data Admin Kelaikan tanpa melanjutkan ke Tahap 2.
+
+Ringkasan:
+
+- Nullable frontend diselaraskan dengan backend dan DDL untuk optional field, termasuk owner, manufacturer, location, surveyor, container type, FK nullable, authorized signer, company profile, dan field optional lain pada matrix.
+- Empty update optional field nullable dikirim sebagai `null` dan diproses backend sebagai `NULL`.
+- Backend list/detail mengembalikan label relation dari DB: `inspection_area_label`, `component_label`, `test_parameter_label`, `approval_category_label`, dan `container_type_label`.
+- List/detail frontend memakai label relation dari row response, bukan `relationOptions` milik dialog.
+- `finding_severities.requires_supervisor_review` diselaraskan ke default patch 0015/canonical dump `0/false`; aturan critical wajib review tetap Tahap 2.
+- Smoke test DB test terpisah ditambahkan dengan env `MASTERDATA_SMOKE_DSN`; test menolak DSN yang tidak mengandung `test` agar tidak memakai database kerja utama.
+- Tidak ada patch SQL, migration, tabel baru, endpoint baru, commit, atau push pada tahap ini.
+
+Risiko tersisa:
+
+- Smoke runtime DB nyata hanya berjalan jika database test eksplisit tersedia.
+- Business rule Tahap 2 seperti singleton company profile, template aktif wajib punya item, dan aturan critical severity belum diaktifkan.

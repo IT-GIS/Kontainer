@@ -84,7 +84,7 @@ Route legacy `/master/*` tetap memakai konfigurasi resource lamanya sehingga per
 
 Mutation master data tetap mencatat actor, action, entity/table, entity_id, old value, new value, request ID, IP, user agent, dan timestamp melalui `audit_logs`.
 
-Perubahan Tahap 1: error audit tidak lagi diabaikan. Jika audit insert gagal, mutation API mengembalikan error. Operasi belum dibungkus transaction bersama audit karena perubahan transaction boundary untuk generic repository dinilai terlalu besar untuk Tahap 1.
+Perubahan Tahap 1.1: mutation master data dan audit log sudah berjalan dalam satu transaction. Jika audit insert gagal, mutation di-rollback dan API mengembalikan error.
 
 ## Test Yang Ditambahkan
 
@@ -119,7 +119,7 @@ Test yang belum dibuat sebagai automated integration test:
 ## Risiko Tersisa
 
 - CRUD runtime belum diuji terhadap database kerja utama untuk mencegah mutation pada database utama.
-- Audit log belum atomic dalam transaction yang sama dengan mutation master data.
+- Audit log sudah transactional bersama mutation master data sejak Tahap 1.1.
 - Relation inactive akan tampil dengan label detail jika endpoint detail berhasil; bila tidak, fallback masih berupa pesan dengan UUID.
 - Searchable select belum memakai komponen combobox penuh; masih berupa input search plus select agar tetap sesuai scope generic minimal.
 - Beberapa validasi bisnis spesifik Tahap 2 belum diaktifkan, misalnya singleton company profile, template active wajib punya item, dan aturan critical severity.
@@ -154,3 +154,13 @@ Corrective Tahap 1.1 menutup blocker hardening generic Master Data Admin Kelaika
 
 Laporan detail: `docs/ADMIN_STAGE_1_1_CORRECTIVE_REPORT.md`.
 Matrix field: `docs/ADMIN_STAGE_1_FIELD_NULLABILITY_MATRIX.md`.
+## Tahap 1.2 - Final Correction Generic Master Data
+
+Tahap 1.2 menambahkan koreksi akhir pada generic Master Data tanpa workflow transaksi, patch SQL, migration, commit, atau push:
+
+- metadata nullable frontend diselaraskan dengan backend dan DDL agar field optional kosong saat edit dikirim sebagai `null`;
+- list/detail relation tidak lagi bergantung pada `relationOptions` dialog;
+- backend mengembalikan label relation `inspection_area_label`, `component_label`, `test_parameter_label`, `approval_category_label`, dan `container_type_label`;
+- `finding_severities.requires_supervisor_review` diselaraskan ke default DB `0/false`;
+- smoke test DB test terpisah ditambahkan dengan gate `MASTERDATA_SMOKE_DSN` dan menolak DSN non-test;
+- runtime DB nyata tetap belum diuji kecuali env test eksplisit tersedia.

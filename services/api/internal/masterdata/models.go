@@ -51,7 +51,16 @@ type Resource struct {
 	Fields              []Field
 	SearchColumns       []string
 	Filters             map[string]string
+	RelationDisplays    []RelationDisplay
 	DefaultSort         string
+}
+
+type RelationDisplay struct {
+	Field      string
+	Alias      string
+	Table      string
+	CodeColumn string
+	NameColumn string
 }
 
 type ListParams struct {
