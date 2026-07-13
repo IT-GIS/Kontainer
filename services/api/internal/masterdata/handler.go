@@ -39,27 +39,31 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	handler.resource(master, authService, "/responsibility-codes", Resources["responsibility_codes"])
 
 	fitnessMaster := v1.Group("/fitness/master-data")
-	handler.resource(fitnessMaster, authService, "/owners", Resources["customers"])
-	handler.resource(fitnessMaster, authService, "/manufacturers", Resources["container_manufacturers"])
-	handler.resource(fitnessMaster, authService, "/locations", Resources["locations"])
-	handler.resource(fitnessMaster, authService, "/surveyors", Resources["surveyors"])
-	handler.resource(fitnessMaster, authService, "/container-types", Resources["container_types"])
-	handler.resource(fitnessMaster, authService, "/approval-categories", Resources["fitness_approval_categories"])
-	handler.resource(fitnessMaster, authService, "/maintenance-schemes", Resources["maintenance_schemes"])
-	handler.resource(fitnessMaster, authService, "/inspection-areas", Resources["inspection_areas"])
-	handler.resource(fitnessMaster, authService, "/structural-components", Resources["structural_components"])
-	handler.resource(fitnessMaster, authService, "/damage-criteria", Resources["structural_damage_criteria"])
-	handler.resource(fitnessMaster, authService, "/finding-severities", Resources["finding_severities"])
-	handler.resource(fitnessMaster, authService, "/test-parameters", Resources["inspection_test_parameters"])
-	handler.resource(fitnessMaster, authService, "/checklist-templates", Resources["fitness_checklist_templates"])
-	checklistTemplateItems := Resources["fitness_checklist_template_items"]
+	handler.resource(fitnessMaster, authService, "/owners", fitnessAdminResource(Resources["customers"]))
+	handler.resource(fitnessMaster, authService, "/manufacturers", fitnessAdminResource(Resources["container_manufacturers"]))
+	handler.resource(fitnessMaster, authService, "/locations", fitnessAdminResource(Resources["locations"]))
+	handler.resource(fitnessMaster, authService, "/surveyors", fitnessAdminResource(Resources["surveyors"]))
+	handler.resource(fitnessMaster, authService, "/container-types", fitnessAdminResource(Resources["container_types"]))
+	handler.resource(fitnessMaster, authService, "/approval-categories", fitnessAdminResource(Resources["fitness_approval_categories"]))
+	handler.resource(fitnessMaster, authService, "/maintenance-schemes", fitnessAdminResource(Resources["maintenance_schemes"]))
+	handler.resource(fitnessMaster, authService, "/inspection-areas", fitnessAdminResource(Resources["inspection_areas"]))
+	handler.resource(fitnessMaster, authService, "/structural-components", fitnessAdminResource(Resources["structural_components"]))
+	handler.resource(fitnessMaster, authService, "/damage-criteria", fitnessAdminResource(Resources["structural_damage_criteria"]))
+	handler.resource(fitnessMaster, authService, "/finding-severities", fitnessAdminResource(Resources["finding_severities"]))
+	handler.resource(fitnessMaster, authService, "/test-parameters", fitnessAdminResource(Resources["inspection_test_parameters"]))
+	handler.resource(fitnessMaster, authService, "/checklist-templates", fitnessAdminResource(Resources["fitness_checklist_templates"]))
+	checklistTemplateItems := fitnessAdminResource(Resources["fitness_checklist_template_items"])
 	handler.resourceItems(fitnessMaster, authService, "/checklist-templates/:id/items", checklistTemplateItems, "template_id")
-	handler.resource(fitnessMaster, authService, "/photo-categories", Resources["evidence_photo_categories"])
-	handler.resource(fitnessMaster, authService, "/inspection-recommendations", Resources["inspection_recommendations"])
-	handler.resource(fitnessMaster, authService, "/authorized-signers", Resources["authorized_signers"])
-	handler.resource(fitnessMaster, authService, "/company-profile", Resources["company_profiles"])
+	handler.resource(fitnessMaster, authService, "/photo-categories", fitnessAdminResource(Resources["evidence_photo_categories"]))
+	handler.resource(fitnessMaster, authService, "/inspection-recommendations", fitnessAdminResource(Resources["inspection_recommendations"]))
+	handler.resource(fitnessMaster, authService, "/authorized-signers", fitnessAdminResource(Resources["authorized_signers"]))
+	handler.resource(fitnessMaster, authService, "/company-profile", fitnessAdminResource(Resources["company_profiles"]))
 }
 
+func fitnessAdminResource(resource Resource) Resource {
+	resource.SoftDelete = false
+	return resource
+}
 func (h Handler) resource(group *gin.RouterGroup, authService *auth.Service, path string, resource Resource) {
 	module := resource.permissionModule()
 	view := middleware.RequirePermission(authService, module+".view.all")
@@ -296,6 +300,8 @@ func (h Handler) writeError(c *gin.Context, err error) {
 		apphttp.Fail(c, http.StatusNotFound, "Data tidak ditemukan.", "NOT_FOUND", nil)
 	case errors.Is(err, ErrDuplicate):
 		apphttp.Fail(c, http.StatusConflict, "Kode sudah digunakan.", "DUPLICATE_RESOURCE", nil)
+	case errors.Is(err, ErrForeignKey):
+		apphttp.Fail(c, http.StatusUnprocessableEntity, "Data referensi tidak valid.", "FOREIGN_KEY_INVALID", nil)
 	case errors.Is(err, ErrInvalidInput):
 		apphttp.Fail(c, http.StatusUnprocessableEntity, "Validasi gagal.", "VALIDATION_ERROR", []apphttp.ErrorDetail{{Message: strings.TrimPrefix(err.Error(), ErrInvalidInput.Error()+": ")}})
 	default:

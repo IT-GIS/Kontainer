@@ -360,3 +360,20 @@ Tahap finishing ini menambahkan dropdown untuk field relasi master data agar Adm
 Template checklist item sudah tersedia sebagai CRUD sederhana di `/fitness/master-data/checklist-templates/[id]/items` dengan relasi ke area pemeriksaan, komponen struktur, dan parameter pengujian. Data ini disiapkan agar nanti form Surveyor dapat dibangun dari master data.
 
 Tahap finishing ini belum mengaktifkan Assignment Surveyor, Pemeriksaan Lapangan, Review, Dokumen, PDF, QR, Import aktif, Finance, atau workflow transaksi Permohonan Kelaikan.
+## Tahap 1 - Hardening Generic Master Data
+
+Tahap 1 memperkuat generic CRUD Master Data Kelaikan tanpa menambah tabel, patch, migration, dashboard, permohonan, import, assignment, inspection, review, dokumen, laporan, atau UI Surveyor.
+
+Perubahan teknis utama:
+
+- Field generik sekarang mendukung `text`, `textarea`, `number`, `decimal`, `email`, `tel`, `url`, `date`, `datetime-local`, `select`, `searchable-select`, `checkbox`, dan `hidden`.
+- Field panjang seperti `address`, `billing_address`, `description`, `note`, dan `inspection_note` dipetakan ke `textarea`.
+- Field telepon, email, URL, tanggal, decimal, dan numeric memiliki metadata input dan validasi backend yang lebih sesuai.
+- Optional field yang dikosongkan saat edit dikirim sebagai `null`, bukan dibuang dari payload.
+- Required field tidak boleh kosong pada create maupun update.
+- Aksi Nonaktifkan pada namespace `/fitness/master-data/*` hanya mengubah status/is_active dan tidak mengisi `deleted_at`.
+- Filter status mengikuti resource: master umum memakai Aktif/Tidak Aktif, checklist template memakai Draf/Aktif/Tidak Aktif, company profile memakai status aktif berbasis `is_active`.
+- Relation dropdown memakai pencarian server-side, mempertahankan nilai lama saat edit, dan menampilkan pesan bila data referensi tidak ditemukan.
+- Mutation master data sekarang tidak lagi mengabaikan error audit log.
+
+Catatan: hardening ini belum mengaktifkan workflow transaksi Kelaikan dan belum membuktikan CRUD runtime terhadap database kerja utama.

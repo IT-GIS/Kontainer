@@ -89,7 +89,7 @@ func TestCompanyProfileUsesIsActiveAsStatusFilter(t *testing.T) {
 }
 func TestValidateChecklistTemplateItemResponseType(t *testing.T) {
 	payload := normalizePayload(Resources["fitness_checklist_template_items"], map[string]any{
-		"template_id": "template-1", "item_code": "ITM-001", "item_label": "Periksa corner post", "response_type": "bad_choice",
+		"template_id": "00000000-0000-0000-0000-000000000111", "item_code": "ITM-001", "item_label": "Periksa corner post", "response_type": "bad_choice",
 	})
 	if err := validatePayload(Resources["fitness_checklist_template_items"], payload, true); err == nil {
 		t.Fatal("expected invalid response_type to fail")
@@ -104,9 +104,83 @@ func TestValidateChecklistTemplateItemResponseType(t *testing.T) {
 func TestChecklistTemplateItemBuildWhereIncludesTemplateFilter(t *testing.T) {
 	where, args := buildWhere(Resources["fitness_checklist_template_items"], ListParams{
 		Status:  "active",
-		Filters: map[string]string{"template_id": "template-1"},
+		Filters: map[string]string{"template_id": "00000000-0000-0000-0000-000000000111"},
 	})
 	if where == "" || len(args) != 2 {
 		t.Fatalf("expected status and template_id filters, got where=%q args=%#v", where, args)
 	}
 }
+
+func TestValidateRequiredUpdateRejectsEmptyValue(t *testing.T) {
+	payload := normalizePayload(Resources["customers"], map[string]any{"customer_name": ""})
+	if err := validatePayload(Resources["customers"], payload, false); err == nil {
+		t.Fatal("expected empty required update value to fail")
+	}
+}
+
+func TestNormalizeOptionalEmptyValueToNil(t *testing.T) {
+	payload := normalizePayload(Resources["customers"], map[string]any{"billing_address": ""})
+	if value, ok := payload["billing_address"]; !ok || value != nil {
+		t.Fatalf("expected optional empty billing_address to normalize to nil, got %#v", payload)
+	}
+}
+
+func TestValidateUnknownFieldRejected(t *testing.T) {
+	if err := validateKnownFields(Resources["customers"], map[string]any{"customer_code": "C-1", "bad_field": "x"}); err == nil {
+		t.Fatal("expected unknown field to fail")
+	}
+}
+
+func TestValidateURLField(t *testing.T) {
+	payload := normalizePayload(Resources["container_manufacturers"], map[string]any{"manufacturer_code": "MFG-001", "manufacturer_name": "Maker", "website": "not-url"})
+	if err := validatePayload(Resources["container_manufacturers"], payload, true); err == nil {
+		t.Fatal("expected invalid website to fail")
+	}
+	payload["website"] = "https://example.com"
+	if err := validatePayload(Resources["container_manufacturers"], payload, true); err != nil {
+		t.Fatalf("expected valid website, got %v", err)
+	}
+}
+
+func TestValidateNumericMinMax(t *testing.T) {
+	payload := normalizePayload(Resources["locations"], map[string]any{"location_code": "LOC-1", "location_name": "Yard", "location_type": "yard", "gps_latitude": -91})
+	if err := validatePayload(Resources["locations"], payload, true); err == nil {
+		t.Fatal("expected latitude outside range to fail")
+	}
+}
+
+func TestValidateForeignKeyUUID(t *testing.T) {
+	payload := normalizePayload(Resources["structural_components"], map[string]any{"code": "C-1", "component_name": "Corner", "inspection_area_id": "not-uuid"})
+	if err := validatePayload(Resources["structural_components"], payload, true); err == nil {
+		t.Fatal("expected invalid UUID relation to fail")
+	}
+}
+
+func TestFitnessAdminResourceDoesNotSoftDelete(t *testing.T) {
+	resource := fitnessAdminResource(Resources["customers"])
+	if resource.SoftDelete {
+		t.Fatal("expected fitness admin resource to deactivate by status without deleted_at")
+	}
+	where, args := buildWhere(resource, ListParams{Status: "inactive"})
+	if where != "WHERE status = $1" || len(args) != 1 || args[0] != "inactive" {
+		t.Fatalf("expected inactive filter without deleted_at clause, got where=%q args=%#v", where, args)
+	}
+}
+
+func TestReactivatePayloadAccepted(t *testing.T) {
+	payload := normalizePayload(Resources["customers"], map[string]any{"status": "active"})
+	if err := validatePayload(Resources["customers"], payload, false); err != nil {
+		t.Fatalf("expected status active update to be valid, got %v", err)
+	}
+}
+
+func TestForeignKeyDBErrorDetection(t *testing.T) {
+	err := errString("Cannot add or update a child row: a foreign key constraint fails")
+	if !isForeignKeyDBError(err) {
+		t.Fatal("expected foreign key DB error to be detected")
+	}
+}
+
+type errString string
+
+func (e errString) Error() string { return string(e) }

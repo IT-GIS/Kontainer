@@ -12,12 +12,19 @@ var (
 	ErrNotFound     = errors.New("master data not found")
 	ErrDuplicate    = errors.New("master data duplicate")
 	ErrInvalidInput = errors.New("master data invalid input")
+	ErrForeignKey   = errors.New("master data foreign key invalid")
 )
 
 type Field struct {
-	Name     string
-	APIName  string
-	Required bool
+	Name          string
+	APIName       string
+	Type          string
+	Required      bool
+	Nullable      bool
+	Min           *float64
+	Max           *float64
+	MaxLength     int
+	AllowedValues []string
 }
 
 func (f Field) RequestName() string {

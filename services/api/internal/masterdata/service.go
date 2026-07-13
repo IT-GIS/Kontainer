@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/mail"
+	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -35,6 +37,9 @@ func (s *Service) Get(ctx context.Context, resource Resource, id uuid.UUID) (map
 }
 
 func (s *Service) Create(ctx context.Context, resource Resource, payload map[string]any, actor Actor) (map[string]any, error) {
+	if err := validateKnownFields(resource, payload); err != nil {
+		return nil, err
+	}
 	normalized := normalizePayload(resource, payload)
 	if err := validatePayload(resource, normalized, true); err != nil {
 		return nil, err
@@ -52,13 +57,21 @@ func (s *Service) Create(ctx context.Context, resource Resource, payload map[str
 		if isDuplicateDBError(err) {
 			return nil, ErrDuplicate
 		}
+		if isForeignKeyDBError(err) {
+			return nil, ErrForeignKey
+		}
 		return nil, err
 	}
-	s.audit(ctx, resource, "create", actor, nil, created)
+	if err := s.audit(ctx, resource, "create", actor, nil, created); err != nil {
+		return nil, err
+	}
 	return created, nil
 }
 
 func (s *Service) Update(ctx context.Context, resource Resource, id uuid.UUID, payload map[string]any, actor Actor) (map[string]any, error) {
+	if err := validateKnownFields(resource, payload); err != nil {
+		return nil, err
+	}
 	oldValue, err := s.repo.Get(ctx, resource, id)
 	if err != nil {
 		return nil, err
@@ -81,9 +94,14 @@ func (s *Service) Update(ctx context.Context, resource Resource, id uuid.UUID, p
 		if isDuplicateDBError(err) {
 			return nil, ErrDuplicate
 		}
+		if isForeignKeyDBError(err) {
+			return nil, ErrForeignKey
+		}
 		return nil, err
 	}
-	s.audit(ctx, resource, "update", actor, oldValue, updated)
+	if err := s.audit(ctx, resource, "update", actor, oldValue, updated); err != nil {
+		return nil, err
+	}
 	return updated, nil
 }
 
@@ -96,11 +114,13 @@ func (s *Service) Delete(ctx context.Context, resource Resource, id uuid.UUID, a
 	if err != nil {
 		return nil, err
 	}
-	s.audit(ctx, resource, "delete", actor, oldValue, deleted)
+	if err := s.audit(ctx, resource, "deactivate", actor, oldValue, deleted); err != nil {
+		return nil, err
+	}
 	return deleted, nil
 }
 
-func (s *Service) audit(ctx context.Context, resource Resource, action string, actor Actor, oldValue any, newValue any) {
+func (s *Service) audit(ctx context.Context, resource Resource, action string, actor Actor, oldValue any, newValue any) error {
 	userID := actor.UserID
 	activeRole := actor.ActiveRole
 	var entityID *uuid.UUID
@@ -116,7 +136,7 @@ func (s *Service) audit(ctx context.Context, resource Resource, action string, a
 			}
 		}
 	}
-	_ = s.repo.InsertAudit(ctx, AuditEntry{
+	return s.repo.InsertAudit(ctx, AuditEntry{
 		UserID: &userID, ActiveRole: &activeRole, Action: resource.Name + "." + action, EntityType: resource.Name,
 		EntityID: entityID, OldValue: mustJSON(oldValue), NewValue: mustJSON(newValue), RequestID: actor.RequestID,
 		IPAddress: actor.IPAddress, UserAgent: actor.UserAgent,
@@ -133,20 +153,29 @@ func normalizePayload(resource Resource, payload map[string]any) map[string]any 
 		if !ok {
 			continue
 		}
-		result[field.Name] = normalizeFieldValue(field.Name, value)
+		result[field.Name] = normalizeFieldValue(resource, field, value)
 	}
 	return result
 }
 
-func normalizeFieldValue(field string, value any) any {
+func normalizeFieldValue(resource Resource, field Field, value any) any {
 	if value == nil {
 		return nil
 	}
-	switch field {
+	if text, ok := value.(string); ok {
+		trimmed := strings.TrimSpace(text)
+		if trimmed == "" && !field.Required && field.Name != resource.statusField() {
+			return nil
+		}
+		value = trimmed
+	}
+	switch field.Name {
 	case "payment_term_days", "display_order", "default_interval_months", "level_no", "version_no":
 		switch v := value.(type) {
 		case float64:
 			return int(v)
+		case int:
+			return v
 		case string:
 			if strings.TrimSpace(v) == "" {
 				return nil
@@ -170,64 +199,210 @@ func normalizeFieldValue(field string, value any) any {
 			return trimmed == "1" || strings.EqualFold(trimmed, "true") || strings.EqualFold(trimmed, "yes")
 		}
 	}
-	if text, ok := value.(string); ok {
-		return strings.TrimSpace(text)
-	}
 	return value
 }
-func validatePayload(resource Resource, payload map[string]any, create bool) error {
-	if create {
-		for _, field := range resource.Fields {
-			if !field.Required {
-				continue
-			}
-			if isEmpty(payload[field.Name]) {
-				return fmt.Errorf("%w: %s wajib diisi", ErrInvalidInput, field.RequestName())
-			}
+
+func validateKnownFields(resource Resource, payload map[string]any) error {
+	allowed := map[string]bool{}
+	for _, field := range resource.Fields {
+		allowed[field.Name] = true
+		if field.APIName != "" {
+			allowed[field.APIName] = true
 		}
 	}
-	if len(payload) == 0 {
-		return fmt.Errorf("%w: request body kosong", ErrInvalidInput)
-	}
-	if status, ok := payload["status"]; ok && !isEmpty(status) {
-		value := stringValue(status)
-		if !oneOf(value, resource.allowedStatusValues()) {
-			return fmt.Errorf("%w: status tidak valid", ErrInvalidInput)
-		}
-	}
-	for _, emailField := range []string{"pic_email", "email"} {
-		if email, ok := payload[emailField]; ok && !isEmpty(email) {
-			if _, err := mail.ParseAddress(stringValue(email)); err != nil {
-				return fmt.Errorf("%w: %s tidak valid", ErrInvalidInput, emailField)
-			}
-		}
-	}
-	if value, ok := payload["response_type"]; ok && !isEmpty(value) {
-		if !oneOf(stringValue(value), []string{"ok_not_ok", "yes_no", "text", "number", "date", "photo_required", "not_applicable"}) {
-			return fmt.Errorf("%w: response_type tidak valid", ErrInvalidInput)
-		}
-	}
-	if value, ok := payload["container_lifecycle"]; ok && !isEmpty(value) {
-		if !oneOf(stringValue(value), []string{"new", "existing"}) {
-			return fmt.Errorf("%w: container_lifecycle tidak valid", ErrInvalidInput)
-		}
-	}
-	if value, ok := payload["location_type"]; ok && !isEmpty(value) {
-		if !oneOf(stringValue(value), []string{"depot", "yard", "port", "warehouse", "factory", "customer_site", "other"}) {
-			return fmt.Errorf("%w: location_type tidak valid", ErrInvalidInput)
-		}
-	}
-	if value, ok := payload["face"]; ok && !isEmpty(value) {
-		if !oneOf(stringValue(value), []string{"left", "right", "front", "door", "roof", "floor", "understructure"}) {
-			return fmt.Errorf("%w: face tidak valid", ErrInvalidInput)
-		}
-	}
-	if value, ok := payload["container_size"]; ok && !isEmpty(value) {
-		if !oneOf(stringValue(value), []string{"all", "20", "40", "45"}) {
-			return fmt.Errorf("%w: container_size tidak valid", ErrInvalidInput)
+	for key := range payload {
+		if !allowed[key] {
+			return fmt.Errorf("%w: field %s tidak dikenal", ErrInvalidInput, key)
 		}
 	}
 	return nil
+}
+
+func validatePayload(resource Resource, payload map[string]any, create bool) error {
+	if len(payload) == 0 {
+		return fmt.Errorf("%w: request body kosong", ErrInvalidInput)
+	}
+	for _, field := range resource.Fields {
+		value, exists := payload[field.Name]
+		if create && field.Required && isEmpty(value) {
+			return fmt.Errorf("%w: %s wajib diisi", ErrInvalidInput, field.RequestName())
+		}
+		if !create && exists && field.Required && isEmpty(value) {
+			return fmt.Errorf("%w: %s wajib diisi", ErrInvalidInput, field.RequestName())
+		}
+		if !exists || isEmpty(value) {
+			continue
+		}
+		if err := validateFieldValue(resource, field, value); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateFieldValue(resource Resource, field Field, value any) error {
+	if field.Name == resource.statusField() {
+		if resource.statusField() == "is_active" {
+			if _, ok := value.(bool); !ok {
+				return fmt.Errorf("%w: status aktif harus boolean", ErrInvalidInput)
+			}
+		} else {
+			status := stringValue(value)
+			if !oneOf(status, resource.allowedStatusValues()) {
+				return fmt.Errorf("%w: status tidak valid", ErrInvalidInput)
+			}
+		}
+	}
+	if strings.HasSuffix(field.Name, "_id") {
+		if _, err := uuid.Parse(stringValue(value)); err != nil {
+			return fmt.Errorf("%w: %s harus UUID", ErrInvalidInput, field.RequestName())
+		}
+	}
+	switch effectiveFieldType(field) {
+	case "email":
+		if _, err := mail.ParseAddress(stringValue(value)); err != nil {
+			return fmt.Errorf("%w: %s tidak valid", ErrInvalidInput, field.RequestName())
+		}
+	case "url":
+		parsed, err := url.ParseRequestURI(stringValue(value))
+		if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+			return fmt.Errorf("%w: %s tidak valid", ErrInvalidInput, field.RequestName())
+		}
+	case "tel":
+		phone := stringValue(value)
+		if len(phone) > effectiveMaxLength(field, 50) {
+			return fmt.Errorf("%w: %s terlalu panjang", ErrInvalidInput, field.RequestName())
+		}
+	case "date":
+		if _, err := time.Parse("2006-01-02", stringValue(value)); err != nil {
+			return fmt.Errorf("%w: %s harus tanggal YYYY-MM-DD", ErrInvalidInput, field.RequestName())
+		}
+	case "number", "decimal":
+		number, ok := numericValue(value)
+		if !ok {
+			return fmt.Errorf("%w: %s harus angka", ErrInvalidInput, field.RequestName())
+		}
+		min, max := effectiveNumericBounds(field)
+		if min != nil && number < *min {
+			return fmt.Errorf("%w: %s kurang dari batas minimum", ErrInvalidInput, field.RequestName())
+		}
+		if max != nil && number > *max {
+			return fmt.Errorf("%w: %s melewati batas maksimum", ErrInvalidInput, field.RequestName())
+		}
+	}
+	if maxLength := effectiveMaxLength(field, 0); maxLength > 0 && len(stringValue(value)) > maxLength {
+		return fmt.Errorf("%w: %s terlalu panjang", ErrInvalidInput, field.RequestName())
+	}
+	allowed := effectiveAllowedValues(resource, field)
+	if len(allowed) > 0 && !oneOf(stringValue(value), allowed) {
+		return fmt.Errorf("%w: %s tidak valid", ErrInvalidInput, field.RequestName())
+	}
+	return nil
+}
+
+func effectiveFieldType(field Field) string {
+	if field.Type != "" {
+		return field.Type
+	}
+	switch field.Name {
+	case "pic_email", "email":
+		return "email"
+	case "pic_phone", "phone":
+		return "tel"
+	case "website":
+		return "url"
+	case "valid_from", "valid_until", "manufacture_date", "application_date", "client_letter_date", "next_examination_date":
+		return "date"
+	case "gps_latitude", "gps_longitude":
+		return "decimal"
+	case "payment_term_days", "display_order", "default_interval_months", "level_no", "version_no":
+		return "number"
+	}
+	return "text"
+}
+
+func effectiveAllowedValues(resource Resource, field Field) []string {
+	if len(field.AllowedValues) > 0 {
+		return field.AllowedValues
+	}
+	switch field.Name {
+	case resource.statusField():
+		if resource.statusField() == "is_active" {
+			return nil
+		}
+		return resource.allowedStatusValues()
+	case "response_type":
+		return []string{"ok_not_ok", "yes_no", "text", "number", "date", "photo_required", "not_applicable"}
+	case "container_lifecycle":
+		return []string{"new", "existing"}
+	case "location_type":
+		return []string{"depot", "yard", "port", "warehouse", "factory", "customer_site", "other"}
+	case "face":
+		return []string{"left", "right", "front", "door", "roof", "floor", "understructure"}
+	case "container_size":
+		return []string{"all", "20", "40", "45"}
+	case "severity_default":
+		return []string{"minor", "major", "critical"}
+	case "badge_tone":
+		return []string{"neutral", "success", "warning", "danger"}
+	case "final_fitness_result_mapping":
+		return []string{"pending", "fit", "unfit"}
+	case "restriction_status_mapping":
+		return []string{"none", "suspended", "prohibited", "released"}
+	case "applies_to":
+		return []string{"inspection", "finding", "test", "repair", "reinspection", "document"}
+	}
+	return nil
+}
+
+func effectiveNumericBounds(field Field) (*float64, *float64) {
+	if field.Min != nil || field.Max != nil {
+		return field.Min, field.Max
+	}
+	switch field.Name {
+	case "gps_latitude":
+		min, max := -90.0, 90.0
+		return &min, &max
+	case "gps_longitude":
+		min, max := -180.0, 180.0
+		return &min, &max
+	case "payment_term_days", "display_order":
+		min := 0.0
+		return &min, nil
+	case "default_interval_months", "level_no", "version_no":
+		min := 1.0
+		return &min, nil
+	}
+	return nil, nil
+}
+
+func effectiveMaxLength(field Field, fallback int) int {
+	if field.MaxLength > 0 {
+		return field.MaxLength
+	}
+	switch field.Name {
+	case "pic_phone", "phone":
+		return 50
+	case "website":
+		return 150
+	}
+	return fallback
+}
+
+func numericValue(value any) (float64, bool) {
+	switch v := value.(type) {
+	case int:
+		return float64(v), true
+	case int64:
+		return float64(v), true
+	case float64:
+		return v, true
+	case string:
+		parsed, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
+		return parsed, err == nil
+	default:
+		return 0, false
+	}
 }
 
 func mergeForDuplicate(resource Resource, oldValue map[string]any, payload map[string]any) map[string]any {
@@ -277,5 +452,11 @@ func parseMapUUID(item map[string]any, key string) (uuid.UUID, bool) {
 }
 
 func isDuplicateDBError(err error) bool {
-	return strings.Contains(strings.ToLower(err.Error()), "duplicate key") || strings.Contains(strings.ToLower(err.Error()), "unique constraint") || strings.Contains(strings.ToLower(err.Error()), "duplicate entry")
+	text := strings.ToLower(err.Error())
+	return strings.Contains(text, "duplicate key") || strings.Contains(text, "unique constraint") || strings.Contains(text, "duplicate entry")
+}
+
+func isForeignKeyDBError(err error) bool {
+	text := strings.ToLower(err.Error())
+	return strings.Contains(text, "foreign key constraint") || strings.Contains(text, "violates foreign key")
 }
