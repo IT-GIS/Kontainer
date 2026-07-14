@@ -3267,3 +3267,41 @@ pre {
     grid-template-columns: 1fr;
   }
 }
+
+.client-location-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.client-location-options label,
+.client-checkbox-control {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  padding: 0.65rem;
+  background: #fff;
+}
+
+.client-location-options input,
+.client-checkbox-control input {
+  width: auto;
+  margin-top: 0.15rem;
+}
+
+.client-location-options span,
+.client-location-options small {
+  display: block;
+}
+
+.client-location-options small {
+  color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .client-location-options {
+    grid-template-columns: 1fr;
+  }
+}

@@ -38,6 +38,27 @@ export function useUnsavedChangesGuard({
     setConfirmationOpen(true);
   }, [active]);
 
+  useEffect(() => {
+    if (!active) return;
+
+    const handleInternalNavigation = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const anchor = target.closest("a[href]");
+      if (!(anchor instanceof HTMLAnchorElement) || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
+
+      const nextUrl = new URL(anchor.href, window.location.href);
+      if (nextUrl.origin !== window.location.origin || nextUrl.href === window.location.href) return;
+
+      event.preventDefault();
+      requestNavigation(() => window.location.assign(nextUrl.href));
+    };
+
+    document.addEventListener("click", handleInternalNavigation, true);
+    return () => document.removeEventListener("click", handleInternalNavigation, true);
+  }, [active, requestNavigation]);
+
   const confirmLeave = useCallback(() => {
     const pending = pendingNavigationRef.current;
     pendingNavigationRef.current = null;

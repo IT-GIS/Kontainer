@@ -253,3 +253,112 @@ Sengaja tidak dikerjakan pada UI-B.2:
 - commit dan push.
 
 Risiko tersisa hanya verifikasi visual/interaksi browser yang terblokir oleh runtime. Tahap berikutnya tetap UI-C dan belum dimulai.
+
+
+## 14. Koreksi UI-B.2.1 — Corrective Hardening
+
+Baseline koreksi adalah commit `e211e34ba9504767cc6228fab16054cc301d5bb5`. UI-B.2.1 hanya mengubah frontend Admin Kelaikan dan laporan ini; tidak ada backend, database, migration, SQL, schema, seed, commit, atau push.
+
+File implementasi yang diubah:
+
+- `apps/web/components/ui/unsaved-changes-guard.tsx`
+- `apps/web/components/ui/searchable-select.tsx`
+- `apps/web/components/fitness/client-master-data/client-pages.tsx`
+- `apps/web/components/fitness/client-master-data/client-master-workspace.tsx`
+- `apps/web/components/fitness/ui-b-interaction-preview.tsx`
+- `apps/web/app/globals.css`
+- `docs/UI_STAGE_B2_CLIENT_MASTER_DATA_REPORT.md`
+
+Koreksi yang diterapkan:
+
+- UnsavedChangesGuard sekarang mencegat link same-origin saat form Klien dirty. Cakupannya meliputi sidebar, breadcrumb, tab, sticky action, dan link internal lain; modifier-click, target eksternal, target `_blank`, download, serta URL yang sama tetap dibiarkan.
+- Semua mekanisme penutupan Drawer Master Data memakai `requestClose` yang sama: tombol Batal, tombol X, Escape, dan backdrop. Ketika form dirty, Drawer tetap terbuka sampai pengguna mengonfirmasi "Buang perubahan".
+- Navigasi link internal dari Drawer dirty tetap dilindungi UnsavedChangesGuard.
+- Tombol Terapkan dari `onSubmit={() => undefined}` dihapus. Daftar Klien, pemilihan klien, empat daftar Master Data, dan Mapping Legacy langsung memfilter pada perubahan field.
+- Editor generik diganti menjadi empat form terpisah: Lokasi Klien, Personel/PIC Klien, Jenis Peti Kemas, dan Referensi Pemeriksaan.
+- SearchableSelect memperoleh opsi `showLabel={false}` ketika label sudah disediakan oleh FormField, sehingga tidak ada label visual ganda.
+
+Field form Lokasi Klien:
+
+- kode dan nama lokasi;
+- jenis lokasi;
+- alamat, kota/kabupaten, provinsi, dan kode pos;
+- PIC lokasi, telepon, email;
+- catatan akses dan status.
+
+Field form Personel/PIC Klien:
+
+- nama lengkap, jabatan, dan tipe personel pihak klien;
+- satu atau lebih lokasi terkait yang hanya berasal dari lokasi milik clientId aktif;
+- email, telepon, dan status.
+
+Surveyor GIFT tidak menjadi tipe atau pilihan. "Surveyor Internal Klien" tetap merupakan personel pihak klien sesuai dokumen terpadu.
+
+Field form Jenis Peti Kemas:
+
+- kode jenis, nama jenis, ukuran, deskripsi, dan status.
+
+Field Referensi Pemeriksaan:
+
+- kode, nama/label, deskripsi, dan status untuk seluruh section;
+- urutan untuk Area Pemeriksaan;
+- area terkait untuk Komponen Struktur;
+- komponen terkait untuk Kriteria Kerusakan/Ketidaksesuaian;
+- dampak visual untuk Tingkat Keparahan;
+- satuan opsional untuk Parameter Pengujian;
+- kebutuhan presentasi untuk Kategori Bukti Foto;
+- nama dan deskripsi untuk Rekomendasi Pemeriksaan.
+
+Tidak ada checklist seed, batas teknis, keputusan otomatis, schema database baru, atau mutation backend. Mapping Legacy tetap read-only.
+
+### Isolasi dan compatibility setelah koreksi
+
+- Setiap record lokal baru tetap mendapatkan `clientId` dari route, bukan dari kontrol form.
+- Daftar lokasi pada form Personel difilter ulang terhadap `client.id`.
+- Referensi dan Mapping Legacy difilter berdasarkan section aktif serta clientId yang sudah difilter oleh async mock service.
+- Seluruh route baru, route placeholder, compatibility route, branding GIFT, dan struktur sidebar 12 menu tetap dipertahankan.
+
+### Validasi aktual UI-B.2.1
+
+- `npm run typecheck --workspace apps/web`: LULUS.
+- `npm run build --workspace apps/web`: LULUS; Next.js mengompilasi, menjalankan TypeScript, dan menghasilkan 60 halaman.
+- `git diff --check`: LULUS.
+- Hash `apps/web/next-env.d.ts` setelah dipulihkan: `7AD303E40D4FDDF44F156129E397511953A71481C5CFD86B1862649AAAF240CC`; blob Git tetap sama dengan baseline.
+- Pencarian `onSubmit={() => undefined}`: 0 temuan.
+- Scope diff: hanya frontend `apps/web` dan laporan; 0 file backend/database/migration/SQL/seed.
+
+### Smoke test aktual UI-B.2.1
+
+HTTP smoke test server lokal:
+
+- 66 route diuji;
+- 66 route HTTP 200;
+- 0 gagal.
+
+Cakupan meliputi Daftar/create/detail Klien, pemilihan Klien, seluruh enam tab utama, tujuh section Referensi dan empat section Mapping Legacy untuk dua klien, invalid tab/section, unknown clientId, seluruh placeholder sidebar Kelaikan, serta seluruh compatibility route lama.
+
+Isolasi payload:
+
+- client-nusantara memuat "Depo Nusantara Priok" dan tidak memuat "Terminal Samudra Perak";
+- client-samudra memuat "Terminal Samudra Perak" dan tidak memuat "Depo Nusantara Priok";
+- kedua payload tidak menampilkan tombol Terapkan.
+
+Pemeriksaan source-level interaksi dan responsive:
+
+- form Klien memasang guard pada state dirty dan guard mencegat link internal di capture phase;
+- Drawer mengarahkan Batal/X/Escape/backdrop ke callback close yang sama, dan callback tersebut membuka confirmation ketika dirty;
+- pembatalan confirmation mempertahankan Drawer, sedangkan konfirmasi discard baru menutup Drawer;
+- seluruh FilterBar terkait memakai `onChange` langsung;
+- komponen tabel/card, tab horizontal, Drawer, sticky action, sidebar breakpoint, context strip, dan grid lokasi memiliki aturan desktop/tablet/mobile;
+- clientId pada Drawer ditampilkan read-only dan tidak mempunyai kontrol pemindahan klien.
+
+Browser in-app interaktif dicoba, tetapi runtime menolak inisialisasi karena metadata `sandboxPolicy` tidak tersedia. Karena itu klik/focus visual, screenshot breakpoint, dan pemeriksaan console hydration tidak dapat dibuktikan melalui browser automation pada sesi UI-B.2.1. Bukti yang tersedia adalah typecheck/build, HTTP route matrix, isolasi payload, dan pemeriksaan jalur event komponen. Keterbatasan ini tidak disamarkan sebagai uji browser lulus.
+
+### Hal yang belum dikerjakan setelah UI-B.2.1
+
+- UI-C dan form Permohonan penuh belum dimulai.
+- UI Surveyor baru tidak dibuat.
+- Backend, database, migration, SQL, schema, dan seed tidak diubah.
+- Persistence setelah reload tetap sengaja belum tersedia.
+- Workshop, billing, invoice, PDF final, QR, dan verifikasi publik tetap tidak diaktifkan.
+- Verifikasi browser interaktif penuh masih menunggu runtime browser internal yang dapat diinisialisasi.

@@ -26,6 +26,7 @@ type SearchableSelectProps = {
   clearable?: boolean;
   id?: string;
   name?: string;
+  showLabel?: boolean;
 };
 
 export function SearchableSelect({
@@ -43,7 +44,8 @@ export function SearchableSelect({
   emptyText = "Data tidak ditemukan.",
   clearable,
   id,
-  name
+  name,
+  showLabel = true
 }: SearchableSelectProps) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
@@ -149,10 +151,12 @@ export function SearchableSelect({
 
   return (
     <div className={`ui-searchable-select ${disabled ? "ui-control-disabled" : ""}`} ref={rootRef}>
-      <label className="ui-form-label" htmlFor={inputId}>
-        {label}
-        {required ? <strong aria-label="wajib">*</strong> : null}
-      </label>
+      {showLabel ? (
+        <label className="ui-form-label" htmlFor={inputId}>
+          {label}
+          {required ? <strong aria-label="wajib">*</strong> : null}
+        </label>
+      ) : null}
       <div className={`ui-combobox-shell ${error ? "ui-control-error" : ""}`}>
         <input
           aria-activedescendant={open ? activeOptionId : undefined}

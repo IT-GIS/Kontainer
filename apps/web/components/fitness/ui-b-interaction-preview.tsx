@@ -92,6 +92,7 @@ export function UiBInteractionPreview() {
           clearable
           id="owner-select"
           label="Pemilik"
+          showLabel={false}
           onChange={setSelectedOwner}
           options={options}
           value={selectedOwner}

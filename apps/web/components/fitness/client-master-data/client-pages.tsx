@@ -112,7 +112,6 @@ export function FitnessClientsList({ initialClients }: { initialClients: Fitness
         fields={fields}
         onChange={(id, value) => setFilters((current) => ({ ...current, [id]: value }))}
         onReset={() => setFilters({})}
-        onSubmit={() => undefined}
       />
       {visibleClients.length > 0 ? (
         <ResponsiveTableCards columns={columns} rows={visibleClients} getRowId={(row) => row.id} getRowTitle={(row) => row.name} />
@@ -192,6 +191,7 @@ export function FitnessClientForm({ client }: { client?: FitnessClientDetail }) 
             <SearchableSelect
               id="client-status"
               label="Status"
+              showLabel={false}
               value={form.status}
               onChange={(value) => update("status", value ?? "Aktif")}
               options={[{ value: "Aktif", label: "Aktif" }, { value: "Tidak Aktif", label: "Tidak Aktif" }]}
@@ -261,7 +261,7 @@ export function FitnessClientPicker({ clients, targetTab = "summary", targetSect
       <ClientWorkspaceTabs activeHref="/fitness/client-master-data" />
       <PageHeader eyebrow="Klien & Master Data" title="Pilih Klien" description="Pilih klien terlebih dahulu agar seluruh data turunan tetap terisolasi." meta={<span>{clients.length} klien mock tersedia</span>} />
       <div className="client-isolation-notice"><Database size={18} /><span>Lokasi, personel, jenis peti kemas, referensi, dan mapping dimuat berdasarkan <strong>clientId</strong>.</span></div>
-      <FilterBar fields={fields} onChange={(id, value) => setFilters((current) => ({ ...current, [id]: value }))} onReset={() => setFilters({})} onSubmit={() => undefined} />
+      <FilterBar fields={fields} onChange={(id, value) => setFilters((current) => ({ ...current, [id]: value }))} onReset={() => setFilters({})} />
       {visible.length ? <ResponsiveTableCards columns={columns} rows={visible} getRowId={(row) => row.id} getRowTitle={(row) => row.name} /> : <EmptyState title="Klien tidak ditemukan" description="Reset filter untuk memilih klien lain." />}
     </div>
   );
