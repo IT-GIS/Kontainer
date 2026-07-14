@@ -1,28 +1,24 @@
+import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
+
+type HeaderAction = {
+  label: string;
+  icon?: LucideIcon;
+  href?: string;
+  onClick?: () => void;
+  disabled?: boolean;
+};
 
 type PageHeaderProps = {
   title: string;
   description?: string;
   eyebrow?: string;
   meta?: React.ReactNode;
-  action?: {
-    label: string;
-    icon?: LucideIcon;
-    onClick: () => void;
-    disabled?: boolean;
-  };
-  secondaryAction?: {
-    label: string;
-    icon?: LucideIcon;
-    onClick: () => void;
-    disabled?: boolean;
-  };
+  action?: HeaderAction;
+  secondaryAction?: HeaderAction;
 };
 
 export function PageHeader({ title, description, eyebrow, meta, action, secondaryAction }: PageHeaderProps) {
-  const Icon = action?.icon;
-  const SecondaryIcon = secondaryAction?.icon;
-
   return (
     <div className="page-header">
       <div>
@@ -33,20 +29,17 @@ export function PageHeader({ title, description, eyebrow, meta, action, secondar
       </div>
       {action || secondaryAction ? (
         <div className="page-header-actions">
-          {secondaryAction ? (
-            <button className="secondary-button" onClick={secondaryAction.onClick} disabled={secondaryAction.disabled}>
-              {SecondaryIcon ? <SecondaryIcon size={18} /> : null}
-              <span>{secondaryAction.label}</span>
-            </button>
-          ) : null}
-          {action ? (
-            <button className="primary-button" onClick={action.onClick} disabled={action.disabled}>
-              {Icon ? <Icon size={18} /> : null}
-              <span>{action.label}</span>
-            </button>
-          ) : null}
+          {secondaryAction ? <HeaderActionControl action={secondaryAction} className="secondary-button" /> : null}
+          {action ? <HeaderActionControl action={action} className="primary-button" /> : null}
         </div>
       ) : null}
     </div>
   );
+}
+
+function HeaderActionControl({ action, className }: { action: HeaderAction; className: string }) {
+  const Icon = action.icon;
+  const content = <>{Icon ? <Icon size={18} /> : null}<span>{action.label}</span></>;
+  if (action.href && !action.disabled) return <Link className={className} href={action.href}>{content}</Link>;
+  return <button className={className} onClick={action.onClick} disabled={action.disabled} type="button">{content}</button>;
 }

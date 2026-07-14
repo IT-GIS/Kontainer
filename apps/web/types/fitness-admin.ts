@@ -277,13 +277,117 @@ export type FitnessLegacyMappingRecord = {
   updatedAt: string;
 };
 
+export type FitnessApplicationStatus = "Draf" | "Diajukan" | "Berjalan" | "Menunggu Review" | "Perlu Perbaikan" | "Selesai";
+
 export type FitnessApplicationSummary = {
   id: string;
   clientId: string;
   applicationNumber: string;
+  applicationDate: string;
   clientName: string;
-  status: string;
+  applicantName: string;
+  ownerUserName: string;
+  locationId: string;
+  locationName: string;
+  containerCount: number;
+  completeness: { complete: number; total: number };
+  processStage: string;
+  status: FitnessApplicationStatus;
   updatedAt: string;
+};
+
+export type FitnessApplicationContainerDraft = {
+  id: string;
+  containerNumber: string;
+  containerTypeId: string;
+  containerTypeName?: string;
+  numberValid: boolean;
+  technicalComplete: boolean;
+};
+
+export type FitnessApplicationAttachment = {
+  id: string;
+  category: "Surat Permohonan" | "Daftar Peti Kemas" | "Kepemilikan/Penguasaan" | "Teknis" | "Lainnya";
+  name: string;
+  sizeLabel: string;
+};
+
+export type FitnessApplicationDraft = {
+  applicationNumber: string;
+  clientId: string;
+  applicantName: string;
+  ownerUserName: string;
+  ownerUserAddress: string;
+  ownerUserPic: string;
+  ownerUserPhone: string;
+  ownerUserEmail: string;
+  applicationDate: string;
+  serviceCategory: string;
+  letterNumber: string;
+  letterDate: string;
+  locationId: string;
+  picPersonnelId: string;
+  plannedInspectionDate: string;
+  containers: FitnessApplicationContainerDraft[];
+  specialInstructions: string;
+  adminNotes: string;
+  referenceIds: string[];
+  attachments: FitnessApplicationAttachment[];
+};
+
+export type FitnessApplicationReadinessItem = { id: string; label: string; ready: boolean; detail: string };
+export type FitnessApplicationReadiness = {
+  applicationId: string; clientId: string; ready: boolean; readyCount: number; totalCount: number;
+  items: FitnessApplicationReadinessItem[];
+};
+
+export type FitnessApplicationDetail = FitnessApplicationSummary & {
+  applicantAddress: string;
+  applicantPicName: string;
+  applicantPhone: string;
+  applicantEmail: string;
+  serviceCategory: string;
+  letterNumber: string;
+  letterDate: string;
+  picPersonnelId: string;
+  picName: string;
+  picPhone: string;
+  plannedInspectionDate: string;
+  specialInstructions: string;
+  adminNotes: string;
+  containers: FitnessApplicationContainerDraft[];
+  referenceIds: string[];
+  attachments: FitnessApplicationAttachment[];
+  progress: Array<{ id: string; label: string; description: string; status: "complete" | "current" | "incomplete" | "warning" | "error" }>;
+  readiness: FitnessApplicationReadiness;
+  history: FitnessClientActivity[];
+};
+
+export type FitnessDashboardMetric = {
+  id: string; clientId?: string; label: string; value: number; description: string; tone: FitnessUiBTone;
+  icon: "clients" | "applications" | "inspection" | "repair" | "reinspection" | "fit" | "unfit";
+};
+export type FitnessDashboardAction = {
+  id: string; clientId?: string; label: string; count: number; description: string; href: string;
+  tone: "neutral" | "success" | "warning" | "danger" | "info";
+  icon: "client" | "application" | "container" | "assignment" | "review" | "repair" | "reinspection" | "document";
+};
+export type FitnessDashboardActivity = {
+  id: string; clientId?: string; title: string; description: string; time: string; period: "7-days" | "30-days" | "quarter";
+  tone: "neutral" | "success" | "warning" | "danger";
+};
+export type FitnessDashboardQuickAction = {
+  id: string;
+  label: string;
+  description: string;
+  href: string;
+  icon: "client" | "master" | "application" | "import" | "assignment" | "review";
+};
+export type FitnessDashboardSnapshot = {
+  metrics: FitnessDashboardMetric[];
+  actions: FitnessDashboardAction[];
+  activities: FitnessDashboardActivity[];
+  quickActions: FitnessDashboardQuickAction[];
 };
 
 export type FitnessContainerSummary = {

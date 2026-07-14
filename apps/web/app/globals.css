@@ -3305,3 +3305,322 @@ pre {
     grid-template-columns: 1fr;
   }
 }
+
+/* UI-C Dashboard Admin dan Permohonan */
+.fitness-dashboard-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.fitness-dashboard-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+  gap: 1rem;
+}
+
+.fitness-dashboard-quick {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.application-create-page,
+.application-detail-page {
+  min-width: 0;
+}
+
+.application-step-panel {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: #fff;
+  padding: 1.2rem;
+}
+
+.application-step-heading {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.9rem;
+}
+
+.application-step-heading > span {
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.application-step-heading h2 {
+  margin: 0.25rem 0;
+}
+
+.application-step-heading p,
+.application-reference-fieldset p {
+  color: var(--muted);
+}
+
+.application-step-navigation {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.application-container-step,
+.application-attachments-step,
+.application-summary-review {
+  display: grid;
+  gap: 1rem;
+}
+
+.application-container-row {
+  display: grid;
+  grid-template-columns: minmax(190px, 1fr) minmax(220px, 1fr) auto auto;
+  align-items: end;
+  gap: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  padding: 0.85rem;
+}
+
+.application-valid,
+.application-invalid {
+  min-height: 2.6rem;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.application-valid {
+  color: #047857;
+}
+
+.application-invalid {
+  color: #b45309;
+}
+
+.application-empty-inline,
+.application-stage-note {
+  border: 1px dashed var(--border);
+  border-radius: 0.8rem;
+  color: var(--muted);
+  padding: 1rem;
+}
+
+.application-reference-fieldset {
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  padding: 1rem;
+}
+
+.application-reference-fieldset legend {
+  padding: 0 0.35rem;
+  font-weight: 750;
+}
+
+.application-reference-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.application-reference-grid label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+}
+
+.application-reference-grid input {
+  width: auto;
+  margin-top: 0.2rem;
+}
+
+.application-reference-grid span,
+.application-reference-grid small {
+  display: block;
+}
+
+.application-reference-grid small {
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+
+.application-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.application-upload-grid > div {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.application-upload-grid button {
+  justify-self: start;
+}
+
+.application-attachment-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.application-attachment-list > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.application-summary-banner {
+  display: flex;
+  gap: 0.75rem;
+  border: 1px solid #86efac;
+  border-radius: 0.85rem;
+  background: #f0fdf4;
+  color: #14532d;
+  padding: 1rem;
+}
+
+.application-summary-banner span {
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.application-summary-review > section,
+.application-detail-facts {
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  padding: 1rem;
+}
+
+.application-summary-review dl,
+.application-detail-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.application-summary-review dl > div,
+.application-detail-facts > div {
+  min-width: 0;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.55rem;
+}
+
+.application-summary-review dt,
+.application-detail-facts dt {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.application-summary-review dd,
+.application-detail-facts dd {
+  margin: 0.2rem 0 0;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.application-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(330px, 0.85fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.application-readiness ul {
+  display: grid;
+  gap: 0.55rem;
+  margin: 1rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.application-readiness li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  padding: 0.65rem;
+}
+
+.application-readiness li span,
+.application-readiness li small {
+  display: block;
+}
+
+.application-readiness li small {
+  color: var(--muted);
+  margin-top: 0.15rem;
+}
+
+.application-ready > svg {
+  color: #047857;
+}
+
+.application-not-ready > svg {
+  color: #b45309;
+}
+
+.application-stage-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 1100px) {
+  .fitness-dashboard-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fitness-dashboard-split,
+  .application-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .application-container-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .fitness-dashboard-actions,
+  .fitness-dashboard-quick,
+  .application-reference-grid,
+  .application-upload-grid,
+  .application-summary-review dl,
+  .application-detail-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .application-step-panel {
+    padding: 0.85rem;
+  }
+
+  .application-container-row {
+    grid-template-columns: 1fr;
+  }
+
+  .application-step-navigation {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .application-step-navigation button,
+  .application-upload-grid button,
+  .application-readiness > a,
+  .application-readiness > button {
+    justify-content: center;
+    width: 100%;
+  }
+}
