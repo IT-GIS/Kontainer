@@ -125,3 +125,173 @@ export type FitnessUiBPreview = {
   filters: FitnessUiBFilter[];
   attachments: FitnessUiBAttachment[];
 };
+
+export type FitnessClientStatus = "Aktif" | "Tidak Aktif";
+export type FitnessClientCompleteness = "Lengkap" | "Belum Lengkap";
+
+export type FitnessClientSummary = {
+  id: string;
+  code: string;
+  name: string;
+  shortName: string;
+  addressShort: string;
+  city: string;
+  province: string;
+  primaryContactName: string;
+  primaryContactTitle: string;
+  email: string;
+  phone: string;
+  locationCount: number;
+  personnelCount: number;
+  containerTypeCount: number;
+  referenceCount: number;
+  containerCount: number;
+  status: FitnessClientStatus;
+  completeness: FitnessClientCompleteness;
+  updatedAt: string;
+};
+
+export type FitnessClientDetail = FitnessClientSummary & {
+  address: string;
+  postalCode: string;
+  legalIdentity: string;
+  adminNotes: string;
+  accessInformation: string;
+};
+
+export type FitnessClientActivity = {
+  id: string;
+  clientId: string;
+  title: string;
+  description: string;
+  time: string;
+  tone: "neutral" | "success" | "warning" | "danger";
+};
+
+export type FitnessClientMasterSummary = {
+  clientId: string;
+  activeLocationCount: number;
+  activePersonnelCount: number;
+  containerTypeCount: number;
+  inspectionReferenceCount: number;
+  legacyMappingCount: number;
+  completeness: FitnessClientCompleteness;
+  updatedAt: string;
+  activities: FitnessClientActivity[];
+};
+
+export type FitnessClientLocationType =
+  | "Depo"
+  | "Gudang"
+  | "Terminal"
+  | "Pelabuhan"
+  | "Lokasi Pemeriksaan"
+  | "Lokasi Perbaikan Eksternal"
+  | "Lainnya";
+
+export type FitnessClientLocation = {
+  id: string;
+  clientId: string;
+  code: string;
+  name: string;
+  type: FitnessClientLocationType;
+  address: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  contactName: string;
+  phone: string;
+  email: string;
+  accessNotes: string;
+  status: FitnessClientStatus;
+  updatedAt: string;
+};
+
+export type FitnessClientPersonnelType =
+  | "PIC Utama"
+  | "PIC Lokasi"
+  | "Penanggung Jawab Peti Kemas"
+  | "Personel Teknis"
+  | "Pendamping Pemeriksaan"
+  | "Surveyor Internal Klien";
+
+export type FitnessClientPersonnel = {
+  id: string;
+  clientId: string;
+  name: string;
+  title: string;
+  type: FitnessClientPersonnelType;
+  locationIds: string[];
+  locationNames: string[];
+  email: string;
+  phone: string;
+  status: FitnessClientStatus;
+  updatedAt: string;
+};
+
+export type FitnessClientContainerType = {
+  id: string;
+  clientId: string;
+  code: string;
+  name: string;
+  size: string;
+  description: string;
+  status: FitnessClientStatus;
+  updatedAt: string;
+};
+
+export type FitnessInspectionReferenceSection =
+  | "inspection-areas"
+  | "structural-components"
+  | "damage-criteria"
+  | "finding-severities"
+  | "test-parameters"
+  | "photo-categories"
+  | "inspection-recommendations";
+
+export type FitnessClientInspectionReference = {
+  id: string;
+  clientId: string;
+  section: FitnessInspectionReferenceSection;
+  code: string;
+  name: string;
+  description: string;
+  relatedTo?: string;
+  unit?: string;
+  presentationRequired?: boolean;
+  order?: number;
+  status: FitnessClientStatus;
+  updatedAt: string;
+};
+
+export type FitnessLegacyMappingSection = "location" | "component" | "damage" | "material";
+
+export type FitnessLegacyMappingRecord = {
+  id: string;
+  clientId: string;
+  section: FitnessLegacyMappingSection;
+  legacyCode: string;
+  legacyName: string;
+  mappedTarget: string | null;
+  mappingStatus: "Terpetakan" | "Belum Terpetakan";
+  updatedAt: string;
+};
+
+export type FitnessApplicationSummary = {
+  id: string;
+  clientId: string;
+  applicationNumber: string;
+  clientName: string;
+  status: string;
+  updatedAt: string;
+};
+
+export type FitnessContainerSummary = {
+  id: string;
+  clientId: string;
+  containerNumber: string;
+  clientName: string;
+  containerTypeId: string;
+  processStage: string;
+  updatedAt: string;
+};

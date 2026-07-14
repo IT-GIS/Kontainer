@@ -1,9 +1,18 @@
 import {
-  Archive, BarChart3, Bell, Building2, ClipboardCheck, ClipboardList, Container,
-  Database, FileText, Gauge, History, Upload, ListChecks, PenLine, Settings,
-  ShieldCheck, UserCog, UserRoundCheck, Wrench
+  Archive,
+  BarChart3,
+  ClipboardCheck,
+  ClipboardList,
+  Container,
+  FileText,
+  Gauge,
+  Settings,
+  ShieldCheck,
+  UserRoundCheck,
+  UsersRound,
+  Wrench
 } from "lucide-react";
-import type { NavigationGroup, NavigationLink, NavigationRouteMatch, NavigationWorkspace } from "@/constants/navigation";
+import type { NavigationLink, NavigationRouteMatch, NavigationWorkspace } from "@/constants/navigation";
 import type { RoleCode } from "@/types/auth";
 
 const admin: RoleCode[] = ["admin"];
@@ -19,16 +28,7 @@ const n = (
   roles: RoleCode[],
   matches?: NavigationRouteMatch[],
   permissions: string[] = placeholderPermission
-): NavigationLink => ({ kind: "link", id: `${href}#${label}`, label, href, icon, roles, permissions, matches });
-
-const g = (label: string, icon: NavigationLink["icon"], roles: RoleCode[], children: NavigationLink[]): NavigationGroup => ({
-  kind: "group",
-  id: label.toLowerCase().replaceAll(" ", "-"),
-  label,
-  icon,
-  roles,
-  children
-});
+): NavigationLink => ({ kind: "link", id: href + "#" + label, label, href, icon, roles, permissions, matches });
 
 export const containerFitnessAdminWorkspace: NavigationWorkspace = {
   id: "admin",
@@ -36,52 +36,20 @@ export const containerFitnessAdminWorkspace: NavigationWorkspace = {
   roles: ["admin", "supervisor", "management"],
   items: [
     n("Dashboard", "/fitness/dashboard", Gauge, readOnly),
-    g("Permohonan", ClipboardList, admin, [
-      n("Daftar Permohonan", "/fitness/applications", ClipboardList, admin, [
-        { path: "/fitness/applications" },
-        { path: "/fitness/applications/:id", mode: "pattern" }
-      ]),
-      n("Buat Permohonan", "/fitness/applications/create", PenLine, admin),
-      n("Permohonan Belum Lengkap", "/fitness/applications?status=incomplete", ClipboardCheck, admin, [
-        { path: "/fitness/applications", query: { status: "incomplete" } }
-      ])
+    n("Klien & Master Data", "/fitness/clients", UsersRound, admin, [
+      { path: "/fitness/clients", mode: "prefix" },
+      { path: "/fitness/client-master-data", mode: "prefix" },
+      { path: "/fitness/master-data", mode: "prefix" }
     ]),
-    g("Peti Kemas", Container, admin, [
-      n("Daftar Peti Kemas", "/fitness/containers", Container, admin, [
-        { path: "/fitness/containers" },
-        { path: "/fitness/containers/:id", mode: "pattern" }
-      ]),
-      n("Import Peti Kemas", "/fitness/containers/import", Upload, admin),
-      n("Validasi Data Teknis", "/fitness/containers?filter=technical-incomplete", ClipboardCheck, admin, [
-        { path: "/fitness/containers", query: { filter: "technical-incomplete" } }
-      ])
-    ]),
-    g("Penugasan", UserRoundCheck, admin, [
-      n("Belum Ditugaskan", "/fitness/assignments?status=unassigned", UserRoundCheck, admin, [
-        { path: "/fitness/assignments", query: { status: "unassigned" } },
-        { path: "/fitness/assignments" },
-        { path: "/fitness/assignments/:id", mode: "pattern" }
-      ]),
-      n("Penugasan Aktif", "/fitness/assignments?status=active", ClipboardCheck, admin, [
-        { path: "/fitness/assignments", query: { status: "active" } }
-      ]),
-      n("Riwayat Penugasan", "/fitness/assignments?status=history", History, admin, [
-        { path: "/fitness/assignments", query: { status: "history" } }
-      ])
-    ]),
-    n("Monitoring Pemeriksaan", "/fitness/inspections", ClipboardCheck, readOnly),
-    n("Review & Keputusan", "/fitness/reviews", ShieldCheck, reviewer),
-    n("Tindak Lanjut Perbaikan", "/fitness/repair-followups", Wrench, reviewer),
-    n("Dokumen Kelaikan", "/fitness/documents", FileText, reporter),
-    n("Laporan", "/fitness/reports", BarChart3, reporter),
-    n("Master Data", "/fitness/master-data", Database, admin, [{ path: "/fitness/master-data", mode: "prefix" }]),
-    g("Pengaturan", Settings, admin, [
-      n("Profil Badan Usaha", "/settings/company-profile", Building2, admin),
-      n("Pengaturan Penomoran", "/settings/numbering", ListChecks, admin),
-      n("Audit Log", "/settings/audit-log", Bell, admin),
-      n("Manajemen User", "/settings/users", UserCog, admin),
-      { ...n("Role & Permission", "/settings/roles", ShieldCheck, admin), exactRoles: ["super_admin"] }
-    ]),
-    n("Arsip Lama", "/fitness/legacy-archive", Archive, readOnly)
+    n("Permohonan", "/fitness/applications", ClipboardList, admin, [{ path: "/fitness/applications", mode: "prefix" }]),
+    n("Peti Kemas", "/fitness/containers", Container, admin, [{ path: "/fitness/containers", mode: "prefix" }]),
+    n("Penugasan Surveyor", "/fitness/assignments", UserRoundCheck, admin, [{ path: "/fitness/assignments", mode: "prefix" }]),
+    n("Pemeriksaan", "/fitness/inspections", ClipboardCheck, readOnly, [{ path: "/fitness/inspections", mode: "prefix" }]),
+    n("Review & Keputusan", "/fitness/reviews", ShieldCheck, reviewer, [{ path: "/fitness/reviews", mode: "prefix" }]),
+    n("Tindak Lanjut Perbaikan", "/fitness/repair-followups", Wrench, reviewer, [{ path: "/fitness/repair-followups", mode: "prefix" }]),
+    n("Dokumen Kelaikan", "/fitness/documents", FileText, reporter, [{ path: "/fitness/documents", mode: "prefix" }]),
+    n("Laporan", "/fitness/reports", BarChart3, reporter, [{ path: "/fitness/reports", mode: "prefix" }]),
+    n("Pengaturan Internal GIFT", "/settings/company-profile", Settings, admin, [{ path: "/settings", mode: "prefix" }]),
+    n("Arsip Lama", "/fitness/legacy-archive", Archive, readOnly, [{ path: "/fitness/legacy-archive", mode: "prefix" }])
   ]
 };

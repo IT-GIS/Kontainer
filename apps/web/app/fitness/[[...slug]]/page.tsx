@@ -1,30 +1,9 @@
 import { Gauge } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
+import { FitnessMasterCompatibilityNotice, type CompatibilityNoticeProps } from "@/components/fitness/client-master-data/client-pages";
 import { FitnessPlaceholderPage } from "@/components/fitness/fitness-placeholder-page";
 import { AppShell } from "@/components/layout/app-shell";
-import { MasterDataPage } from "@/components/master/master-data-page";
 import { getFitnessPlaceholderByPath, type FitnessPlaceholder } from "@/constants/fitness-admin";
-import { masterResources } from "@/constants/master-data";
-
-const activeMasterDataRoutes: Record<string, { resourceId: keyof typeof masterResources; title: string }> = {
-  "/fitness/master-data/owners": { resourceId: "fitness-owners", title: "Pemilik Peti Kemas" },
-  "/fitness/master-data/manufacturers": { resourceId: "fitness-manufacturers", title: "Pabrik Pembuat" },
-  "/fitness/master-data/locations": { resourceId: "fitness-locations", title: "Lokasi" },
-  "/fitness/master-data/surveyors": { resourceId: "fitness-surveyors", title: "Surveyor" },
-  "/fitness/master-data/container-types": { resourceId: "fitness-container-types", title: "Jenis Peti Kemas" },
-  "/fitness/master-data/approval-categories": { resourceId: "fitness-approval-categories", title: "Kategori Persetujuan" },
-  "/fitness/master-data/maintenance-schemes": { resourceId: "fitness-maintenance-schemes", title: "Skema Pemeliharaan" },
-  "/fitness/master-data/inspection-areas": { resourceId: "fitness-inspection-areas", title: "Area Pemeriksaan" },
-  "/fitness/master-data/structural-components": { resourceId: "fitness-structural-components", title: "Komponen Struktur" },
-  "/fitness/master-data/damage-criteria": { resourceId: "fitness-damage-criteria", title: "Kriteria Kerusakan" },
-  "/fitness/master-data/finding-severities": { resourceId: "fitness-finding-severities", title: "Tingkat Keparahan" },
-  "/fitness/master-data/test-parameters": { resourceId: "fitness-test-parameters", title: "Parameter Pengujian" },
-  "/fitness/master-data/checklist-templates": { resourceId: "fitness-checklist-templates", title: "Template Checklist" },
-  "/fitness/master-data/photo-categories": { resourceId: "fitness-photo-categories", title: "Kategori Bukti Foto" },
-  "/fitness/master-data/inspection-recommendations": { resourceId: "fitness-inspection-recommendations", title: "Rekomendasi Pemeriksaan" },
-  "/fitness/master-data/authorized-signers": { resourceId: "fitness-authorized-signers", title: "Pejabat Penandatangan" },
-  "/fitness/master-data/company-profile": { resourceId: "fitness-company-profile", title: "Profil Badan Usaha" }
-};
 
 type FitnessRouteProps = {
   params: Promise<{ slug?: string[] }>;
@@ -46,50 +25,43 @@ const fallbackPlaceholder: FitnessPlaceholder = {
   ]
 };
 
+const compatibility: Record<string, CompatibilityNoticeProps> = {
+  "/fitness/master-data": notice("Master Data lama", "Master Data global telah digantikan oleh Master Data berbasis klien.", "Pilih Klien", "/fitness/client-master-data"),
+  "/fitness/master-data/owners": notice("Pemilik Peti Kemas lama", "Profil perusahaan pengguna jasa sekarang dikelola sebagai Klien.", "Buka Daftar Klien", "/fitness/clients"),
+  "/fitness/master-data/manufacturers": notice("Pabrik Pembuat lama", "Referensi pabrik tidak diaktifkan sebagai Master Data Klien pada UI-B.2.", "Buka Peti Kemas", "/fitness/containers"),
+  "/fitness/master-data/locations": notice("Lokasi lama", "Lokasi harus dibuka setelah memilih klien agar data tidak tercampur.", "Pilih Klien", "/fitness/client-master-data?targetTab=locations"),
+  "/fitness/master-data/surveyors": { ...notice("Surveyor lama", "Personel/PIC Klien dipisahkan dari Surveyor GIFT.", "Pilih Klien untuk Personel/PIC", "/fitness/client-master-data?targetTab=personnel", "Buka Surveyor GIFT lama", "/master/surveyors"), internalGift: true },
+  "/fitness/master-data/container-types": notice("Jenis Peti Kemas lama", "Jenis peti kemas sekarang dibatasi berdasarkan klien.", "Pilih Klien", "/fitness/client-master-data?targetTab=container-types"),
+  "/fitness/master-data/approval-categories": notice("Kategori Persetujuan lama", "Master global ini tidak diaktifkan pada workflow UI-B.2.", "Kembali ke Master Data Klien", "/fitness/client-master-data"),
+  "/fitness/master-data/maintenance-schemes": notice("Skema Pemeliharaan lama", "Master global ini tidak diaktifkan pada workflow UI-B.2.", "Kembali ke Master Data Klien", "/fitness/client-master-data"),
+  "/fitness/master-data/inspection-areas": referenceNotice("Area Pemeriksaan", "inspection-areas"),
+  "/fitness/master-data/structural-components": referenceNotice("Komponen Struktur", "structural-components"),
+  "/fitness/master-data/damage-criteria": referenceNotice("Kriteria Kerusakan", "damage-criteria"),
+  "/fitness/master-data/finding-severities": referenceNotice("Tingkat Keparahan", "finding-severities"),
+  "/fitness/master-data/test-parameters": referenceNotice("Parameter Pengujian", "test-parameters"),
+  "/fitness/master-data/photo-categories": referenceNotice("Kategori Bukti Foto", "photo-categories"),
+  "/fitness/master-data/inspection-recommendations": referenceNotice("Rekomendasi Pemeriksaan", "inspection-recommendations"),
+  "/fitness/master-data/checklist-templates": notice("Template Checklist lama", "Checklist seed dan workflow checklist tidak diaktifkan pada UI-B.2.", "Kembali ke Master Data Klien", "/fitness/client-master-data"),
+  "/fitness/master-data/authorized-signers": { ...notice("Pejabat Penandatangan lama", "Pejabat penandatangan adalah data internal GIFT, bukan Master Data Klien.", "Buka Pengaturan Internal GIFT", "/settings/company-profile"), internalGift: true },
+  "/fitness/master-data/company-profile": { ...notice("Profil Badan Usaha lama", "Profil badan usaha merupakan data internal GIFT.", "Buka Profil Badan Usaha", "/settings/company-profile"), internalGift: true }
+};
+
 export default async function FitnessRoutePage({ params, searchParams }: FitnessRouteProps) {
   const [resolvedParams, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const slug = resolvedParams.slug ?? ["dashboard"];
-  const path = `/fitness/${slug.join("/")}`;
+  const path = "/fitness/" + slug.join("/");
   const activeHref = buildActiveHref(path, resolvedSearchParams);
-  const activeResource = activeMasterDataRoutes[path];
+  const compatibilityItem = compatibility[path] ?? (path.startsWith("/fitness/master-data/checklist-templates/") ? compatibility["/fitness/master-data/checklist-templates"] : undefined);
 
-  const checklistTemplateItemsMatch = slug.length === 4 && slug[0] === "master-data" && slug[1] === "checklist-templates" && slug[3] === "items";
-  if (checklistTemplateItemsMatch) {
-    const templateId = slug[2];
+  if (compatibilityItem) {
     return (
       <ProtectedRoute>
         <AppShell
-          title="Item Template Checklist"
-          breadcrumbs={[
-            { label: "Admin Kelaikan", href: "/fitness/dashboard" },
-            { label: "Master Data", href: "/fitness/master-data" },
-            { label: "Template Checklist", href: "/fitness/master-data/checklist-templates" },
-            { label: "Item" }
-          ]}
+          title={compatibilityItem.title}
+          subtitle="Compatibility route Admin Kelaikan"
+          breadcrumbs={[{ label: "Admin Kelaikan", href: "/fitness/dashboard" }, { label: "Klien & Master Data", href: "/fitness/clients" }, { label: compatibilityItem.title }]}
         >
-          <MasterDataPage
-            resourceId="fitness-checklist-template-items"
-            endpointOverride={`/fitness/master-data/checklist-templates/${templateId}/items`}
-            fixedValues={{ template_id: templateId }}
-            backHref="/fitness/master-data/checklist-templates"
-          />
-        </AppShell>
-      </ProtectedRoute>
-    );
-  }
-
-  if (activeResource) {
-    return (
-      <ProtectedRoute>
-        <AppShell
-          title={activeResource.title}
-          breadcrumbs={[
-            { label: "Admin Kelaikan", href: "/fitness/dashboard" },
-            { label: "Master Data", href: "/fitness/master-data" },
-            { label: activeResource.title }
-          ]}
-        >
-          <MasterDataPage resourceId={activeResource.resourceId} />
+          <FitnessMasterCompatibilityNotice {...compatibilityItem} />
         </AppShell>
       </ProtectedRoute>
     );
@@ -99,15 +71,25 @@ export default async function FitnessRoutePage({ params, searchParams }: Fitness
   return <FitnessPlaceholderPage item={item} activeHref={activeHref} />;
 }
 
+function notice(title: string, description: string, primaryLabel: string, primaryHref: string, secondaryLabel?: string, secondaryHref?: string): CompatibilityNoticeProps {
+  return {
+    title,
+    description,
+    primary: { label: primaryLabel, href: primaryHref },
+    secondary: secondaryLabel && secondaryHref ? { label: secondaryLabel, href: secondaryHref } : undefined
+  };
+}
+
+function referenceNotice(title: string, section: string): CompatibilityNoticeProps {
+  return notice(title + " lama", "Referensi pemeriksaan harus dibuka dalam konteks klien.", "Pilih Klien", "/fitness/client-master-data?targetTab=inspection-references&targetSection=" + section);
+}
+
 function buildActiveHref(path: string, searchParams: Record<string, string | string[] | undefined>) {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(searchParams)) {
-    if (Array.isArray(value)) {
-      value.forEach((item) => query.append(key, item));
-    } else if (value !== undefined) {
-      query.set(key, value);
-    }
+    if (Array.isArray(value)) value.forEach((item) => query.append(key, item));
+    else if (value !== undefined) query.set(key, value);
   }
   const queryText = query.toString();
-  return queryText ? `${path}?${queryText}` : path;
+  return queryText ? path + "?" + queryText : path;
 }

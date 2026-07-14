@@ -1,24 +1,14 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, CircleAlert, Sparkles } from "lucide-react";
 import { ActionCard } from "@/components/ui/action-card";
-import { ActivityTimeline } from "@/components/ui/activity-timeline";
-import { AttachmentPreview } from "@/components/ui/attachment-preview";
-import { AttachmentUploaderPlaceholder } from "@/components/ui/attachment-uploader-placeholder";
 import { CompletionBadge } from "@/components/ui/completion-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
-import { FilterBar } from "@/components/ui/filter-bar";
-import { MetricCard } from "@/components/ui/metric-card";
 import { PageTabs } from "@/components/ui/page-tabs";
-import { ProgressTracker } from "@/components/ui/progress-tracker";
-import { ResponsiveTableCards, type ResponsiveColumn } from "@/components/ui/responsive-table-cards";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Stepper } from "@/components/ui/stepper";
-import { StickyActionBar } from "@/components/ui/sticky-action-bar";
 import type {
-  FitnessMasterDataGroup, FitnessMockState, FitnessNavigationSummary, FitnessPlaceholder,
-  FitnessUiBPreview, FitnessUiBRecord
+  FitnessMasterDataGroup, FitnessMockState, FitnessNavigationSummary, FitnessPlaceholder
 } from "@/types/fitness-admin";
 
 type FeaturePlaceholderProps = {
@@ -137,83 +127,6 @@ export function MasterDataIndex({ state }: MasterDataIndexProps) {
   );
 }
 
-export function FitnessDesignPatternPreview({ state }: { state: FitnessMockState<FitnessUiBPreview> }) {
-  if (state.status === "loading") return <Skeleton variant="table" />;
-  if (state.status === "error") return <ErrorState message={state.error} />;
-  if (state.status === "empty" || state.data.records.length === 0) {
-    return (
-      <EmptyState
-        title="Data operasional belum tersedia"
-        description="Tampilan sudah menyiapkan state kosong sebelum data nyata dihubungkan."
-      />
-    );
-  }
-
-  const columns: ResponsiveColumn<FitnessUiBRecord>[] = [
-    { key: "code", header: "Kode", render: (row) => <strong>{row.code}</strong> },
-    { key: "owner", header: "Pemilik", render: (row) => row.owner },
-    { key: "stage", header: "Tahap Proses", render: (row) => row.stage },
-    { key: "status", header: "Status", render: (row) => <StatusBadge tone="info">{row.status}</StatusBadge> },
-    { key: "complete", header: "Kelengkapan", render: (row) => <CompletionBadge complete={row.complete} total={row.total} /> }
-  ];
-
-  return (
-    <section className="workspace-panel ui-b-preview-panel">
-      <SectionHeader title="Tampilan Operasional" description="Pola komponen siap untuk daftar, form bertahap, dan detail proses." />
-      <div className="ui-b-metric-grid">
-        {state.data.metrics.map((metric) => (
-          <MetricCard
-            description={metric.description}
-            icon={metric.icon}
-            key={metric.label}
-            label={metric.label}
-            tone={metric.tone}
-            trend={metric.trend}
-            value={metric.value}
-          />
-        ))}
-      </div>
-      <FilterBar fields={state.data.filters} resetHref="/fitness/dashboard" />
-      <div className="ui-b-flow-grid">
-        <Stepper steps={state.data.steps} />
-        <ProgressTracker items={state.data.progress} />
-      </div>
-      <ResponsiveTableCards
-        columns={columns}
-        getRowId={(row) => row.id}
-        getRowTitle={(row) => row.code}
-        rows={state.data.records}
-      />
-      <div className="ui-b-support-grid">
-        <div className="ui-b-support-panel">
-          <h3>Aktivitas</h3>
-          <ActivityTimeline items={state.data.activities} />
-        </div>
-        <div className="ui-b-support-panel">
-          <h3>Lampiran</h3>
-          <AttachmentUploaderPlaceholder
-            title="Area lampiran"
-            description="Siapkan dokumen permohonan, foto pemeriksaan, atau file pendukung."
-          />
-          {state.data.attachments.map((attachment) => (
-            <AttachmentPreview
-              key={attachment.name}
-              name={attachment.name}
-              sizeLabel={attachment.sizeLabel}
-              type={attachment.type}
-            />
-          ))}
-        </div>
-      </div>
-      <StickyActionBar
-        primary={{ label: "Lanjutkan", disabled: true }}
-        secondary={{ label: "Simpan Draf", disabled: true }}
-        summary={<CompletionBadge complete={3} total={5} label="Kesiapan" />}
-      />
-    </section>
-  );
-}
-
 function MasterDataCard({ item }: { item: FitnessMasterDataGroup["items"][number] }) {
   const Icon = item.icon;
   return (
@@ -255,7 +168,7 @@ export function EmptyDevelopmentNote() {
   return (
     <div className="empty-development-note">
       <CircleAlert size={18} />
-      <span>Data operasional belum dihubungkan pada tahap UI-B.</span>
+      <span>Data operasional belum dihubungkan pada tahap UI-B.1.</span>
     </div>
   );
 }

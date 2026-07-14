@@ -30,9 +30,9 @@ export const fitnessDashboardSummary: FitnessNavigationSummary[] = [
     icon: UserRoundCheck
   },
   {
-    label: "Master Data",
-    href: "/fitness/master-data",
-    description: "Kelola referensi utama untuk proses kelaikan peti kemas.",
+    label: "Klien & Master Data",
+    href: "/fitness/clients",
+    description: "Kelola klien dan referensi yang terisolasi berdasarkan clientId.",
     status: "Aktif",
     icon: Database
   }

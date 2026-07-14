@@ -1,6 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
+import { useDialogBehavior } from "@/hooks/use-dialog-behavior";
 
 type DrawerProps = {
   open: boolean;
@@ -8,22 +9,50 @@ type DrawerProps = {
   description?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  closeOnBackdrop?: boolean;
+  closeOnEscape?: boolean;
+  preventClose?: boolean;
   onClose: () => void;
 };
 
-export function Drawer({ open, title, description, children, footer, onClose }: DrawerProps) {
+export function Drawer({
+  open,
+  title,
+  description,
+  children,
+  footer,
+  closeOnBackdrop = true,
+  closeOnEscape = true,
+  preventClose,
+  onClose
+}: DrawerProps) {
+  const { dialogRef, titleId, descriptionId, requestClose, handleBackdropMouseDown } = useDialogBehavior({
+    open,
+    onClose,
+    closeOnBackdrop,
+    closeOnEscape,
+    preventClose
+  });
+
   if (!open) return null;
 
   return (
-    <div className="ui-drawer-layer" role="presentation">
-      <button aria-label="Tutup drawer" className="ui-drawer-scrim" onClick={onClose} type="button" />
-      <aside className="ui-drawer" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="ui-drawer-layer" onMouseDown={handleBackdropMouseDown} role="presentation">
+      <aside
+        aria-describedby={description ? descriptionId : undefined}
+        aria-labelledby={titleId}
+        aria-modal="true"
+        className="ui-drawer"
+        ref={dialogRef as React.RefObject<HTMLElement>}
+        role="dialog"
+        tabIndex={-1}
+      >
         <header className="ui-drawer-head">
           <div>
-            <h2>{title}</h2>
-            {description ? <p>{description}</p> : null}
+            <h2 id={titleId}>{title}</h2>
+            {description ? <p id={descriptionId}>{description}</p> : null}
           </div>
-          <button className="icon-button" onClick={onClose} title="Tutup drawer" type="button">
+          <button aria-label="Tutup drawer" className="icon-button" disabled={preventClose} onClick={requestClose} type="button">
             <X size={18} />
           </button>
         </header>

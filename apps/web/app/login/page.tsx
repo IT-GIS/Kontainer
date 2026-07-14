@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import { Loader2, Lock, Mail } from "lucide-react";
@@ -44,7 +44,7 @@ function LoginForm() {
           <Image className="source-login-logo" src="/images/gift-logo.png" alt="GIFT Logo" width={72} height={72} priority />
           <div>
             <h1 id="login-title">Sistem Kelaikan Peti Kemas Terintegrasi</h1>
-            <p>PT. Global Inspeksi Sertifikasi</p>
+            <p>PT Global Inspeksi Forensik Teknik</p>
           </div>
         </header>
 

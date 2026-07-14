@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, X } from "lucide-react";
+import { useDialogBehavior } from "@/hooks/use-dialog-behavior";
 
 type ConfirmationDialogProps = {
   open: boolean;
@@ -10,6 +11,8 @@ type ConfirmationDialogProps = {
   cancelLabel?: string;
   tone?: "neutral" | "danger";
   isLoading?: boolean;
+  closeOnBackdrop?: boolean;
+  closeOnEscape?: boolean;
   onConfirm: () => void;
   onClose: () => void;
 };
@@ -22,28 +25,46 @@ export function ConfirmationDialog({
   cancelLabel = "Batalkan",
   tone = "neutral",
   isLoading,
+  closeOnBackdrop = true,
+  closeOnEscape = true,
   onConfirm,
   onClose
 }: ConfirmationDialogProps) {
+  const { dialogRef, titleId, descriptionId, requestClose, handleBackdropMouseDown } = useDialogBehavior({
+    open,
+    onClose,
+    closeOnBackdrop,
+    closeOnEscape,
+    preventClose: isLoading
+  });
+
   if (!open) return null;
 
   return (
-    <div className="dialog-backdrop" role="presentation">
-      <div className="dialog-panel ui-confirmation" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="dialog-backdrop" onMouseDown={handleBackdropMouseDown} role="presentation">
+      <div
+        aria-describedby={descriptionId}
+        aria-labelledby={titleId}
+        aria-modal="true"
+        className="dialog-panel ui-confirmation"
+        ref={dialogRef as React.RefObject<HTMLDivElement>}
+        role="dialog"
+        tabIndex={-1}
+      >
         <div className="dialog-head">
           <div className={`ui-confirmation-icon ui-confirmation-${tone}`}>
             <AlertTriangle size={18} />
           </div>
-          <button className="icon-button" onClick={onClose} title="Tutup dialog" type="button">
+          <button aria-label="Tutup dialog" className="icon-button" disabled={isLoading} onClick={requestClose} type="button">
             <X size={18} />
           </button>
         </div>
         <div className="dialog-body">
-          <h3>{title}</h3>
-          <p>{description}</p>
+          <h3 id={titleId}>{title}</h3>
+          <p id={descriptionId}>{description}</p>
         </div>
         <div className="dialog-actions">
-          <button className="secondary-button" onClick={onClose} type="button">
+          <button className="secondary-button" disabled={isLoading} onClick={requestClose} type="button">
             {cancelLabel}
           </button>
           <button
