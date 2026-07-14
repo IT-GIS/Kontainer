@@ -62,6 +62,7 @@ export function AppShell({ title, subtitle = defaultSubtitle, breadcrumbs = [], 
     const label = navigationLabel(item, user);
     return (
       <Link
+        aria-current={active ? "page" : undefined}
         className={`nav-link ${nested ? "nav-sublink" : ""} ${active ? "nav-link-active" : ""}`}
         href={item.href}
         key={item.id}

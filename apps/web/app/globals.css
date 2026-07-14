@@ -3141,6 +3141,12 @@ pre {
   white-space: nowrap;
 }
 
+.master-data-category-workspace,
+.master-data-category-workspace .workspace-panel,
+.master-data-customer-picker {
+  min-width: 0;
+}
+
 .client-isolation-notice,
 .client-reference-note,
 .client-context-strip {
@@ -3240,6 +3246,18 @@ pre {
 }
 
 @media (max-width: 640px) {
+  .master-data-customer-picker .ui-row-card .client-inline-action,
+  .master-data-category-workspace .page-header-actions,
+  .master-data-category-workspace .page-header-actions a,
+  .master-data-category-workspace .page-header-actions button {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .master-data-customer-picker .ui-row-card .client-inline-action {
+    min-height: 2.75rem;
+  }
+
   .client-context-strip {
     align-items: flex-start;
     flex-direction: column;

@@ -28,8 +28,9 @@ export function ClientWorkspaceTabs({ activeHref }: { activeHref: string }) {
   return <PageTabs tabs={workspaceTabs} activeHref={activeHref} />;
 }
 
-export function FitnessClientsList({ initialClients }: { initialClients: FitnessClientSummary[] }) {
+export function FitnessClientsList({ initialClients, clientFirst = false }: { initialClients: FitnessClientSummary[]; clientFirst?: boolean }) {
   const router = useRouter();
+  const customerBase = clientFirst ? "/fitness/master-data/customers" : "/fitness/clients";
   const [clients, setClients] = useState(initialClients);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [pendingClient, setPendingClient] = useState<FitnessClientSummary | null>(null);
@@ -82,9 +83,9 @@ export function FitnessClientsList({ initialClients }: { initialClients: Fitness
       header: "Aksi",
       render: (row) => (
         <div className="client-row-actions">
-          <Link className="icon-button" href={"/fitness/clients/" + row.id} aria-label={"Lihat detail " + row.name} title="Lihat detail"><Eye size={16} /></Link>
-          <Link className="icon-button" href={"/fitness/clients/" + row.id} aria-label={"Edit " + row.name} title="Edit"><Pencil size={16} /></Link>
-          <Link className="secondary-button client-inline-action" href={"/fitness/client-master-data/" + row.id + "?tab=summary"}>Kelola Master Data</Link>
+          <Link className="icon-button" href={customerBase + "/" + row.id} aria-label={"Lihat detail " + row.name} title="Lihat detail"><Eye size={16} /></Link>
+          <Link className="icon-button" href={customerBase + "/" + row.id} aria-label={"Edit " + row.name} title="Edit"><Pencil size={16} /></Link>
+          <Link className="secondary-button client-inline-action" href={clientFirst ? "/fitness/master-data/locations/" + row.id : "/fitness/client-master-data/" + row.id + "?tab=summary"}>{clientFirst ? "Kelola Location" : "Kelola Master Data"}</Link>
           <button className="secondary-button client-inline-action" disabled={row.status !== "Aktif"} onClick={() => setPendingClient(row)} type="button">Nonaktifkan</button>
         </div>
       )
@@ -100,13 +101,13 @@ export function FitnessClientsList({ initialClients }: { initialClients: Fitness
 
   return (
     <div className="page-stack">
-      <ClientWorkspaceTabs activeHref="/fitness/clients" />
+      {!clientFirst ? <ClientWorkspaceTabs activeHref="/fitness/clients" /> : null}
       <PageHeader
         eyebrow="Klien & Master Data"
-        title="Daftar Klien"
+        title={clientFirst ? "Customer" : "Daftar Klien"}
         description="Perusahaan atau organisasi pengguna jasa inspeksi GIFT."
-        meta={<span>{visibleClients.length} dari {clients.length} klien ditampilkan</span>}
-        action={{ label: "Tambah Klien", icon: Plus, onClick: () => router.push("/fitness/clients/create") }}
+        meta={<span>{visibleClients.length} dari {clients.length} {clientFirst ? "Customer" : "klien"} ditampilkan</span>}
+        action={{ label: clientFirst ? "Tambah Customer" : "Tambah Klien", icon: Plus, onClick: () => router.push(customerBase + "/create") }}
       />
       <FilterBar
         fields={fields}
@@ -116,7 +117,7 @@ export function FitnessClientsList({ initialClients }: { initialClients: Fitness
       {visibleClients.length > 0 ? (
         <ResponsiveTableCards columns={columns} rows={visibleClients} getRowId={(row) => row.id} getRowTitle={(row) => row.name} />
       ) : (
-        <EmptyState title="Klien tidak ditemukan" description="Ubah pencarian atau reset filter untuk menampilkan klien." />
+        <EmptyState title={clientFirst ? "Customer tidak ditemukan" : "Klien tidak ditemukan"} description="Ubah pencarian atau reset filter untuk menampilkan data." />
       )}
       {toast ? <ToastFeedback title="Perubahan lokal berhasil" description={toast} tone="success" onDismiss={() => setToast(null)} /> : null}
       <ConfirmationDialog
@@ -132,9 +133,9 @@ export function FitnessClientsList({ initialClients }: { initialClients: Fitness
   );
 }
 
-export function FitnessClientForm({ client }: { client?: FitnessClientDetail }) {
-  const router = useRouter();
+export function FitnessClientForm({ client, clientFirst = false }: { client?: FitnessClientDetail; clientFirst?: boolean }) {
   const isEdit = Boolean(client);
+  const customerBase = clientFirst ? "/fitness/master-data/customers" : "/fitness/clients";
   const [form, setForm] = useState({
     code: client?.code ?? "",
     name: client?.name ?? "",
@@ -175,10 +176,10 @@ export function FitnessClientForm({ client }: { client?: FitnessClientDetail }) 
 
   return (
     <div className="page-stack">
-      <ClientWorkspaceTabs activeHref="/fitness/clients" />
+      {!clientFirst ? <ClientWorkspaceTabs activeHref="/fitness/clients" /> : null}
       <PageHeader
         eyebrow={isEdit ? client?.code : "Klien baru"}
-        title={isEdit ? "Detail dan Edit Klien" : "Tambah Klien"}
+        title={isEdit ? `Detail dan Edit ${clientFirst ? "Customer" : "Klien"}` : `Tambah ${clientFirst ? "Customer" : "Klien"}`}
         description="Form frontend-only. Tidak ada data yang dikirim ke backend pada UI-B.2."
         meta={client ? <StatusBadge tone={client.status === "Aktif" ? "success" : "neutral"}>{client.status}</StatusBadge> : undefined}
       />
@@ -230,8 +231,8 @@ export function FitnessClientForm({ client }: { client?: FitnessClientDetail }) 
       />
       <StickyActionBar
         summary={<span>{dirty ? "Ada perubahan belum disimpan" : "Tidak ada perubahan lokal"}</span>}
-        tertiary={{ label: "Kembali", href: "/fitness/clients" }}
-        secondary={client ? { label: "Kelola Master Data", href: "/fitness/client-master-data/" + client.id + "?tab=summary" } : undefined}
+        tertiary={{ label: "Kembali", href: customerBase }}
+        secondary={client ? { label: clientFirst ? "Kelola Location" : "Kelola Master Data", href: clientFirst ? "/fitness/master-data/locations/" + client.id : "/fitness/client-master-data/" + client.id + "?tab=summary" } : undefined}
         primary={{ label: "Simpan", icon: Save, type: "submit", form: "fitness-client-form", disabled: missingRequired || !dirty }}
       />
     </div>

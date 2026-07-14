@@ -3,8 +3,11 @@ import type {
   FitnessClientDetail,
   FitnessClientInspectionReference,
   FitnessClientLocation,
+  FitnessClientMasterDataReference,
   FitnessClientMasterSummary,
   FitnessClientPersonnel,
+  FitnessClientReferenceCategory,
+  FitnessClientSurveyor,
   FitnessLegacyMappingRecord
 } from "@/types/fitness-admin";
 
@@ -21,9 +24,9 @@ export const fitnessClients: FitnessClientDetail[] = [
     primaryContactTitle: "Manajer Operasional",
     email: "rina.prameswari@example.test",
     phone: "+62 21 555 0101",
-    locationCount: 2,
+    locationCount: 3,
     personnelCount: 2,
-    containerTypeCount: 2,
+    containerTypeCount: 3,
     referenceCount: 7,
     containerCount: 18,
     status: "Aktif",
@@ -66,6 +69,7 @@ export const fitnessClients: FitnessClientDetail[] = [
 export const fitnessClientLocations: FitnessClientLocation[] = [
   location("nl-loc-1", "client-nusantara", "NL-JKT-01", "Depo Nusantara Priok", "Depo", "Tanjung Priok", "Jakarta Utara", "DKI Jakarta", "Rina Prameswari", "+62 21 555 0111"),
   location("nl-loc-2", "client-nusantara", "NL-JKT-02", "Gudang Marunda", "Gudang", "Marunda", "Jakarta Utara", "DKI Jakarta", "Dimas Kurnia", "+62 21 555 0112"),
+  location("nl-loc-3", "client-nusantara", "NL-BKS-01", "Area Pemeriksaan Cibitung", "Lokasi Pemeriksaan", "Cibitung", "Bekasi", "Jawa Barat", "Nadia Putri", "+62 21 555 0113"),
   location("sj-loc-1", "client-samudra", "SJ-SBY-01", "Terminal Samudra Perak", "Terminal", "Tanjung Perak", "Surabaya", "Jawa Timur", "Arief Setiawan", "+62 31 555 0211"),
   location("sj-loc-2", "client-samudra", "SJ-SBY-02", "Lokasi Pemeriksaan Margomulyo", "Lokasi Pemeriksaan", "Margomulyo", "Surabaya", "Jawa Timur", "Maya Lestari", "+62 31 555 0212", "Tidak Aktif")
 ];
@@ -80,8 +84,45 @@ export const fitnessClientPersonnel: FitnessClientPersonnel[] = [
 export const fitnessClientContainerTypes: FitnessClientContainerType[] = [
   containerType("nl-type-1", "client-nusantara", "NL-20-GP", "General Purpose 20 ft", "20 ft", "Referensi jenis peti kemas milik Klien NL."),
   containerType("nl-type-2", "client-nusantara", "NL-40-HC", "High Cube 40 ft", "40 ft", "Referensi jenis peti kemas milik Klien NL."),
+  containerType("nl-type-3", "client-nusantara", "NL-20-RF", "Reefer 20 ft", "20 ft", "Referensi jenis peti kemas berpendingin milik Klien NL."),
   containerType("sj-type-1", "client-samudra", "SJ-20-OT", "Open Top 20 ft", "20 ft", "Referensi jenis peti kemas milik Klien SJ."),
   containerType("sj-type-2", "client-samudra", "SJ-40-GP", "General Purpose 40 ft", "40 ft", "Referensi jenis peti kemas milik Klien SJ.")
+];
+
+export const fitnessClientSurveyors: FitnessClientSurveyor[] = [
+  surveyor("nl-surveyor-1", "client-nusantara", "NL-SRV-01", "Nadia Putri", "Surveyor Internal Customer", ["nl-loc-1", "nl-loc-3"], ["Depo Nusantara Priok", "Area Pemeriksaan Cibitung"], "nadia.putri@example.test", "+62 21 555 0131"),
+  surveyor("nl-surveyor-2", "client-nusantara", "NL-SRV-02", "Bagas Pratama", "Pemeriksa Teknis Customer", ["nl-loc-2"], ["Gudang Marunda"], "bagas.pratama@example.test", "+62 21 555 0132"),
+  surveyor("sj-surveyor-1", "client-samudra", "SJ-SRV-01", "Maya Lestari", "Surveyor Internal Customer", ["sj-loc-1"], ["Terminal Samudra Perak"], "maya.lestari@example.test", "+62 31 555 0231")
+];
+
+export const fitnessClientMasterDataReferences: FitnessClientMasterDataReference[] = [
+  masterReference("nl-survey-type-1", "client-nusantara", "survey-type", "NL-ST-01", "Pemeriksaan Berkala", "Jenis layanan pemeriksaan berkala milik Customer Nusantara."),
+  masterReference("nl-survey-type-2", "client-nusantara", "survey-type", "NL-ST-02", "Pemeriksaan Kondisi", "Jenis layanan pemeriksaan kondisi milik Customer Nusantara."),
+  masterReference("sj-survey-type-1", "client-samudra", "survey-type", "SJ-ST-01", "Pemeriksaan Awal", "Jenis layanan pemeriksaan awal milik Customer Samudra."),
+
+  masterReference("nl-cedex-location-1", "client-nusantara", "cedex-location", "NL-CL-01", "Upper Structure", "Referensi teknis lokasi CEDEX Customer Nusantara."),
+  masterReference("nl-cedex-location-2", "client-nusantara", "cedex-location", "NL-CL-02", "Lower Structure", "Referensi teknis lokasi CEDEX Customer Nusantara."),
+  masterReference("sj-cedex-location-1", "client-samudra", "cedex-location", "SJ-CL-01", "Side Structure", "Referensi teknis lokasi CEDEX Customer Samudra."),
+
+  masterReference("nl-cedex-component-1", "client-nusantara", "cedex-component", "NL-CC-01", "Roof Panel", "Referensi teknis komponen CEDEX Customer Nusantara."),
+  masterReference("nl-cedex-component-2", "client-nusantara", "cedex-component", "NL-CC-02", "Corner Post", "Referensi teknis komponen CEDEX Customer Nusantara."),
+  masterReference("sj-cedex-component-1", "client-samudra", "cedex-component", "SJ-CC-01", "Side Panel", "Referensi teknis komponen CEDEX Customer Samudra."),
+
+  masterReference("nl-cedex-damage-1", "client-nusantara", "cedex-damage", "NL-CD-01", "Bent", "Referensi teknis damage CEDEX Customer Nusantara."),
+  masterReference("nl-cedex-damage-2", "client-nusantara", "cedex-damage", "NL-CD-02", "Cracked", "Referensi teknis damage CEDEX Customer Nusantara."),
+  masterReference("sj-cedex-damage-1", "client-samudra", "cedex-damage", "SJ-CD-01", "Dented", "Referensi teknis damage CEDEX Customer Samudra."),
+
+  masterReference("nl-cedex-repair-1", "client-nusantara", "cedex-repair", "NL-CR-01", "Straighten", "Referensi teknis repair CEDEX Customer Nusantara."),
+  masterReference("nl-cedex-repair-2", "client-nusantara", "cedex-repair", "NL-CR-02", "Weld", "Referensi teknis repair CEDEX Customer Nusantara."),
+  masterReference("sj-cedex-repair-1", "client-samudra", "cedex-repair", "SJ-CR-01", "Patch", "Referensi teknis repair CEDEX Customer Samudra."),
+
+  masterReference("nl-cedex-material-1", "client-nusantara", "cedex-material", "NL-CM-01", "Steel", "Referensi teknis material CEDEX Customer Nusantara."),
+  masterReference("nl-cedex-material-2", "client-nusantara", "cedex-material", "NL-CM-02", "Aluminium", "Referensi teknis material CEDEX Customer Nusantara."),
+  masterReference("sj-cedex-material-1", "client-samudra", "cedex-material", "SJ-CM-01", "Plywood", "Referensi teknis material CEDEX Customer Samudra."),
+
+  masterReference("nl-responsibility-1", "client-nusantara", "responsibility-code", "NL-RC-01", "Customer Reference A", "Label Responsibility Code Customer Nusantara tanpa aturan bisnis tambahan."),
+  masterReference("nl-responsibility-2", "client-nusantara", "responsibility-code", "NL-RC-02", "Customer Reference B", "Label Responsibility Code Customer Nusantara tanpa aturan bisnis tambahan."),
+  masterReference("sj-responsibility-1", "client-samudra", "responsibility-code", "SJ-RC-01", "Customer Reference S", "Label Responsibility Code Customer Samudra tanpa aturan bisnis tambahan.")
 ];
 
 export const fitnessClientInspectionReferences: FitnessClientInspectionReference[] = [
@@ -141,6 +182,31 @@ function personnel(id: string, clientId: string, name: string, title: string, ty
 
 function containerType(id: string, clientId: string, code: string, name: string, size: string, description: string): FitnessClientContainerType {
   return { id, clientId, code, name, size, description, status: "Aktif", updatedAt: "14 Juli 2026" };
+}
+
+function surveyor(
+  id: string,
+  clientId: string,
+  code: string,
+  name: string,
+  title: string,
+  locationIds: string[],
+  locationNames: string[],
+  email: string,
+  phone: string
+): FitnessClientSurveyor {
+  return { id, clientId, code, name, title, locationIds, locationNames, email, phone, status: "Aktif", updatedAt: "14 Juli 2026" };
+}
+
+function masterReference(
+  id: string,
+  clientId: string,
+  category: FitnessClientReferenceCategory,
+  code: string,
+  name: string,
+  description: string
+): FitnessClientMasterDataReference {
+  return { id, clientId, category, code, name, description, status: "Aktif", updatedAt: "14 Juli 2026" };
 }
 
 function reference(id: string, clientId: string, section: FitnessClientInspectionReference["section"], code: string, name: string, description: string, order: number, presentationRequired?: boolean): FitnessClientInspectionReference {

@@ -240,6 +240,75 @@ export type FitnessClientContainerType = {
   updatedAt: string;
 };
 
+export type FitnessMasterDataCategory =
+  | "customer"
+  | "location"
+  | "surveyor"
+  | "container-type"
+  | "survey-type"
+  | "cedex-location"
+  | "cedex-component"
+  | "cedex-damage"
+  | "cedex-repair"
+  | "cedex-material"
+  | "responsibility-code";
+
+export type FitnessMasterDataCategorySlug =
+  | "customers"
+  | "locations"
+  | "surveyors"
+  | "container-types"
+  | "survey-types"
+  | "cedex-locations"
+  | "cedex-components"
+  | "cedex-damages"
+  | "cedex-repairs"
+  | "cedex-materials"
+  | "responsibility-codes";
+
+export type FitnessClientSurveyor = {
+  id: string;
+  clientId: string;
+  code: string;
+  name: string;
+  title: string;
+  locationIds: string[];
+  locationNames: string[];
+  email: string;
+  phone: string;
+  status: FitnessClientStatus;
+  updatedAt: string;
+};
+
+export type FitnessClientReferenceCategory = Exclude<
+  FitnessMasterDataCategory,
+  "customer" | "location" | "surveyor" | "container-type"
+>;
+
+export type FitnessClientMasterDataReference = {
+  id: string;
+  clientId: string;
+  category: FitnessClientReferenceCategory;
+  code: string;
+  name: string;
+  description: string;
+  status: FitnessClientStatus;
+  updatedAt: string;
+};
+
+export type FitnessClientMasterDataRecord =
+  | FitnessClientLocation
+  | FitnessClientSurveyor
+  | FitnessClientContainerType
+  | FitnessClientMasterDataReference;
+
+export type FitnessMasterDataCategorySummary = {
+  clientId: string;
+  category: FitnessMasterDataCategory;
+  count: number;
+  updatedAt: string;
+};
+
 export type FitnessInspectionReferenceSection =
   | "inspection-areas"
   | "structural-components"

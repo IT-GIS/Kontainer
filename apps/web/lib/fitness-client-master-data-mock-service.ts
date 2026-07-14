@@ -2,8 +2,10 @@ import {
   fitnessClientContainerTypes,
   fitnessClientInspectionReferences,
   fitnessClientLocations,
+  fitnessClientMasterDataReferences,
   fitnessClientMasterSummaries,
   fitnessClientPersonnel,
+  fitnessClientSurveyors,
   fitnessClients,
   fitnessLegacyMappings
 } from "@/mocks/fitness-client-master-data";
@@ -12,12 +14,18 @@ import type {
   FitnessClientDetail,
   FitnessClientInspectionReference,
   FitnessClientLocation,
+  FitnessClientMasterDataRecord,
+  FitnessClientMasterDataReference,
   FitnessClientMasterSummary,
   FitnessClientPersonnel,
+  FitnessClientReferenceCategory,
   FitnessClientSummary,
+  FitnessClientSurveyor,
   FitnessInspectionReferenceSection,
   FitnessLegacyMappingRecord,
   FitnessLegacyMappingSection,
+  FitnessMasterDataCategory,
+  FitnessMasterDataCategorySummary,
   FitnessMockMode,
   FitnessMockState
 } from "@/types/fitness-admin";
@@ -29,9 +37,17 @@ export async function getFitnessClients(mode: FitnessMockMode = "success"): Prom
   return state(fitnessClients.map(toSummary), [], mode);
 }
 
+export async function getFitnessCustomers(mode: FitnessMockMode = "success") {
+  return getFitnessClients(mode);
+}
+
 export async function getFitnessClientById(clientId: string, mode: FitnessMockMode = "success"): Promise<FitnessMockState<FitnessClientDetail | null>> {
   await wait();
   return state(fitnessClients.find((item) => item.id === clientId) ?? null, null, mode);
+}
+
+export async function getFitnessCustomerById(clientId: string, mode: FitnessMockMode = "success") {
+  return getFitnessClientById(clientId, mode);
 }
 
 export async function getFitnessClientMasterSummary(clientId: string, mode: FitnessMockMode = "success"): Promise<FitnessMockState<FitnessClientMasterSummary | null>> {
@@ -54,6 +70,39 @@ export async function getFitnessClientContainerTypes(clientId: string, mode: Fit
   return state(fitnessClientContainerTypes.filter((item) => item.clientId === clientId), [], mode);
 }
 
+export async function getFitnessClientSurveyors(clientId: string, mode: FitnessMockMode = "success"): Promise<FitnessMockState<FitnessClientSurveyor[]>> {
+  await wait();
+  return state(fitnessClientSurveyors.filter((item) => item.clientId === clientId), [], mode);
+}
+
+export async function getFitnessClientSurveyTypes(clientId: string, mode: FitnessMockMode = "success") {
+  return getFitnessClientMasterDataReferences(clientId, "survey-type", mode);
+}
+
+export async function getFitnessClientCedexLocations(clientId: string, mode: FitnessMockMode = "success") {
+  return getFitnessClientMasterDataReferences(clientId, "cedex-location", mode);
+}
+
+export async function getFitnessClientCedexComponents(clientId: string, mode: FitnessMockMode = "success") {
+  return getFitnessClientMasterDataReferences(clientId, "cedex-component", mode);
+}
+
+export async function getFitnessClientCedexDamages(clientId: string, mode: FitnessMockMode = "success") {
+  return getFitnessClientMasterDataReferences(clientId, "cedex-damage", mode);
+}
+
+export async function getFitnessClientCedexRepairs(clientId: string, mode: FitnessMockMode = "success") {
+  return getFitnessClientMasterDataReferences(clientId, "cedex-repair", mode);
+}
+
+export async function getFitnessClientCedexMaterials(clientId: string, mode: FitnessMockMode = "success") {
+  return getFitnessClientMasterDataReferences(clientId, "cedex-material", mode);
+}
+
+export async function getFitnessClientResponsibilityCodes(clientId: string, mode: FitnessMockMode = "success") {
+  return getFitnessClientMasterDataReferences(clientId, "responsibility-code", mode);
+}
+
 export async function getFitnessClientInspectionReferences(clientId: string, section: FitnessInspectionReferenceSection, mode: FitnessMockMode = "success"): Promise<FitnessMockState<FitnessClientInspectionReference[]>> {
   await wait();
   return state(fitnessClientInspectionReferences.filter((item) => item.clientId === clientId && item.section === section), [], mode);
@@ -62,6 +111,49 @@ export async function getFitnessClientInspectionReferences(clientId: string, sec
 export async function getFitnessClientLegacyMappings(clientId: string, section: FitnessLegacyMappingSection, mode: FitnessMockMode = "success"): Promise<FitnessMockState<FitnessLegacyMappingRecord[]>> {
   await wait();
   return state(fitnessLegacyMappings.filter((item) => item.clientId === clientId && item.section === section), [], mode);
+}
+
+export async function getFitnessClientMasterDataReferences(
+  clientId: string,
+  category: FitnessClientReferenceCategory,
+  mode: FitnessMockMode = "success"
+): Promise<FitnessMockState<FitnessClientMasterDataReference[]>> {
+  await wait();
+  return state(
+    fitnessClientMasterDataReferences.filter((item) => item.clientId === clientId && item.category === category),
+    [],
+    mode
+  );
+}
+
+export async function getFitnessMasterDataCategoryRecords(
+  clientId: string,
+  category: FitnessMasterDataCategory,
+  mode: FitnessMockMode = "success"
+): Promise<FitnessMockState<FitnessClientMasterDataRecord[]>> {
+  await wait();
+  return state(recordsForCategory(clientId, category), [], mode);
+}
+
+export async function getMasterDataCategorySummary(
+  clientId: string,
+  category: FitnessMasterDataCategory,
+  mode: FitnessMockMode = "success"
+): Promise<FitnessMockState<FitnessMasterDataCategorySummary | null>> {
+  await wait();
+  const client = fitnessClients.find((item) => item.id === clientId);
+  const summary = client
+    ? { clientId, category, count: category === "customer" ? 1 : recordsForCategory(clientId, category).length, updatedAt: client.updatedAt }
+    : null;
+  return state(summary, null, mode);
+}
+
+function recordsForCategory(clientId: string, category: FitnessMasterDataCategory): FitnessClientMasterDataRecord[] {
+  if (category === "location") return fitnessClientLocations.filter((item) => item.clientId === clientId);
+  if (category === "surveyor") return fitnessClientSurveyors.filter((item) => item.clientId === clientId);
+  if (category === "container-type") return fitnessClientContainerTypes.filter((item) => item.clientId === clientId);
+  if (category === "customer") return [];
+  return fitnessClientMasterDataReferences.filter((item) => item.clientId === clientId && item.category === category);
 }
 
 function toSummary(client: FitnessClientDetail): FitnessClientSummary {

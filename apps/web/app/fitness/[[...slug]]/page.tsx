@@ -25,7 +25,7 @@ const fallbackPlaceholder: FitnessPlaceholder = {
   ]
 };
 
-const compatibility: Record<string, CompatibilityNoticeProps> = {
+export const fitnessMasterDataCompatibility: Record<string, CompatibilityNoticeProps> = {
   "/fitness/master-data": notice("Master Data lama", "Master Data global telah digantikan oleh Master Data berbasis klien.", "Pilih Klien", "/fitness/client-master-data"),
   "/fitness/master-data/owners": notice("Pemilik Peti Kemas lama", "Profil perusahaan pengguna jasa sekarang dikelola sebagai Klien.", "Buka Daftar Klien", "/fitness/clients"),
   "/fitness/master-data/manufacturers": notice("Pabrik Pembuat lama", "Referensi pabrik tidak diaktifkan sebagai Master Data Klien pada UI-B.2.", "Buka Peti Kemas", "/fitness/containers"),
@@ -51,7 +51,7 @@ export default async function FitnessRoutePage({ params, searchParams }: Fitness
   const slug = resolvedParams.slug ?? ["dashboard"];
   const path = "/fitness/" + slug.join("/");
   const activeHref = buildActiveHref(path, resolvedSearchParams);
-  const compatibilityItem = compatibility[path] ?? (path.startsWith("/fitness/master-data/checklist-templates/") ? compatibility["/fitness/master-data/checklist-templates"] : undefined);
+  const compatibilityItem = fitnessMasterDataCompatibility[path] ?? (path.startsWith("/fitness/master-data/checklist-templates/") ? fitnessMasterDataCompatibility["/fitness/master-data/checklist-templates"] : undefined);
 
   if (compatibilityItem) {
     return (
