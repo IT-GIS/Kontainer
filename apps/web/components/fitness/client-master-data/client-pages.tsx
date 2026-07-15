@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Building2, Database, Eye, Pencil, Plus, Save, UserRoundCheck } from "lucide-react";
+import { Building2, Eye, Pencil, Plus, Save, UserRoundCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -10,34 +10,25 @@ import { FilterBar, type FilterBarField } from "@/components/ui/filter-bar";
 import { FormField } from "@/components/ui/form-field";
 import { FormSection } from "@/components/ui/form-section";
 import { PageHeader } from "@/components/ui/page-header";
-import { PageTabs } from "@/components/ui/page-tabs";
 import { ResponsiveTableCards, type ResponsiveColumn } from "@/components/ui/responsive-table-cards";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { StickyActionBar } from "@/components/ui/sticky-action-bar";
 import { ToastFeedback } from "@/components/ui/toast-feedback";
 import { UnsavedChangesGuard } from "@/components/ui/unsaved-changes-guard";
-import type { FitnessClientDetail, FitnessClientSummary, PageTabItem } from "@/types/fitness-admin";
+import type { FitnessClientDetail, FitnessClientSummary, FitnessMasterDataCategorySummary } from "@/types/fitness-admin";
+import { CustomerMasterDataOverview } from "./customer-master-data-overview";
 
-const workspaceTabs: PageTabItem[] = [
-  { id: "clients", label: "Daftar Klien", href: "/fitness/clients" },
-  { id: "master", label: "Master Data Klien", href: "/fitness/client-master-data" }
-];
-
-export function ClientWorkspaceTabs({ activeHref }: { activeHref: string }) {
-  return <PageTabs tabs={workspaceTabs} activeHref={activeHref} />;
-}
-
-export function FitnessClientsList({ initialClients, clientFirst = false }: { initialClients: FitnessClientSummary[]; clientFirst?: boolean }) {
+export function FitnessClientsList({ initialClients }: { initialClients: FitnessClientSummary[] }) {
   const router = useRouter();
-  const customerBase = clientFirst ? "/fitness/master-data/customers" : "/fitness/clients";
+  const customerBase = "/fitness/master-data/customers";
   const [clients, setClients] = useState(initialClients);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [pendingClient, setPendingClient] = useState<FitnessClientSummary | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const fields: FilterBarField[] = [
-    { id: "keyword", label: "Cari", type: "search", value: filters.keyword ?? "", placeholder: "Nama atau kode klien" },
+    { id: "keyword", label: "Cari", type: "search", value: filters.keyword ?? "", placeholder: "Nama atau kode Customer" },
     {
       id: "status",
       label: "Status",
@@ -67,14 +58,14 @@ export function FitnessClientsList({ initialClients, clientFirst = false }: { in
   }, [clients, filters]);
 
   const columns: ResponsiveColumn<FitnessClientSummary>[] = [
-    { key: "code", header: "Kode Klien", render: (row) => <strong>{row.code}</strong> },
+    { key: "code", header: "Kode Customer", render: (row) => <strong>{row.code}</strong> },
     {
       key: "name",
       header: "Perusahaan/Organisasi",
       render: (row) => <span><strong>{row.name}</strong><small className="client-cell-note">{row.addressShort}</small></span>
     },
     { key: "pic", header: "PIC Utama", render: (row) => <span>{row.primaryContactName}<small className="client-cell-note">{row.email}<br />{row.phone}</small></span> },
-    { key: "locations", header: "Lokasi", render: (row) => row.locationCount },
+    { key: "locations", header: "Location Customer", render: (row) => row.locationCount },
     { key: "containers", header: "Peti Kemas", render: (row) => row.containerCount },
     { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "Aktif" ? "success" : "neutral"}>{row.status}</StatusBadge> },
     { key: "updated", header: "Pembaruan", render: (row) => row.updatedAt },
@@ -85,7 +76,7 @@ export function FitnessClientsList({ initialClients, clientFirst = false }: { in
         <div className="client-row-actions">
           <Link className="icon-button" href={customerBase + "/" + row.id} aria-label={"Lihat detail " + row.name} title="Lihat detail"><Eye size={16} /></Link>
           <Link className="icon-button" href={customerBase + "/" + row.id} aria-label={"Edit " + row.name} title="Edit"><Pencil size={16} /></Link>
-          <Link className="secondary-button client-inline-action" href={clientFirst ? "/fitness/master-data/locations/" + row.id : "/fitness/client-master-data/" + row.id + "?tab=summary"}>{clientFirst ? "Kelola Location" : "Kelola Master Data"}</Link>
+          <Link className="secondary-button client-inline-action" href={customerBase + "/" + row.id}>Buka Ringkasan Master Data</Link>
           <button className="secondary-button client-inline-action" disabled={row.status !== "Aktif"} onClick={() => setPendingClient(row)} type="button">Nonaktifkan</button>
         </div>
       )
@@ -101,13 +92,12 @@ export function FitnessClientsList({ initialClients, clientFirst = false }: { in
 
   return (
     <div className="page-stack">
-      {!clientFirst ? <ClientWorkspaceTabs activeHref="/fitness/clients" /> : null}
       <PageHeader
         eyebrow="Klien & Master Data"
-        title={clientFirst ? "Customer" : "Daftar Klien"}
-        description="Perusahaan atau organisasi pengguna jasa inspeksi GIFT."
-        meta={<span>{visibleClients.length} dari {clients.length} {clientFirst ? "Customer" : "klien"} ditampilkan</span>}
-        action={{ label: clientFirst ? "Tambah Customer" : "Tambah Klien", icon: Plus, onClick: () => router.push(customerBase + "/create") }}
+        title="Customer"
+        description="Customer adalah perusahaan atau organisasi pengguna jasa inspeksi GIFT."
+        meta={<span>{visibleClients.length} dari {clients.length} Customer ditampilkan</span>}
+        action={{ label: "Tambah Customer", icon: Plus, onClick: () => router.push(customerBase + "/create") }}
       />
       <FilterBar
         fields={fields}
@@ -117,13 +107,13 @@ export function FitnessClientsList({ initialClients, clientFirst = false }: { in
       {visibleClients.length > 0 ? (
         <ResponsiveTableCards columns={columns} rows={visibleClients} getRowId={(row) => row.id} getRowTitle={(row) => row.name} />
       ) : (
-        <EmptyState title={clientFirst ? "Customer tidak ditemukan" : "Klien tidak ditemukan"} description="Ubah pencarian atau reset filter untuk menampilkan data." />
+        <EmptyState title="Customer tidak ditemukan" description="Ubah pencarian atau reset filter untuk menampilkan data." />
       )}
       {toast ? <ToastFeedback title="Perubahan lokal berhasil" description={toast} tone="success" onDismiss={() => setToast(null)} /> : null}
       <ConfirmationDialog
         open={Boolean(pendingClient)}
-        title="Nonaktifkan klien?"
-        description="Perubahan hanya berlaku pada state lokal UI-B.2 dan akan kembali setelah halaman dimuat ulang."
+        title="Nonaktifkan Customer?"
+        description="Perubahan hanya berlaku pada state lokal frontend dan akan kembali setelah halaman dimuat ulang."
         confirmLabel="Nonaktifkan"
         tone="danger"
         onClose={() => setPendingClient(null)}
@@ -133,9 +123,15 @@ export function FitnessClientsList({ initialClients, clientFirst = false }: { in
   );
 }
 
-export function FitnessClientForm({ client, clientFirst = false }: { client?: FitnessClientDetail; clientFirst?: boolean }) {
+export function FitnessClientForm({
+  client,
+  overview = []
+}: {
+  client?: FitnessClientDetail;
+  overview?: FitnessMasterDataCategorySummary[];
+}) {
   const isEdit = Boolean(client);
-  const customerBase = clientFirst ? "/fitness/master-data/customers" : "/fitness/clients";
+  const customerBase = "/fitness/master-data/customers";
   const [form, setForm] = useState({
     code: client?.code ?? "",
     name: client?.name ?? "",
@@ -157,6 +153,8 @@ export function FitnessClientForm({ client, clientFirst = false }: { client?: Fi
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [toastOpen, setToastOpen] = useState(false);
   const missingRequired = !form.code.trim() || !form.name.trim() || !form.primaryContactName.trim() || !form.email.trim();
+  const invalidEmail = Boolean(form.email.trim()) && !isValidEmail(form.email);
+  const formInvalid = missingRequired || invalidEmail;
 
   function update(field: keyof typeof form, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -165,7 +163,7 @@ export function FitnessClientForm({ client, clientFirst = false }: { client?: Fi
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!missingRequired) setConfirmOpen(true);
+    if (!formInvalid) setConfirmOpen(true);
   }
 
   function saveLocal() {
@@ -176,16 +174,23 @@ export function FitnessClientForm({ client, clientFirst = false }: { client?: Fi
 
   return (
     <div className="page-stack">
-      {!clientFirst ? <ClientWorkspaceTabs activeHref="/fitness/clients" /> : null}
       <PageHeader
-        eyebrow={isEdit ? client?.code : "Klien baru"}
-        title={isEdit ? `Detail dan Edit ${clientFirst ? "Customer" : "Klien"}` : `Tambah ${clientFirst ? "Customer" : "Klien"}`}
-        description="Form frontend-only. Tidak ada data yang dikirim ke backend pada UI-B.2."
+        eyebrow={isEdit ? client?.code : "Customer baru"}
+        title={isEdit ? "Detail dan Edit Customer" : "Tambah Customer"}
+        description="Form frontend-only. Tidak ada data yang dikirim ke backend."
         meta={client ? <StatusBadge tone={client.status === "Aktif" ? "success" : "neutral"}>{client.status}</StatusBadge> : undefined}
       />
+      {client && overview.length ? (
+        <CustomerMasterDataOverview
+          clientId={client.id}
+          customerName={client.name}
+          items={overview}
+          onEdit={() => document.getElementById("client-code")?.focus()}
+        />
+      ) : null}
       <form id="fitness-client-form" onSubmit={submit}>
-        <FormSection title="Identitas" description="Kode dan identitas perusahaan atau organisasi klien.">
-          <TextField id="client-code" label="Kode Klien" value={form.code} onChange={(value) => update("code", value)} required />
+        <FormSection title="Identitas" description="Kode dan identitas perusahaan atau organisasi Customer.">
+          <TextField id="client-code" label="Kode Customer" value={form.code} onChange={(value) => update("code", value)} required />
           <TextField id="client-name" label="Nama Perusahaan/Organisasi" value={form.name} onChange={(value) => update("name", value)} required />
           <TextField id="client-short-name" label="Nama Singkat" value={form.shortName} onChange={(value) => update("shortName", value)} />
           <FormField id="client-status" label="Status" required helpText="Status hanya mengubah state lokal pada tahap ini.">
@@ -210,17 +215,17 @@ export function FitnessClientForm({ client, clientFirst = false }: { client?: Fi
         <FormSection title="Kontak Utama">
           <TextField id="client-pic" label="PIC Utama" value={form.primaryContactName} onChange={(value) => update("primaryContactName", value)} required />
           <TextField id="client-title" label="Jabatan" value={form.primaryContactTitle} onChange={(value) => update("primaryContactTitle", value)} />
-          <TextField id="client-email" label="Email" type="email" value={form.email} onChange={(value) => update("email", value)} required />
+          <TextField id="client-email" label="Email" type="email" value={form.email} onChange={(value) => update("email", value)} error={invalidEmail ? "Gunakan format email yang valid." : undefined} required />
           <TextField id="client-phone" label="Telepon" value={form.phone} onChange={(value) => update("phone", value)} />
         </FormSection>
-        <FormSection title="Catatan Admin">
-          <TextField id="client-notes" label="Catatan" value={form.adminNotes} onChange={(value) => update("adminNotes", value)} multiline />
+        <FormSection title="Catatan">
+          <TextField id="client-notes" label="Catatan Admin" value={form.adminNotes} onChange={(value) => update("adminNotes", value)} multiline />
           <TextField id="client-access" label="Informasi Akses" value={form.accessInformation} onChange={(value) => update("accessInformation", value)} multiline />
         </FormSection>
       </form>
-      {missingRequired && dirty ? <div className="alert alert-warning" role="alert">Lengkapi kode, nama klien, PIC utama, dan email sebelum menyimpan.</div> : null}
+      {formInvalid && dirty ? <div className="alert alert-warning" role="alert">{invalidEmail ? "Perbaiki format email sebelum menyimpan." : "Lengkapi Kode Customer, nama, PIC utama, dan email sebelum menyimpan."}</div> : null}
       {toastOpen ? <ToastFeedback title="Data tersimpan di tampilan" description="Perubahan lokal akan kembali ke mock awal setelah reload." tone="success" onDismiss={() => setToastOpen(false)} /> : null}
-      <UnsavedChangesGuard active={dirty} message="Perubahan Klien belum disimpan." />
+      <UnsavedChangesGuard active={dirty} message="Perubahan Customer belum disimpan." />
       <ConfirmationDialog
         open={confirmOpen}
         title="Simpan perubahan lokal?"
@@ -232,38 +237,8 @@ export function FitnessClientForm({ client, clientFirst = false }: { client?: Fi
       <StickyActionBar
         summary={<span>{dirty ? "Ada perubahan belum disimpan" : "Tidak ada perubahan lokal"}</span>}
         tertiary={{ label: "Kembali", href: customerBase }}
-        secondary={client ? { label: clientFirst ? "Kelola Location" : "Kelola Master Data", href: clientFirst ? "/fitness/master-data/locations/" + client.id : "/fitness/client-master-data/" + client.id + "?tab=summary" } : undefined}
-        primary={{ label: "Simpan", icon: Save, type: "submit", form: "fitness-client-form", disabled: missingRequired || !dirty }}
+        primary={{ label: "Simpan", icon: Save, type: "submit", form: "fitness-client-form", disabled: formInvalid || !dirty }}
       />
-    </div>
-  );
-}
-
-export function FitnessClientPicker({ clients, targetTab = "summary", targetSection }: { clients: FitnessClientSummary[]; targetTab?: string; targetSection?: string }) {
-  const [filters, setFilters] = useState<Record<string, string>>({});
-  const keyword = (filters.keyword ?? "").toLowerCase();
-  const visible = clients.filter((client) => (!keyword || (client.name + " " + client.code).toLowerCase().includes(keyword)) && (!filters.status || client.status === filters.status));
-  const fields: FilterBarField[] = [
-    { id: "keyword", label: "Cari", type: "search", value: filters.keyword ?? "", placeholder: "Nama atau kode klien" },
-    { id: "status", label: "Status", type: "select", value: filters.status ?? "", placeholder: "Semua status", options: [{ value: "Aktif", label: "Aktif" }, { value: "Tidak Aktif", label: "Tidak Aktif" }] }
-  ];
-  const columns: ResponsiveColumn<FitnessClientSummary>[] = [
-    { key: "client", header: "Klien", render: (row) => <span><strong>{row.name}</strong><small className="client-cell-note">{row.code}</small></span> },
-    { key: "locations", header: "Lokasi", render: (row) => row.locationCount },
-    { key: "personnel", header: "Personel/PIC", render: (row) => row.personnelCount },
-    { key: "types", header: "Jenis Peti Kemas", render: (row) => row.containerTypeCount },
-    { key: "references", header: "Referensi", render: (row) => row.referenceCount },
-    { key: "complete", header: "Kelengkapan", render: (row) => <StatusBadge tone={row.completeness === "Lengkap" ? "success" : "warning"}>{row.completeness}</StatusBadge> },
-    { key: "action", header: "Aksi", render: (row) => <Link className="primary-button client-inline-action" href={masterHref(row.id, targetTab, targetSection)}>Kelola Master Data</Link> }
-  ];
-
-  return (
-    <div className="page-stack">
-      <ClientWorkspaceTabs activeHref="/fitness/client-master-data" />
-      <PageHeader eyebrow="Klien & Master Data" title="Pilih Klien" description="Pilih klien terlebih dahulu agar seluruh data turunan tetap terisolasi." meta={<span>{clients.length} klien mock tersedia</span>} />
-      <div className="client-isolation-notice"><Database size={18} /><span>Lokasi, personel, jenis peti kemas, referensi, dan mapping dimuat berdasarkan <strong>clientId</strong>.</span></div>
-      <FilterBar fields={fields} onChange={(id, value) => setFilters((current) => ({ ...current, [id]: value }))} onReset={() => setFilters({})} />
-      {visible.length ? <ResponsiveTableCards columns={columns} rows={visible} getRowId={(row) => row.id} getRowTitle={(row) => row.name} /> : <EmptyState title="Klien tidak ditemukan" description="Reset filter untuk memilih klien lain." />}
     </div>
   );
 }
@@ -285,7 +260,7 @@ export function FitnessMasterCompatibilityNotice({ title, description, primary, 
         <div>
           <StatusBadge tone="warning">Route lama dipertahankan</StatusBadge>
           <h2>Pilih konteks data yang benar</h2>
-          <p>CRUD global lama tidak dijadikan workflow aktif pada UI-B.2. Data klien harus dibuka melalui clientId, sedangkan data personel internal tetap berada di konteks GIFT.</p>
+          <p>CRUD global lama tidak dijadikan workflow aktif. Data Customer harus dibuka melalui clientId, sedangkan personel internal tetap berada di konteks GIFT.</p>
           <div className="compatibility-actions">
             <Link className="primary-button" href={primary.href}>{primary.label}</Link>
             {secondary ? <Link className="secondary-button" href={secondary.href}>{secondary.label}</Link> : null}
@@ -296,20 +271,18 @@ export function FitnessMasterCompatibilityNotice({ title, description, primary, 
   );
 }
 
-function TextField({ id, label, value, onChange, required, multiline, type = "text" }: { id: string; label: string; value: string; onChange: (value: string) => void; required?: boolean; multiline?: boolean; type?: string }) {
+function TextField({ id, label, value, onChange, required, multiline, type = "text", error }: { id: string; label: string; value: string; onChange: (value: string) => void; required?: boolean; multiline?: boolean; type?: string; error?: string }) {
   return (
-    <FormField id={id} label={label} required={required}>
+    <FormField error={error} id={id} label={label} required={required}>
       {multiline ? (
-        <textarea id={id} rows={3} value={value} onChange={(event) => onChange(event.target.value)} required={required} />
+        <textarea aria-describedby={error ? id + "-error" : undefined} aria-invalid={Boolean(error)} id={id} rows={3} value={value} onChange={(event) => onChange(event.target.value)} required={required} />
       ) : (
-        <input id={id} type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} />
+        <input aria-describedby={error ? id + "-error" : undefined} aria-invalid={Boolean(error)} id={id} type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} />
       )}
     </FormField>
   );
 }
 
-function masterHref(clientId: string, tab: string, section?: string) {
-  const query = new URLSearchParams({ tab });
-  if (section) query.set("section", section);
-  return "/fitness/client-master-data/" + clientId + "?" + query.toString();
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }

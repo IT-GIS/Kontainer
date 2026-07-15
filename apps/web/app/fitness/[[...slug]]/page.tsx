@@ -26,14 +26,14 @@ const fallbackPlaceholder: FitnessPlaceholder = {
 };
 
 export const fitnessMasterDataCompatibility: Record<string, CompatibilityNoticeProps> = {
-  "/fitness/master-data": notice("Master Data lama", "Master Data global telah digantikan oleh Master Data berbasis klien.", "Pilih Klien", "/fitness/client-master-data"),
-  "/fitness/master-data/owners": notice("Pemilik Peti Kemas lama", "Profil perusahaan pengguna jasa sekarang dikelola sebagai Klien.", "Buka Daftar Klien", "/fitness/clients"),
-  "/fitness/master-data/manufacturers": notice("Pabrik Pembuat lama", "Referensi pabrik tidak diaktifkan sebagai Master Data Klien pada UI-B.2.", "Buka Peti Kemas", "/fitness/containers"),
-  "/fitness/master-data/locations": notice("Lokasi lama", "Lokasi harus dibuka setelah memilih klien agar data tidak tercampur.", "Pilih Klien", "/fitness/client-master-data?targetTab=locations"),
-  "/fitness/master-data/surveyors": { ...notice("Surveyor lama", "Personel/PIC Klien dipisahkan dari Surveyor GIFT.", "Pilih Klien untuk Personel/PIC", "/fitness/client-master-data?targetTab=personnel", "Buka Surveyor GIFT lama", "/master/surveyors"), internalGift: true },
-  "/fitness/master-data/container-types": notice("Jenis Peti Kemas lama", "Jenis peti kemas sekarang dibatasi berdasarkan klien.", "Pilih Klien", "/fitness/client-master-data?targetTab=container-types"),
-  "/fitness/master-data/approval-categories": notice("Kategori Persetujuan lama", "Master global ini tidak diaktifkan pada workflow UI-B.2.", "Kembali ke Master Data Klien", "/fitness/client-master-data"),
-  "/fitness/master-data/maintenance-schemes": notice("Skema Pemeliharaan lama", "Master global ini tidak diaktifkan pada workflow UI-B.2.", "Kembali ke Master Data Klien", "/fitness/client-master-data"),
+  "/fitness/master-data": notice("Master Data lama", "Master Data global telah digantikan oleh Master Data berbasis Customer.", "Pilih Customer", "/fitness/client-master-data"),
+  "/fitness/master-data/owners": notice("Pemilik Peti Kemas lama", "Profil perusahaan pengguna jasa sekarang dikelola sebagai Customer.", "Buka Daftar Customer", "/fitness/clients"),
+  "/fitness/master-data/manufacturers": notice("Pabrik Pembuat lama", "Referensi pabrik tidak diaktifkan sebagai Master Data Customer.", "Buka Peti Kemas", "/fitness/containers"),
+  "/fitness/master-data/locations": notice("Location lama", "Location harus dibuka setelah memilih Customer agar data tidak tercampur.", "Pilih Customer", "/fitness/client-master-data?targetTab=locations"),
+  "/fitness/master-data/surveyors": { ...notice("Surveyor lama", "Surveyor Customer dipisahkan dari Surveyor GIFT.", "Pilih Customer", "/fitness/client-master-data?targetTab=personnel", "Buka Surveyor GIFT lama", "/master/surveyors"), internalGift: true },
+  "/fitness/master-data/container-types": notice("Container Type lama", "Container Type sekarang dibatasi berdasarkan Customer.", "Pilih Customer", "/fitness/client-master-data?targetTab=container-types"),
+  "/fitness/master-data/approval-categories": notice("Kategori Persetujuan lama", "Master global ini tidak diaktifkan pada workflow Customer.", "Kembali ke Master Data Customer", "/fitness/client-master-data"),
+  "/fitness/master-data/maintenance-schemes": notice("Skema Pemeliharaan lama", "Master global ini tidak diaktifkan pada workflow Customer.", "Kembali ke Master Data Customer", "/fitness/client-master-data"),
   "/fitness/master-data/inspection-areas": referenceNotice("Area Pemeriksaan", "inspection-areas"),
   "/fitness/master-data/structural-components": referenceNotice("Komponen Struktur", "structural-components"),
   "/fitness/master-data/damage-criteria": referenceNotice("Kriteria Kerusakan", "damage-criteria"),
@@ -41,8 +41,8 @@ export const fitnessMasterDataCompatibility: Record<string, CompatibilityNoticeP
   "/fitness/master-data/test-parameters": referenceNotice("Parameter Pengujian", "test-parameters"),
   "/fitness/master-data/photo-categories": referenceNotice("Kategori Bukti Foto", "photo-categories"),
   "/fitness/master-data/inspection-recommendations": referenceNotice("Rekomendasi Pemeriksaan", "inspection-recommendations"),
-  "/fitness/master-data/checklist-templates": notice("Template Checklist lama", "Checklist seed dan workflow checklist tidak diaktifkan pada UI-B.2.", "Kembali ke Master Data Klien", "/fitness/client-master-data"),
-  "/fitness/master-data/authorized-signers": { ...notice("Pejabat Penandatangan lama", "Pejabat penandatangan adalah data internal GIFT, bukan Master Data Klien.", "Buka Pengaturan Internal GIFT", "/settings/company-profile"), internalGift: true },
+  "/fitness/master-data/checklist-templates": notice("Template Checklist lama", "Checklist seed dan workflow checklist tidak diaktifkan pada Master Data Customer.", "Kembali ke Master Data Customer", "/fitness/client-master-data"),
+  "/fitness/master-data/authorized-signers": { ...notice("Pejabat Penandatangan lama", "Pejabat penandatangan adalah data internal GIFT, bukan Master Data Customer.", "Buka Pengaturan Internal GIFT", "/settings/company-profile"), internalGift: true },
   "/fitness/master-data/company-profile": { ...notice("Profil Badan Usaha lama", "Profil badan usaha merupakan data internal GIFT.", "Buka Profil Badan Usaha", "/settings/company-profile"), internalGift: true }
 };
 
@@ -81,7 +81,7 @@ function notice(title: string, description: string, primaryLabel: string, primar
 }
 
 function referenceNotice(title: string, section: string): CompatibilityNoticeProps {
-  return notice(title + " lama", "Referensi pemeriksaan harus dibuka dalam konteks klien.", "Pilih Klien", "/fitness/client-master-data?targetTab=inspection-references&targetSection=" + section);
+  return notice(title + " lama", "Referensi pemeriksaan harus dibuka dalam konteks Customer.", "Pilih Customer", "/fitness/client-master-data?targetTab=inspection-references&targetSection=" + section);
 }
 
 function buildActiveHref(path: string, searchParams: Record<string, string | string[] | undefined>) {

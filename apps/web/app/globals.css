@@ -3113,7 +3113,7 @@ pre {
 }
 
 
-/* UI-B.2 Klien dan Master Data Klien */
+/* Master Data Customer client-first */
 .client-cell-note {
   display: block;
   margin-top: 0.2rem;
@@ -3181,6 +3181,100 @@ pre {
   margin-top: 1rem;
 }
 
+.customer-master-data-overview {
+  min-width: 0;
+}
+
+.customer-master-data-overview-head,
+.customer-master-data-overview-actions,
+.customer-master-data-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.customer-master-data-overview-head,
+.customer-master-data-card-head {
+  justify-content: space-between;
+}
+
+.customer-master-data-overview-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.customer-master-data-overview-actions > *,
+.customer-master-data-card .primary-button {
+  min-height: 2.75rem;
+}
+
+.customer-master-data-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.customer-master-data-card {
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+  align-content: start;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+  padding: 1rem;
+}
+
+.customer-master-data-card h3 {
+  margin: 0;
+}
+
+.customer-master-data-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.customer-master-data-card dl > div {
+  min-width: 0;
+}
+
+.customer-master-data-card dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.customer-master-data-card dd {
+  margin: 0.2rem 0 0;
+  font-weight: 700;
+}
+
+.customer-master-data-card .primary-button {
+  justify-self: start;
+}
+
+.client-checkbox-input {
+  width: 1.25rem;
+  min-height: 1.25rem;
+}
+
+.client-master-data-drawer-form,
+.client-checkbox-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.client-master-data-drawer-form .ui-form-section-grid {
+  grid-template-columns: 1fr;
+}
+
+.client-checkbox-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .client-context-field {
   display: grid;
   gap: 0.2rem;
@@ -3231,6 +3325,12 @@ pre {
   margin-top: 1rem;
 }
 
+@media (max-width: 1100px) {
+  .customer-master-data-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 900px) {
   .client-context-strip {
     top: 0.4rem;
@@ -3246,6 +3346,24 @@ pre {
 }
 
 @media (max-width: 640px) {
+  .customer-master-data-overview-head,
+  .customer-master-data-overview-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .customer-master-data-overview-actions > *,
+  .customer-master-data-card .primary-button {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .customer-master-data-grid,
+  .customer-master-data-card dl,
+  .client-checkbox-grid {
+    grid-template-columns: 1fr;
+  }
+
   .master-data-customer-picker .ui-row-card .client-inline-action,
   .master-data-category-workspace .page-header-actions,
   .master-data-category-workspace .page-header-actions a,

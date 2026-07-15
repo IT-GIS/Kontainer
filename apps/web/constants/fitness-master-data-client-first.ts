@@ -10,24 +10,28 @@ export type FitnessMasterDataCategoryConfig = {
   label: string;
   description: string;
   searchPlaceholder: string;
+  codeLabel: string;
+  nameLabel: string;
+  descriptionLabel: string;
   addLabel: string;
   emptyTitle: string;
   referenceCategory?: FitnessClientReferenceCategory;
+  referenceVariant?: "survey-type" | "cedex-location" | "named";
   notice?: string;
 };
 
 export const fitnessMasterDataCategoryConfigs: readonly FitnessMasterDataCategoryConfig[] = [
-  config("customer", "customers", "Customer", "Perusahaan atau organisasi pengguna jasa inspeksi GIFT.", "Nama atau kode Customer", "Tambah Customer", "Customer belum tersedia"),
-  config("location", "locations", "Location", "Lokasi milik atau yang digunakan Customer untuk pemeriksaan.", "Kode, nama, kota, atau PIC", "Tambah Location", "Location belum tersedia"),
-  config("surveyor", "surveyors", "Surveyor", "Surveyor Customer, bukan Surveyor GIFT.", "Kode, nama, jabatan, atau Location", "Tambah Surveyor", "Surveyor Customer belum tersedia", undefined, "Surveyor pada Master Data adalah pihak Customer. Surveyor GIFT tetap terpisah."),
-  config("container-type", "container-types", "Container Type", "Referensi jenis peti kemas milik Customer.", "Kode, nama, ukuran, atau deskripsi", "Tambah Container Type", "Container Type belum tersedia"),
-  config("survey-type", "survey-types", "Survey Type", "Referensi jenis layanan atau pemeriksaan milik Customer.", "Kode, nama, atau deskripsi", "Tambah Survey Type", "Survey Type belum tersedia", "survey-type", "Survey Type bukan status atau transisi workflow."),
-  config("cedex-location", "cedex-locations", "CEDEX Location", "Referensi teknis CEDEX Location milik Customer.", "Kode, nama, atau deskripsi", "Tambah CEDEX Location", "CEDEX Location belum tersedia", "cedex-location"),
-  config("cedex-component", "cedex-components", "CEDEX Component", "Referensi teknis CEDEX Component milik Customer.", "Kode, nama, atau deskripsi", "Tambah CEDEX Component", "CEDEX Component belum tersedia", "cedex-component"),
-  config("cedex-damage", "cedex-damages", "CEDEX Damage", "Referensi teknis CEDEX Damage milik Customer.", "Kode, nama, atau deskripsi", "Tambah CEDEX Damage", "CEDEX Damage belum tersedia", "cedex-damage"),
-  config("cedex-repair", "cedex-repairs", "CEDEX Repair", "Referensi teknis CEDEX Repair milik Customer.", "Kode, nama, atau deskripsi", "Tambah CEDEX Repair", "CEDEX Repair belum tersedia", "cedex-repair", "Referensi teknis saja; bukan workshop, biaya, spare part, atau operasional bengkel."),
-  config("cedex-material", "cedex-materials", "CEDEX Material", "Referensi teknis CEDEX Material milik Customer.", "Kode, nama, atau deskripsi", "Tambah CEDEX Material", "CEDEX Material belum tersedia", "cedex-material", "Referensi teknis saja; bukan inventori, stok, harga, atau pembelian."),
-  config("responsibility-code", "responsibility-codes", "Responsibility Code", "Referensi Responsibility Code milik Customer.", "Kode, nama, atau deskripsi", "Tambah Responsibility Code", "Responsibility Code belum tersedia", "responsibility-code", "Referensi frontend tanpa aturan keputusan, biaya, penagihan, atau tanggung jawab hukum.")
+  config({ id: "customer", slug: "customers", label: "Customer", description: "Customer adalah perusahaan atau organisasi pengguna jasa inspeksi GIFT.", searchPlaceholder: "Nama atau kode Customer", codeLabel: "Kode Customer", nameLabel: "Nama Perusahaan/Organisasi", descriptionLabel: "Catatan Admin", addLabel: "Tambah Customer", emptyTitle: "Customer belum tersedia" }),
+  config({ id: "location", slug: "locations", label: "Location", description: "Location Customer yang digunakan untuk pemeriksaan.", searchPlaceholder: "Kode, nama, kota, atau PIC", codeLabel: "Kode Location", nameLabel: "Nama Location", descriptionLabel: "Catatan Akses", addLabel: "Tambah Location", emptyTitle: "Location Customer belum tersedia" }),
+  config({ id: "surveyor", slug: "surveyors", label: "Surveyor", description: "Surveyor Customer, bukan Surveyor GIFT.", searchPlaceholder: "Kode, nama, jabatan, atau Location", codeLabel: "Kode Surveyor", nameLabel: "Nama Lengkap", descriptionLabel: "Jabatan", addLabel: "Tambah Surveyor", emptyTitle: "Surveyor Customer belum tersedia", notice: "Surveyor GIFT dikelola pada Pengaturan Internal GIFT dan Penugasan Surveyor GIFT." }),
+  config({ id: "container-type", slug: "container-types", label: "Container Type", description: "Referensi Container Type Customer, bukan peti kemas individual.", searchPlaceholder: "Kode, nama, ukuran, atau deskripsi", codeLabel: "Kode Container Type", nameLabel: "Nama Container Type", descriptionLabel: "Deskripsi", addLabel: "Tambah Container Type", emptyTitle: "Container Type Customer belum tersedia" }),
+  config({ id: "survey-type", slug: "survey-types", label: "Survey Type", description: "Referensi jenis layanan atau pemeriksaan milik Customer.", searchPlaceholder: "Kode, nama, atau deskripsi", codeLabel: "Kode Survey Type", nameLabel: "Nama Survey Type", descriptionLabel: "Deskripsi", addLabel: "Tambah Survey Type", emptyTitle: "Survey Type Customer belum tersedia", referenceCategory: "survey-type", referenceVariant: "survey-type", notice: "Survey Type hanya menjadi referensi pemilihan. Status proses dikendalikan sistem." }),
+  config({ id: "cedex-location", slug: "cedex-locations", label: "CEDEX Location", description: "Referensi teknis CEDEX Location milik Customer.", searchPlaceholder: "Kode, face, grid, mapping, atau ukuran", codeLabel: "Kode CEDEX Location", nameLabel: "Grid Code", descriptionLabel: "Deskripsi", addLabel: "Tambah CEDEX Location", emptyTitle: "CEDEX Location Customer belum tersedia", referenceCategory: "cedex-location", referenceVariant: "cedex-location", notice: "Field teknis mengikuti struktur CEDEX Location legacy yang terverifikasi." }),
+  config({ id: "cedex-component", slug: "cedex-components", label: "CEDEX Component", description: "Referensi teknis CEDEX Component milik Customer.", searchPlaceholder: "Kode, nama Component, atau deskripsi", codeLabel: "Kode CEDEX Component", nameLabel: "Nama Component", descriptionLabel: "Deskripsi", addLabel: "Tambah CEDEX Component", emptyTitle: "CEDEX Component Customer belum tersedia", referenceCategory: "cedex-component", referenceVariant: "named" }),
+  config({ id: "cedex-damage", slug: "cedex-damages", label: "CEDEX Damage", description: "Referensi teknis CEDEX Damage milik Customer.", searchPlaceholder: "Kode, nama Damage, atau deskripsi", codeLabel: "Kode CEDEX Damage", nameLabel: "Nama Damage", descriptionLabel: "Deskripsi", addLabel: "Tambah CEDEX Damage", emptyTitle: "CEDEX Damage Customer belum tersedia", referenceCategory: "cedex-damage", referenceVariant: "named" }),
+  config({ id: "cedex-repair", slug: "cedex-repairs", label: "CEDEX Repair", description: "Referensi teknis CEDEX Repair milik Customer.", searchPlaceholder: "Kode, nama Repair, atau deskripsi", codeLabel: "Kode CEDEX Repair", nameLabel: "Nama Repair", descriptionLabel: "Deskripsi", addLabel: "Tambah CEDEX Repair", emptyTitle: "CEDEX Repair Customer belum tersedia", referenceCategory: "cedex-repair", referenceVariant: "named", notice: "CEDEX Repair hanya referensi teknis; bukan workshop, proses perbaikan, biaya, invoice, spare part, inventori, atau vendor billing." }),
+  config({ id: "cedex-material", slug: "cedex-materials", label: "CEDEX Material", description: "Referensi teknis CEDEX Material milik Customer.", searchPlaceholder: "Kode, nama Material, atau deskripsi", codeLabel: "Kode CEDEX Material", nameLabel: "Nama Material", descriptionLabel: "Deskripsi", addLabel: "Tambah CEDEX Material", emptyTitle: "CEDEX Material Customer belum tersedia", referenceCategory: "cedex-material", referenceVariant: "named", notice: "CEDEX Material hanya referensi teknis; bukan inventori, stok, harga, pembelian, atau pengeluaran material." }),
+  config({ id: "responsibility-code", slug: "responsibility-codes", label: "Responsibility Code", description: "Referensi Responsibility Code Customer.", searchPlaceholder: "Code, nama/label, atau deskripsi", codeLabel: "Responsibility Code", nameLabel: "Nama/Label Responsibility", descriptionLabel: "Deskripsi", addLabel: "Tambah Responsibility Code", emptyTitle: "Responsibility Code Customer belum tersedia", referenceCategory: "responsibility-code", referenceVariant: "named", notice: "Responsibility Code pada tahap ini hanya referensi Master Data Customer." })
 ];
 
 export function getFitnessMasterDataCategoryConfig(slug: string) {
@@ -43,16 +47,6 @@ export function fitnessMasterDataCategoryHref(category: FitnessMasterDataCategor
   return "/fitness/master-data/" + config.slug + (clientId ? "/" + clientId : "");
 }
 
-function config(
-  id: FitnessMasterDataCategory,
-  slug: FitnessMasterDataCategorySlug,
-  label: string,
-  description: string,
-  searchPlaceholder: string,
-  addLabel: string,
-  emptyTitle: string,
-  referenceCategory?: FitnessClientReferenceCategory,
-  notice?: string
-): FitnessMasterDataCategoryConfig {
-  return { id, slug, label, description, searchPlaceholder, addLabel, emptyTitle, referenceCategory, notice };
+function config(value: FitnessMasterDataCategoryConfig): FitnessMasterDataCategoryConfig {
+  return value;
 }

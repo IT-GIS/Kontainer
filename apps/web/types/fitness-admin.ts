@@ -168,18 +168,6 @@ export type FitnessClientActivity = {
   tone: "neutral" | "success" | "warning" | "danger";
 };
 
-export type FitnessClientMasterSummary = {
-  clientId: string;
-  activeLocationCount: number;
-  activePersonnelCount: number;
-  containerTypeCount: number;
-  inspectionReferenceCount: number;
-  legacyMappingCount: number;
-  completeness: FitnessClientCompleteness;
-  updatedAt: string;
-  activities: FitnessClientActivity[];
-};
-
 export type FitnessClientLocationType =
   | "Depo"
   | "Gudang"
@@ -213,7 +201,7 @@ export type FitnessClientPersonnelType =
   | "Penanggung Jawab Peti Kemas"
   | "Personel Teknis"
   | "Pendamping Pemeriksaan"
-  | "Surveyor Internal Klien";
+  | "Surveyor Internal Customer";
 
 export type FitnessClientPersonnel = {
   id: string;
@@ -285,16 +273,47 @@ export type FitnessClientReferenceCategory = Exclude<
   "customer" | "location" | "surveyor" | "container-type"
 >;
 
-export type FitnessClientMasterDataReference = {
+type FitnessClientMasterDataReferenceBase = {
   id: string;
   clientId: string;
   category: FitnessClientReferenceCategory;
   code: string;
-  name: string;
   description: string;
   status: FitnessClientStatus;
   updatedAt: string;
 };
+
+export type FitnessClientSurveyTypeReference = FitnessClientMasterDataReferenceBase & {
+  category: "survey-type";
+  name: string;
+  requiresEir: boolean;
+  requiresLightTest: boolean;
+  requiresCargoWorthyResult: boolean;
+};
+
+export type FitnessCedexFace = "left" | "right" | "front" | "door" | "roof" | "floor" | "understructure";
+export type FitnessCedexContainerSize = "all" | "20" | "40" | "45";
+
+export type FitnessClientCedexLocationReference = FitnessClientMasterDataReferenceBase & {
+  category: "cedex-location";
+  face: FitnessCedexFace;
+  gridCode: string;
+  cedexMappingCode: string;
+  containerSize: FitnessCedexContainerSize;
+  displayOrder: number;
+};
+
+export type FitnessClientNamedReferenceCategory = Exclude<FitnessClientReferenceCategory, "survey-type" | "cedex-location">;
+
+export type FitnessClientNamedMasterDataReference = FitnessClientMasterDataReferenceBase & {
+  category: FitnessClientNamedReferenceCategory;
+  name: string;
+};
+
+export type FitnessClientMasterDataReference =
+  | FitnessClientSurveyTypeReference
+  | FitnessClientCedexLocationReference
+  | FitnessClientNamedMasterDataReference;
 
 export type FitnessClientMasterDataRecord =
   | FitnessClientLocation
@@ -306,7 +325,10 @@ export type FitnessMasterDataCategorySummary = {
   clientId: string;
   category: FitnessMasterDataCategory;
   count: number;
+  activeCount: number;
+  inactiveCount: number;
   updatedAt: string;
+  completeness: FitnessClientCompleteness;
 };
 
 export type FitnessInspectionReferenceSection =
@@ -330,19 +352,6 @@ export type FitnessClientInspectionReference = {
   presentationRequired?: boolean;
   order?: number;
   status: FitnessClientStatus;
-  updatedAt: string;
-};
-
-export type FitnessLegacyMappingSection = "location" | "component" | "damage" | "material";
-
-export type FitnessLegacyMappingRecord = {
-  id: string;
-  clientId: string;
-  section: FitnessLegacyMappingSection;
-  legacyCode: string;
-  legacyName: string;
-  mappedTarget: string | null;
-  mappingStatus: "Terpetakan" | "Belum Terpetakan";
   updatedAt: string;
 };
 

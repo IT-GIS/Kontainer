@@ -3,11 +3,9 @@ import {
   fitnessClientInspectionReferences,
   fitnessClientLocations,
   fitnessClientMasterDataReferences,
-  fitnessClientMasterSummaries,
   fitnessClientPersonnel,
   fitnessClientSurveyors,
-  fitnessClients,
-  fitnessLegacyMappings
+  fitnessClients
 } from "@/mocks/fitness-client-master-data";
 import type {
   FitnessClientContainerType,
@@ -16,14 +14,11 @@ import type {
   FitnessClientLocation,
   FitnessClientMasterDataRecord,
   FitnessClientMasterDataReference,
-  FitnessClientMasterSummary,
   FitnessClientPersonnel,
   FitnessClientReferenceCategory,
   FitnessClientSummary,
   FitnessClientSurveyor,
   FitnessInspectionReferenceSection,
-  FitnessLegacyMappingRecord,
-  FitnessLegacyMappingSection,
   FitnessMasterDataCategory,
   FitnessMasterDataCategorySummary,
   FitnessMockMode,
@@ -31,6 +26,18 @@ import type {
 } from "@/types/fitness-admin";
 
 const delayMs = 40;
+const customerOverviewCategories: Exclude<FitnessMasterDataCategory, "customer">[] = [
+  "location",
+  "surveyor",
+  "container-type",
+  "survey-type",
+  "cedex-location",
+  "cedex-component",
+  "cedex-damage",
+  "cedex-repair",
+  "cedex-material",
+  "responsibility-code"
+];
 
 export async function getFitnessClients(mode: FitnessMockMode = "success"): Promise<FitnessMockState<FitnessClientSummary[]>> {
   await wait();
@@ -48,11 +55,6 @@ export async function getFitnessClientById(clientId: string, mode: FitnessMockMo
 
 export async function getFitnessCustomerById(clientId: string, mode: FitnessMockMode = "success") {
   return getFitnessClientById(clientId, mode);
-}
-
-export async function getFitnessClientMasterSummary(clientId: string, mode: FitnessMockMode = "success"): Promise<FitnessMockState<FitnessClientMasterSummary | null>> {
-  await wait();
-  return state(fitnessClientMasterSummaries.find((item) => item.clientId === clientId) ?? null, null, mode);
 }
 
 export async function getFitnessClientLocations(clientId: string, mode: FitnessMockMode = "success"): Promise<FitnessMockState<FitnessClientLocation[]>> {
@@ -108,11 +110,6 @@ export async function getFitnessClientInspectionReferences(clientId: string, sec
   return state(fitnessClientInspectionReferences.filter((item) => item.clientId === clientId && item.section === section), [], mode);
 }
 
-export async function getFitnessClientLegacyMappings(clientId: string, section: FitnessLegacyMappingSection, mode: FitnessMockMode = "success"): Promise<FitnessMockState<FitnessLegacyMappingRecord[]>> {
-  await wait();
-  return state(fitnessLegacyMappings.filter((item) => item.clientId === clientId && item.section === section), [], mode);
-}
-
 export async function getFitnessClientMasterDataReferences(
   clientId: string,
   category: FitnessClientReferenceCategory,
@@ -141,11 +138,17 @@ export async function getMasterDataCategorySummary(
   mode: FitnessMockMode = "success"
 ): Promise<FitnessMockState<FitnessMasterDataCategorySummary | null>> {
   await wait();
+  return state(categorySummary(clientId, category), null, mode);
+}
+
+export async function getFitnessCustomerMasterDataOverview(
+  clientId: string,
+  mode: FitnessMockMode = "success"
+): Promise<FitnessMockState<FitnessMasterDataCategorySummary[] | null>> {
+  await wait();
   const client = fitnessClients.find((item) => item.id === clientId);
-  const summary = client
-    ? { clientId, category, count: category === "customer" ? 1 : recordsForCategory(clientId, category).length, updatedAt: client.updatedAt }
-    : null;
-  return state(summary, null, mode);
+  const overview = client ? customerOverviewCategories.map((category) => categorySummary(clientId, category)!) : null;
+  return state(overview, null, mode);
 }
 
 function recordsForCategory(clientId: string, category: FitnessMasterDataCategory): FitnessClientMasterDataRecord[] {
@@ -154,6 +157,34 @@ function recordsForCategory(clientId: string, category: FitnessMasterDataCategor
   if (category === "container-type") return fitnessClientContainerTypes.filter((item) => item.clientId === clientId);
   if (category === "customer") return [];
   return fitnessClientMasterDataReferences.filter((item) => item.clientId === clientId && item.category === category);
+}
+
+function categorySummary(clientId: string, category: FitnessMasterDataCategory): FitnessMasterDataCategorySummary | null {
+  const client = fitnessClients.find((item) => item.id === clientId);
+  if (!client) return null;
+  if (category === "customer") {
+    return {
+      clientId,
+      category,
+      count: 1,
+      activeCount: client.status === "Aktif" ? 1 : 0,
+      inactiveCount: client.status === "Tidak Aktif" ? 1 : 0,
+      updatedAt: client.updatedAt,
+      completeness: "Lengkap"
+    };
+  }
+
+  const records = recordsForCategory(clientId, category);
+  const activeCount = records.filter((item) => item.status === "Aktif").length;
+  return {
+    clientId,
+    category,
+    count: records.length,
+    activeCount,
+    inactiveCount: records.length - activeCount,
+    updatedAt: records[0]?.updatedAt ?? client.updatedAt,
+    completeness: records.length > 0 ? "Lengkap" : "Belum Lengkap"
+  };
 }
 
 function toSummary(client: FitnessClientDetail): FitnessClientSummary {
@@ -170,7 +201,7 @@ function toSummary(client: FitnessClientDetail): FitnessClientSummary {
 
 function state<T>(data: T, emptyData: T, mode: FitnessMockMode): FitnessMockState<T> {
   if (mode === "loading") return { status: "loading", data: null, isLoading: true, error: null };
-  if (mode === "error") return { status: "error", data: null, isLoading: false, error: "Data mock Klien belum dapat dimuat." };
+  if (mode === "error") return { status: "error", data: null, isLoading: false, error: "Data mock Customer belum dapat dimuat." };
   if (mode === "empty") return { status: "empty", data: emptyData, isLoading: false, error: null };
   return { status: "success", data, isLoading: false, error: null };
 }

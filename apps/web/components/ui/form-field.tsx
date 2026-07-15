@@ -40,7 +40,7 @@ export function FormField({
       ) : null}
       {children}
       {helpText ? <small id={resolvedHelpTextId}>{helpText}</small> : null}
-      {error ? <em id={resolvedErrorId}>{error}</em> : null}
+      {error ? <em id={resolvedErrorId} role="alert">{error}</em> : null}
     </div>
   );
 }

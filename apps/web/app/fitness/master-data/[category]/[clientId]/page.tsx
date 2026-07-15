@@ -5,7 +5,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fitnessMasterDataCategoryHref, getFitnessMasterDataCategoryConfig } from "@/constants/fitness-master-data-client-first";
-import { getFitnessClientLocations, getFitnessCustomerById, getFitnessMasterDataCategoryRecords } from "@/lib/fitness-client-master-data-mock-service";
+import { getFitnessClientLocations, getFitnessCustomerById, getFitnessCustomerMasterDataOverview, getFitnessMasterDataCategoryRecords } from "@/lib/fitness-client-master-data-mock-service";
 import type { FitnessMasterDataCategory, FitnessMockMode } from "@/types/fitness-admin";
 import { fitnessMasterDataCompatibility } from "../../../[[...slug]]/page";
 
@@ -30,10 +30,11 @@ export default async function FitnessMasterDataCategoryDetailPage({
   }
 
   const recordMode = mockMode(first(query.mockState));
-  const [customerState, recordState, locationState] = await Promise.all([
+  const [customerState, recordState, locationState, overviewState] = await Promise.all([
     getFitnessCustomerById(clientId),
     config.id === "customer" ? Promise.resolve(null) : getFitnessMasterDataCategoryRecords(clientId, config.id, recordMode),
-    config.id === "surveyor" ? getFitnessClientLocations(clientId) : Promise.resolve(null)
+    config.id === "surveyor" ? getFitnessClientLocations(clientId) : Promise.resolve(null),
+    config.id === "customer" ? getFitnessCustomerMasterDataOverview(clientId) : Promise.resolve(null)
   ]);
   const customer = customerState.status === "success" ? customerState.data : null;
   const title = customer?.name ?? config.label;
@@ -42,7 +43,7 @@ export default async function FitnessMasterDataCategoryDetailPage({
     <ProtectedRoute>
       <AppShell title={title} subtitle={`${config.label} berdasarkan Customer aktif.`} breadcrumbs={[{ label: "Admin Kelaikan", href: "/fitness/dashboard" }, { label: "Klien & Master Data", href: "/fitness/master-data/customers" }, { label: config.label, href: fitnessMasterDataCategoryHref(config.id) }, { label: customer?.name ?? clientId }]}>
         {!customer ? <ErrorState message="clientId tidak ditemukan pada mock Customer." action={{ label: "Kembali ke Daftar Customer", href: fitnessMasterDataCategoryHref(config.id) }} /> : null}
-        {customer && config.id === "customer" ? <FitnessClientForm client={customer} clientFirst /> : null}
+        {customer && config.id === "customer" ? <FitnessClientForm client={customer} overview={overviewState?.status === "success" ? overviewState.data ?? [] : []} /> : null}
         {customer && recordState?.status === "loading" ? <Skeleton variant="table" label={`Memuat ${config.label} ${customer.name}`} /> : null}
         {customer && recordState?.status === "error" ? <ErrorState message={recordState.error} action={{ label: "Kembali ke Daftar Customer", href: fitnessMasterDataCategoryHref(config.id) }} /> : null}
         {customer && recordState?.status === "success" ? (

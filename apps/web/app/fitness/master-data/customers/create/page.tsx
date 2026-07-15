@@ -6,7 +6,7 @@ export default function FitnessCustomerCreatePage() {
   return (
     <ProtectedRoute>
       <AppShell title="Tambah Customer" subtitle="Daftarkan perusahaan atau organisasi pengguna jasa." breadcrumbs={[{ label: "Admin Kelaikan", href: "/fitness/dashboard" }, { label: "Klien & Master Data", href: "/fitness/master-data/customers" }, { label: "Customer", href: "/fitness/master-data/customers" }, { label: "Tambah Customer" }]}>
-        <FitnessClientForm clientFirst />
+        <FitnessClientForm />
       </AppShell>
     </ProtectedRoute>
   );

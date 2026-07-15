@@ -206,3 +206,46 @@ Browser in-app interaktif dicoba setelah server lokal aktif, tetapi koneksi brow
 - Persistence lintas reload tidak dibuat.
 - Test framework atau dependency baru tidak ditambahkan.
 - Tidak ada commit dan tidak ada push.
+
+## 15. FINAL CORRECTION AND HARDENING
+
+Baseline final correction adalah `8dba26aca6d60b74179cadab5d1d90e95317da8c`. File lokal `docs/PROMPT_CODEX_MASTER_DATA_CLIENT_FIRST.md` tetap dipertahankan tanpa perubahan.
+
+Koreksi final yang diterapkan:
+
+- seluruh isi canonical Master Data memakai terminologi Customer; `Klien & Master Data` hanya dipertahankan sebagai nama group navigasi;
+- daftar dan form Customer hanya mempunyai satu cabang canonical, tanpa `clientFirst=false`, `FitnessClientPicker`, atau `FitnessClientMasterWorkspace`;
+- detail Customer tetap memuat form profil dan sekarang mempunyai overview 10 kategori, metrik total/aktif/tidak aktif/pembaruan/kelengkapan, tombol Edit Customer, shortcut Kelola, serta kembali ke daftar;
+- `FitnessMasterDataCategorySummary` memuat `activeCount`, `inactiveCount`, dan `completeness`; `getFitnessCustomerMasterDataOverview(clientId)` memakai kelengkapan presence-based;
+- picker menampilkan total dan record aktif/tidak aktif, PIC, wilayah, status, pembaruan, filter langsung, dan nama aksesibel yang menyebut kategori serta Customer;
+- editor referensi memakai union discriminated untuk Survey Type, CEDEX Location, kategori CEDEX bernama, dan Responsibility Code sehingga field legacy tidak dipaksakan ke model generik;
+- setiap Drawer memakai Customer dan `clientId` read-only dari route; pilihan Location Surveyor dibatasi ke Location aktif milik Customer tersebut;
+- form Customer dan Location/Surveyor memvalidasi field wajib dan format email; feedback konfirmasi, toast, dirty guard, Escape, focus trap, dan focus restore memakai komponen interaksi existing;
+- overview responsive memakai tiga kolom desktop, dua kolom tablet, dan satu kolom mobile; form Drawer satu kolom, action minimal 44 px, context strip wrap, card mobile berlabel, dan konten diberi proteksi overflow;
+- route canonical dan seluruh adapter compatibility tetap tersedia. Active child tetap tunggal berdasarkan scoring match existing, group membuka otomatis, dan atribut `aria-expanded` serta `aria-current` dipertahankan.
+
+Pembersihan hanya mencakup UI lama yang tidak mempunyai consumer: workspace/tab summary privat, picker privat, mapping legacy privat, dan cabang label lama. Tipe/getter Personel serta referensi pemeriksaan yang masih dipakai UI-C tidak dihapus.
+
+### Batas role
+
+- Admin mengelola Master Data.
+- Supervisor dan Reviewer mengambil keputusan teknis pada tahap workflow berikutnya, bukan pada Master Data.
+- Management tetap read-only.
+- Admin boleh melihat Review untuk monitoring, tetapi tidak memperoleh aksi keputusan teknis dari perubahan frontend ini.
+
+### Validasi final
+
+Hasil final correction dicatat berdasarkan perintah yang benar-benar dijalankan pada sesi ini:
+
+- `npm run typecheck --workspace apps/web`: LULUS.
+- `npm run build --workspace apps/web`: LULUS; Next.js menghasilkan 65 halaman.
+- `git diff --check`: LULUS; peringatan line-ending Windows tidak menghasilkan error.
+- Hash `apps/web/next-env.d.ts` kembali ke `7AD303E40D4FDDF44F156129E397511953A71481C5CFD86B1862649AAAF240CC` setelah churn build dipulihkan.
+- HTTP smoke: 66/66 route lulus, mencakup seluruh index canonical, detail dua Customer untuk 11 kategori, create, unknown category/`clientId`, state loading/empty/error, dan adapter compatibility.
+- Isolasi payload HTML: 7/7 pemeriksaan lulus untuk Location, Surveyor/Location aktif, CEDEX Damage, dan Responsibility Code pada Nusantara/Samudra.
+- Browser in-app sudah benar-benar dicoba, tetapi koneksi gagal pada tahap inisialisasi runtime sesi. Karena itu filter/click, sidebar, dialog, focus, refresh visual, dan breakpoint browser tidak dinyatakan lulus.
+- Scan 17 file implementasi/dokumentasi yang diubah: nol temuan untuk empat variasi istilah terlarang pada brief.
+- Scan repository menemukan istilah tersebut hanya pada dokumen brief lama `docs/FINALISASI_FULL_MENU_ADMIN_KELAIKAN_BERTAHAP.md` dan file prompt lokal pengguna yang tidak diubah; temuan ini berada di luar scope.
+- Audit scope: nol file backend, API, database, migration, SQL, atau modul operasional berubah.
+
+Tidak ada backend, API, database, migration, SQL, atau modul operasional yang diubah oleh final correction.

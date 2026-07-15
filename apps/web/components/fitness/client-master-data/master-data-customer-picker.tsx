@@ -39,7 +39,7 @@ export function MasterDataCustomerPicker({ config, items }: { config: FitnessMas
     { key: "code", header: "Kode", render: ({ customer }) => <strong>{customer.code}</strong> },
     { key: "pic", header: "PIC Utama", render: ({ customer }) => <span>{customer.primaryContactName}<small className="client-cell-note">{customer.email}</small></span> },
     { key: "region", header: "Kota/Provinsi", render: ({ customer }) => <span>{customer.city}<small className="client-cell-note">{customer.province}</small></span> },
-    { key: "count", header: "Jumlah Data", render: ({ summary }) => <strong>{summary.count}</strong> },
+    { key: "count", header: "Jumlah Data", render: ({ summary }) => <span><strong>{summary.count} data</strong><small className="client-cell-note">{summary.activeCount} aktif · {summary.inactiveCount} tidak aktif</small></span> },
     { key: "status", header: "Status", render: ({ customer }) => <StatusBadge tone={customer.status === "Aktif" ? "success" : "neutral"}>{customer.status}</StatusBadge> },
     { key: "updated", header: "Pembaruan", render: ({ summary }) => summary.updatedAt },
     {
@@ -67,7 +67,7 @@ export function MasterDataCustomerPicker({ config, items }: { config: FitnessMas
       />
       <div className="client-isolation-notice" role="status">
         <Database size={18} />
-        <span>Customer adalah sumber perusahaan. Data {config.label} selalu dibatasi oleh <strong>clientId</strong> dari route.</span>
+        <span>Customer adalah sumber perusahaan atau organisasi. Data {config.label} selalu dibatasi oleh <strong>clientId</strong> dari route.</span>
       </div>
       <FilterBar fields={fields} onChange={(id, value) => setFilters((current) => ({ ...current, [id]: value }))} onReset={() => setFilters({})} />
       {visibleItems.length ? (
