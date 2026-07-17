@@ -4,7 +4,9 @@ import Link from "next/link";
 import { ArrowLeft, Pencil } from "lucide-react";
 import {
   fitnessMasterDataCategoryConfigs,
-  fitnessMasterDataCategoryHref
+  masterDataDetailHref,
+  masterDataIndexHref,
+  type MasterDataRouteFamily
 } from "@/constants/fitness-master-data-client-first";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { FitnessMasterDataCategorySummary } from "@/types/fitness-admin";
@@ -13,12 +15,16 @@ export function CustomerMasterDataOverview({
   clientId,
   customerName,
   items,
-  onEdit
+  onEdit,
+  routeFamily = "fitness",
+  readOnly = false
 }: {
   clientId: string;
   customerName: string;
   items: FitnessMasterDataCategorySummary[];
   onEdit: () => void;
+  routeFamily?: MasterDataRouteFamily;
+  readOnly?: boolean;
 }) {
   return (
     <section className="workspace-panel customer-master-data-overview" aria-labelledby="customer-master-data-title">
@@ -28,11 +34,11 @@ export function CustomerMasterDataOverview({
           <p>Ringkasan seluruh kategori yang dimiliki Customer aktif.</p>
         </div>
         <div className="customer-master-data-overview-actions">
-          <button className="secondary-button" onClick={onEdit} type="button">
+          <button className="secondary-button" disabled={readOnly} onClick={onEdit} type="button">
             <Pencil size={16} />
             <span>Edit Customer</span>
           </button>
-          <Link className="secondary-button" href="/fitness/master-data/customers">
+          <Link className="secondary-button" href={masterDataIndexHref("customer", routeFamily)}>
             <ArrowLeft size={16} />
             <span>Kembali ke daftar Customer</span>
           </Link>
@@ -59,7 +65,7 @@ export function CustomerMasterDataOverview({
               <Link
                 aria-label={`Kelola ${config.label} untuk Customer ${customerName}`}
                 className="primary-button"
-                href={fitnessMasterDataCategoryHref(config.id, clientId)}
+                href={masterDataDetailHref(config.id, clientId, routeFamily)}
               >
                 Kelola {config.label}
               </Link>

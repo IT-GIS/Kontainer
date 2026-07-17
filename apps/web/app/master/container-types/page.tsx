@@ -1,15 +1,5 @@
-"use client";
+import { ActualMasterDataIndexRoute, type ActualMasterDataSearchParams } from "@/components/master/customer-first-route";
 
-import { ProtectedRoute } from "@/components/auth/protected-route";
-import { AppShell } from "@/components/layout/app-shell";
-import { MasterDataPage } from "@/components/master/master-data-page";
-
-export default function ContainerTypesPage() {
-  return (
-    <ProtectedRoute>
-      <AppShell title="Master Container Type">
-        <MasterDataPage resourceId="container-types" />
-      </AppShell>
-    </ProtectedRoute>
-  );
+export default function ContainerTypesPage({ searchParams }: { searchParams: ActualMasterDataSearchParams }) {
+  return <ActualMasterDataIndexRoute category="container-type" searchParams={searchParams} />;
 }

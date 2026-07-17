@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Database } from "lucide-react";
-import type { FitnessMasterDataCategoryConfig } from "@/constants/fitness-master-data-client-first";
-import { fitnessMasterDataCategoryHref } from "@/constants/fitness-master-data-client-first";
+import type { FitnessMasterDataCategoryConfig, MasterDataRouteFamily } from "@/constants/fitness-master-data-client-first";
+import { masterDataDetailHref } from "@/constants/fitness-master-data-client-first";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FilterBar, type FilterBarField } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
@@ -17,7 +17,15 @@ export type MasterDataCustomerPickerItem = {
   summary: FitnessMasterDataCategorySummary;
 };
 
-export function MasterDataCustomerPicker({ config, items }: { config: FitnessMasterDataCategoryConfig; items: MasterDataCustomerPickerItem[] }) {
+export function MasterDataCustomerPicker({
+  config,
+  items,
+  routeFamily = "fitness"
+}: {
+  config: FitnessMasterDataCategoryConfig;
+  items: MasterDataCustomerPickerItem[];
+  routeFamily?: MasterDataRouteFamily;
+}) {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const regions = Array.from(new Set(items.flatMap(({ customer }) => [customer.city, customer.province])));
   const fields: FilterBarField[] = [
@@ -36,11 +44,13 @@ export function MasterDataCustomerPicker({ config, items }: { config: FitnessMas
   }, [filters, items]);
   const columns: ResponsiveColumn<MasterDataCustomerPickerItem>[] = [
     { key: "customer", header: "Customer", render: ({ customer }) => <span><strong>{customer.name}</strong><small className="client-cell-note">{customer.addressShort}</small></span> },
-    { key: "code", header: "Kode", render: ({ customer }) => <strong>{customer.code}</strong> },
+    { key: "code", header: "Kode Customer", render: ({ customer }) => <strong>{customer.code}</strong> },
     { key: "pic", header: "PIC Utama", render: ({ customer }) => <span>{customer.primaryContactName}<small className="client-cell-note">{customer.email}</small></span> },
     { key: "region", header: "Kota/Provinsi", render: ({ customer }) => <span>{customer.city}<small className="client-cell-note">{customer.province}</small></span> },
-    { key: "count", header: "Jumlah Data", render: ({ summary }) => <span><strong>{summary.count} data</strong><small className="client-cell-note">{summary.activeCount} aktif · {summary.inactiveCount} tidak aktif</small></span> },
-    { key: "status", header: "Status", render: ({ customer }) => <StatusBadge tone={customer.status === "Aktif" ? "success" : "neutral"}>{customer.status}</StatusBadge> },
+    { key: "count", header: "Jumlah Data Kategori", render: ({ summary }) => <strong>{summary.count}</strong> },
+    { key: "active", header: "Data Aktif", render: ({ summary }) => <strong>{summary.activeCount}</strong> },
+    { key: "inactive", header: "Data Tidak Aktif", render: ({ summary }) => <strong>{summary.inactiveCount}</strong> },
+    { key: "status", header: "Status Customer", render: ({ customer }) => <StatusBadge tone={customer.status === "Aktif" ? "success" : "neutral"}>{customer.status}</StatusBadge> },
     { key: "updated", header: "Pembaruan", render: ({ summary }) => summary.updatedAt },
     {
       key: "action",
@@ -49,7 +59,7 @@ export function MasterDataCustomerPicker({ config, items }: { config: FitnessMas
         <Link
           aria-label={`Kelola ${config.label} ${customer.name}`}
           className="primary-button client-inline-action"
-          href={fitnessMasterDataCategoryHref(config.id, customer.id)}
+          href={masterDataDetailHref(config.id, customer.id, routeFamily)}
         >
           Kelola {config.label}
         </Link>
@@ -71,7 +81,7 @@ export function MasterDataCustomerPicker({ config, items }: { config: FitnessMas
       </div>
       <FilterBar fields={fields} onChange={(id, value) => setFilters((current) => ({ ...current, [id]: value }))} onReset={() => setFilters({})} />
       {visibleItems.length ? (
-        <ResponsiveTableCards columns={columns} rows={visibleItems} getRowId={({ customer }) => customer.id} getRowTitle={({ customer }) => customer.name} />
+        <ResponsiveTableCards columns={columns} rows={visibleItems} getRowId={({ customer }) => customer.id} getRowTitle={({ customer }) => customer.name} label={`Daftar Customer untuk ${config.label}`} pageSize={10} />
       ) : (
         <EmptyState title="Customer tidak ditemukan" description="Ubah pencarian atau reset filter untuk memilih Customer lain." />
       )}

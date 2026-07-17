@@ -649,7 +649,7 @@ export const masterResources: Record<string, MasterResource> = {
   },
   "cedex-components": codeNameResource("cedex-components", "Master CEDEX Component", "CEDEX component references for survey damage records.", "/master/cedex/components", "cedex_components", "component_name", "Component Name"),
   "cedex-damages": codeNameResource("cedex-damages", "Master CEDEX Damage", "Damage code references used by surveyors.", "/master/cedex/damages", "cedex_damages", "damage_name", "Damage Name"),
-  "cedex-perbaikans": codeNameResource("cedex-perbaikans", "Master CEDEX Repair", "Repair action code references used in damage records.", "/master/cedex/perbaikans", "cedex_perbaikans", "perbaikan_name", "Repair Name"),
+  "cedex-repairs": codeNameResource("cedex-repairs", "Master CEDEX Repair", "Repair action code references used in damage records.", "/master/cedex/repairs", "cedex_repairs", "repair_name", "Repair Name"),
   "cedex-materials": codeNameResource("cedex-materials", "Master CEDEX Material", "Material references used by survey damage records.", "/master/cedex/materials", "cedex_materials", "material_name", "Material Name"),
   "responsibility-codes": codeNameResource("responsibility-codes", "Master Responsibility Code", "Responsibility codes used by survey damage records.", "/master/responsibility-codes", "responsibility_codes", "name", "Name")
 };

@@ -31,17 +31,17 @@ export const adminWorkspace: NavigationWorkspace = {
       roleLabels: { management: "Dashboard" }
     },
     g("Master Data", Database, admin, [
-      n("Customer", "/master/customers", UsersRound, admin, ["customers.view.all"]),
-      n("Location", "/master/locations", MapPin, admin, ["locations.view.all"]),
-      n("Surveyor", "/master/surveyors", UserRoundCheck, admin, ["surveyors.view.all"]),
-      n("Container Type", "/master/container-types", Container, admin, ["container_types.view.all"]),
-      n("Survey Type", "/master/survey-types", ClipboardCheck, admin, ["survey_types.view.all"]),
-      n("CEDEX Location", "/master/cedex/locations", MapPin, admin, ["cedex_locations.view.all"]),
-      n("CEDEX Component", "/master/cedex/components", PackageCheck, admin, ["cedex_components.view.all"]),
-      n("CEDEX Damage", "/master/cedex/damages", Layers, admin, ["cedex_damages.view.all"]),
-      n("CEDEX Repair", "/master/cedex/repairs", Wrench, admin, ["cedex_repairs.view.all"]),
-      n("CEDEX Material", "/master/cedex/materials", Boxes, admin, ["cedex_materials.view.all"]),
-      n("Responsibility Code", "/master/responsibility-codes", Tags, admin, ["responsibility_codes.view.all"])
+      n("Customer", "/master/customers", UsersRound, admin, ["customers.view.all"], [{ path: "/master/customers", mode: "prefix" }]),
+      n("Location", "/master/locations", MapPin, admin, ["locations.view.all"], [{ path: "/master/locations", mode: "prefix" }]),
+      n("Surveyor", "/master/surveyors", UserRoundCheck, admin, ["surveyors.view.all"], [{ path: "/master/surveyors", mode: "prefix" }]),
+      n("Container Type", "/master/container-types", Container, admin, ["container_types.view.all"], [{ path: "/master/container-types", mode: "prefix" }]),
+      n("Survey Type", "/master/survey-types", ClipboardCheck, admin, ["survey_types.view.all"], [{ path: "/master/survey-types", mode: "prefix" }]),
+      n("CEDEX Location", "/master/cedex/locations", MapPin, admin, ["cedex_locations.view.all"], [{ path: "/master/cedex/locations", mode: "prefix" }]),
+      n("CEDEX Component", "/master/cedex/components", PackageCheck, admin, ["cedex_components.view.all"], [{ path: "/master/cedex/components", mode: "prefix" }]),
+      n("CEDEX Damage", "/master/cedex/damages", Layers, admin, ["cedex_damages.view.all"], [{ path: "/master/cedex/damages", mode: "prefix" }]),
+      n("CEDEX Repair", "/master/cedex/repairs", Wrench, admin, ["cedex_repairs.view.all"], [{ path: "/master/cedex/repairs", mode: "prefix" }]),
+      n("CEDEX Material", "/master/cedex/materials", Boxes, admin, ["cedex_materials.view.all"], [{ path: "/master/cedex/materials", mode: "prefix" }]),
+      n("Responsibility Code", "/master/responsibility-codes", Tags, admin, ["responsibility_codes.view.all"], [{ path: "/master/responsibility-codes", mode: "prefix" }])
     ]),
     g("Job Order", Truck, admin, [
       n("Job List", "/jobs", ClipboardList, admin, ["jobs.view.all", "jobs.manage.all"], [

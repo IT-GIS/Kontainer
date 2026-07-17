@@ -4,7 +4,7 @@ import { FitnessClientMasterCategoryWorkspace } from "@/components/fitness/clien
 import { AppShell } from "@/components/layout/app-shell";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fitnessMasterDataCategoryHref, getFitnessMasterDataCategoryConfig } from "@/constants/fitness-master-data-client-first";
+import { fitnessMasterDataIndexHref, getFitnessMasterDataCategoryConfig } from "@/constants/fitness-master-data-client-first";
 import { getFitnessClientLocations, getFitnessCustomerById, getFitnessCustomerMasterDataOverview, getFitnessMasterDataCategoryRecords } from "@/lib/fitness-client-master-data-mock-service";
 import type { FitnessMasterDataCategory, FitnessMockMode } from "@/types/fitness-admin";
 import { fitnessMasterDataCompatibility } from "../../../[[...slug]]/page";
@@ -41,13 +41,14 @@ export default async function FitnessMasterDataCategoryDetailPage({
 
   return (
     <ProtectedRoute>
-      <AppShell title={title} subtitle={`${config.label} berdasarkan Customer aktif.`} breadcrumbs={[{ label: "Admin Kelaikan", href: "/fitness/dashboard" }, { label: "Klien & Master Data", href: "/fitness/master-data/customers" }, { label: config.label, href: fitnessMasterDataCategoryHref(config.id) }, { label: customer?.name ?? clientId }]}>
-        {!customer ? <ErrorState message="clientId tidak ditemukan pada mock Customer." action={{ label: "Kembali ke Daftar Customer", href: fitnessMasterDataCategoryHref(config.id) }} /> : null}
+      <AppShell title={title} subtitle={`${config.label} berdasarkan Customer aktif.`} breadcrumbs={[{ label: "Admin Kelaikan", href: "/fitness/dashboard" }, { label: "Klien & Master Data", href: "/fitness/master-data/customers" }, { label: config.label, href: fitnessMasterDataIndexHref(config.id) }, { label: customer?.name ?? clientId }]}>
+        {!customer ? <ErrorState message="clientId tidak ditemukan pada mock Customer." action={{ label: "Kembali ke Daftar Customer", href: fitnessMasterDataIndexHref(config.id) }} /> : null}
         {customer && config.id === "customer" ? <FitnessClientForm client={customer} overview={overviewState?.status === "success" ? overviewState.data ?? [] : []} /> : null}
         {customer && recordState?.status === "loading" ? <Skeleton variant="table" label={`Memuat ${config.label} ${customer.name}`} /> : null}
-        {customer && recordState?.status === "error" ? <ErrorState message={recordState.error} action={{ label: "Kembali ke Daftar Customer", href: fitnessMasterDataCategoryHref(config.id) }} /> : null}
+        {customer && recordState?.status === "error" ? <ErrorState message={recordState.error} action={{ label: "Kembali ke Daftar Customer", href: fitnessMasterDataIndexHref(config.id) }} /> : null}
         {customer && recordState?.status === "success" ? (
           <FitnessClientMasterCategoryWorkspace
+            key={`${config.id}:${customer.id}`}
             client={customer}
             category={config.id as Exclude<FitnessMasterDataCategory, "customer">}
             records={recordState.data}
@@ -55,7 +56,7 @@ export default async function FitnessMasterDataCategoryDetailPage({
           />
         ) : null}
         {customer && recordState?.status === "empty" ? (
-          <FitnessClientMasterCategoryWorkspace client={customer} category={config.id as Exclude<FitnessMasterDataCategory, "customer">} records={[]} locations={locationState?.status === "success" ? locationState.data : []} />
+          <FitnessClientMasterCategoryWorkspace key={`${config.id}:${customer.id}`} client={customer} category={config.id as Exclude<FitnessMasterDataCategory, "customer">} records={[]} locations={locationState?.status === "success" ? locationState.data : []} />
         ) : null}
       </AppShell>
     </ProtectedRoute>

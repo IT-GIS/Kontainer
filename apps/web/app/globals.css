@@ -3135,10 +3135,23 @@ pre {
 }
 
 .client-inline-action {
-  min-height: 2rem;
+  min-height: 2.75rem;
   padding: 0.4rem 0.65rem;
   font-size: 0.78rem;
   white-space: nowrap;
+}
+
+.client-row-actions .icon-button {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+
+.client-readonly-fieldset {
+  border: 0;
+  display: contents;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
 }
 
 .master-data-category-workspace,

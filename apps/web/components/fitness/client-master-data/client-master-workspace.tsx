@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft, ClipboardCheck, Database, Pencil, Plus } from "lucide-react";
-import { fitnessMasterDataCategoryHref, getFitnessMasterDataCategoryConfigByID } from "@/constants/fitness-master-data-client-first";
+import { ArrowLeft, ClipboardCheck, Database, Eye, Pencil, Plus, X } from "lucide-react";
+import { getFitnessMasterDataCategoryConfigByID, masterDataIndexHref, type MasterDataRouteFamily } from "@/constants/fitness-master-data-client-first";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Drawer } from "@/components/ui/drawer";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -33,15 +33,18 @@ export function FitnessClientMasterCategoryWorkspace({
   client,
   category,
   records,
-  locations
+  locations,
+  routeFamily = "fitness"
 }: {
   client: FitnessClientDetail;
   category: Exclude<FitnessMasterDataCategory, "customer">;
   records: FitnessClientMasterDataRecord[];
   locations: FitnessClientLocation[];
+  routeFamily?: MasterDataRouteFamily;
 }) {
   const config = getFitnessMasterDataCategoryConfigByID(category);
-  const pickerHref = fitnessMasterDataCategoryHref(category);
+  const pickerHref = masterDataIndexHref(category, routeFamily);
+  const readOnly = client.status !== "Aktif";
   return (
     <div className="page-stack master-data-category-workspace">
       <PageHeader
@@ -57,20 +60,23 @@ export function FitnessClientMasterCategoryWorkspace({
             <span>Diperbarui: {client.updatedAt}</span>
           </span>
         }
-        secondaryAction={{ label: "Daftar Customer", icon: ArrowLeft, href: pickerHref }}
+        secondaryAction={{ label: "Kembali ke Daftar Customer", icon: ArrowLeft, href: pickerHref }}
       />
       <div className="client-context-strip" role="status" aria-label={`Customer aktif ${client.name}`}>
         <Database size={18} />
         <span><strong>Customer aktif:</strong> {client.name}</span>
         <span><strong>Kode:</strong> {client.code}</span>
+        <span><strong>Status:</strong> {client.status}</span>
+        <span><strong>PIC Utama:</strong> {client.primaryContactName}</span>
         <span><strong>clientId:</strong> {client.id}</span>
       </div>
+      {readOnly ? <div className="alert alert-warning" role="alert">Customer tidak aktif. Data tetap dapat dilihat, tetapi tambah, edit, dan nonaktifkan dinonaktifkan.</div> : null}
       {config.notice ? <div className="client-reference-note"><ClipboardCheck size={18} /><span>{config.notice}</span></div> : null}
-      {category === "location" ? <LocationTab client={client} initialRows={records as FitnessClientLocation[]} /> : null}
-      {category === "surveyor" ? <CustomerSurveyorTab client={client} initialRows={records as FitnessClientSurveyor[]} locations={locations} /> : null}
-      {category === "container-type" ? <ContainerTypeTab client={client} initialRows={records as FitnessClientContainerType[]} /> : null}
+      {category === "location" ? <LocationTab client={client} initialRows={records as FitnessClientLocation[]} readOnly={readOnly} /> : null}
+      {category === "surveyor" ? <CustomerSurveyorTab client={client} initialRows={records as FitnessClientSurveyor[]} locations={locations} readOnly={readOnly} /> : null}
+      {category === "container-type" ? <ContainerTypeTab client={client} initialRows={records as FitnessClientContainerType[]} readOnly={readOnly} /> : null}
       {category !== "location" && category !== "surveyor" && category !== "container-type" ? (
-        <MasterDataReferenceTab client={client} category={category as FitnessClientReferenceCategory} initialRows={records as FitnessClientMasterDataReference[]} />
+        <MasterDataReferenceTab client={client} category={category as FitnessClientReferenceCategory} initialRows={records as FitnessClientMasterDataReference[]} readOnly={readOnly} />
       ) : null}
     </div>
   );
@@ -122,10 +128,11 @@ function matchesFilters(searchable: string, status: FitnessClientStatus, filters
 type LocationDraft = Omit<FitnessClientLocation, "id" | "clientId" | "updatedAt">;
 const emptyLocation: LocationDraft = { code: "", name: "", type: "Lokasi Pemeriksaan", address: "", city: "", province: "", postalCode: "", contactName: "", phone: "", email: "", accessNotes: "", status: "Aktif" };
 
-function LocationTab({ client, initialRows }: { client: FitnessClientDetail; initialRows: FitnessClientLocation[] }) {
+function LocationTab({ client, initialRows, readOnly }: { client: FitnessClientDetail; initialRows: FitnessClientLocation[]; readOnly: boolean }) {
   const [rows, setRows] = useState(initialRows);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<FitnessClientLocation | null>(null);
+  const [viewing, setViewing] = useState<FitnessClientLocation | null>(null);
   const [draft, setDraft] = useState<LocationDraft>(emptyLocation);
   const [pendingDeactivate, setPendingDeactivate] = useState<FitnessClientLocation | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -139,7 +146,7 @@ function LocationTab({ client, initialRows }: { client: FitnessClientDetail; ini
     { key: "address", header: "Alamat", render: (row) => <span>{row.address}<small className="client-cell-note">{row.city}, {row.province} {row.postalCode}</small></span> },
     { key: "contact", header: "PIC", render: (row) => <span>{row.contactName}<small className="client-cell-note">{row.phone}<br />{row.email}</small></span> },
     { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "Aktif" ? "success" : "neutral"}>{row.status}</StatusBadge> },
-    { key: "actions", header: "Aksi", render: (row) => <RowActions name={row.name} active={row.status === "Aktif"} onEdit={() => openEditor(row)} onDeactivate={() => setPendingDeactivate(row)} /> }
+    { key: "actions", header: "Aksi", render: (row) => <RowActions name={row.name} active={row.status === "Aktif"} readOnly={readOnly} onView={() => setViewing(row)} onEdit={() => openEditor(row)} onDeactivate={() => setPendingDeactivate(row)} /> }
   ];
   function openEditor(row?: FitnessClientLocation) {
     setEditing(row ?? null); setDraft(row ? locationDraft(row) : { ...emptyLocation }); drawer.begin();
@@ -148,22 +155,23 @@ function LocationTab({ client, initialRows }: { client: FitnessClientDetail; ini
     setDraft((current) => ({ ...current, [field]: value })); drawer.markDirty();
   }
   function save() {
-    if (!valid) return;
+    if (!valid || readOnly) return;
     const record: FitnessClientLocation = { ...draft, id: editing?.id ?? client.id + "-location-local-" + Date.now(), clientId: client.id, updatedAt: "State lokal" };
     setRows((current) => editing ? current.map((row) => row.id === editing.id ? record : row) : [...current, record]);
     drawer.finish(); setToast((editing ? "Perubahan Location" : "Location baru") + " tersimpan pada state lokal " + client.code + ".");
   }
   function deactivate() {
-    if (!pendingDeactivate) return;
+    if (!pendingDeactivate || readOnly) return;
     setRows((current) => current.map((row) => row.id === pendingDeactivate.id ? { ...row, status: "Tidak Aktif" } : row));
     setPendingDeactivate(null); setToast("Location dinonaktifkan pada state lokal.");
   }
   return <>
     <section className="workspace-panel">
-      <PageHeader title="Location Customer" description="Location yang dimiliki atau digunakan Customer untuk proses pemeriksaan." action={{ label: "Tambah Location", icon: Plus, onClick: () => openEditor() }} />
+      <PageHeader title="Location Customer" description="Location yang dimiliki atau digunakan Customer untuk proses pemeriksaan." action={readOnly ? undefined : { label: "Tambah Location", icon: Plus, onClick: () => openEditor() }} />
       <FilterBar fields={baseFilterFields(filters, "Kode, nama, kota, atau PIC")} onChange={(id, value) => setFilters((current) => ({ ...current, [id]: value }))} onReset={() => setFilters({})} />
-      {visibleRows.length ? <ResponsiveTableCards columns={columns} rows={visibleRows} getRowId={(row) => row.id} getRowTitle={(row) => row.name} /> : <EmptyState title="Location Customer tidak ditemukan" description="Tambah Location atau reset filter." />}
+      {visibleRows.length ? <ResponsiveTableCards columns={columns} rows={visibleRows} getRowId={(row) => row.id} getRowTitle={(row) => row.name} label={`Location ${client.name}`} pageSize={10} /> : <EmptyState title="Location Customer tidak ditemukan" description="Tambah Location atau reset filter." />}
     </section>
+    <RecordPreview item={viewing} onClose={() => setViewing(null)} title="Detail Location" />
     <MasterDataDrawer client={client} controller={drawer} title={(editing ? "Edit " : "Tambah ") + "Location Customer"} description="Customer dikunci oleh route." valid={valid} onSave={save}>
       <FormSection title="Identitas Location" description="Data Location hanya berlaku untuk Customer aktif.">
         <EditorField id="location-code" label="Kode Location" value={draft.code} onChange={(value) => change("code", value)} required />
@@ -190,10 +198,11 @@ function LocationTab({ client, initialRows }: { client: FitnessClientDetail; ini
 type CustomerSurveyorDraft = Omit<FitnessClientSurveyor, "id" | "clientId" | "updatedAt" | "locationNames">;
 const emptyCustomerSurveyor: CustomerSurveyorDraft = { code: "", name: "", title: "", locationIds: [], email: "", phone: "", status: "Aktif" };
 
-function CustomerSurveyorTab({ client, initialRows, locations }: { client: FitnessClientDetail; initialRows: FitnessClientSurveyor[]; locations: FitnessClientLocation[] }) {
+function CustomerSurveyorTab({ client, initialRows, locations, readOnly }: { client: FitnessClientDetail; initialRows: FitnessClientSurveyor[]; locations: FitnessClientLocation[]; readOnly: boolean }) {
   const [rows, setRows] = useState(initialRows);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<FitnessClientSurveyor | null>(null);
+  const [viewing, setViewing] = useState<FitnessClientSurveyor | null>(null);
   const [draft, setDraft] = useState<CustomerSurveyorDraft>(emptyCustomerSurveyor);
   const [pendingDeactivate, setPendingDeactivate] = useState<FitnessClientSurveyor | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -209,7 +218,7 @@ function CustomerSurveyorTab({ client, initialRows, locations }: { client: Fitne
     { key: "contact", header: "Kontak", render: (row) => <span>{row.email}<small className="client-cell-note">{row.phone}</small></span> },
     { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "Aktif" ? "success" : "neutral"}>{row.status}</StatusBadge> },
     { key: "updated", header: "Pembaruan", render: (row) => row.updatedAt },
-    { key: "actions", header: "Aksi", render: (row) => <RowActions name={row.name} active={row.status === "Aktif"} onEdit={() => openEditor(row)} onDeactivate={() => setPendingDeactivate(row)} /> }
+    { key: "actions", header: "Aksi", render: (row) => <RowActions name={row.name} active={row.status === "Aktif"} readOnly={readOnly} onView={() => setViewing(row)} onEdit={() => openEditor(row)} onDeactivate={() => setPendingDeactivate(row)} /> }
   ];
   function openEditor(row?: FitnessClientSurveyor) {
     setEditing(row ?? null);
@@ -224,7 +233,7 @@ function CustomerSurveyorTab({ client, initialRows, locations }: { client: Fitne
     change("locationIds", draft.locationIds.includes(locationId) ? draft.locationIds.filter((id) => id !== locationId) : [...draft.locationIds, locationId]);
   }
   function save() {
-    if (!valid) return;
+    if (!valid || readOnly) return;
     const locationNames = clientLocations.filter((location) => draft.locationIds.includes(location.id)).map((location) => location.name);
     const record: FitnessClientSurveyor = { ...draft, locationNames, id: editing?.id ?? client.id + "-surveyor-local-" + Date.now(), clientId: client.id, updatedAt: "State lokal" };
     setRows((current) => editing ? current.map((row) => row.id === editing.id ? record : row) : [...current, record]);
@@ -232,17 +241,18 @@ function CustomerSurveyorTab({ client, initialRows, locations }: { client: Fitne
     setToast((editing ? "Perubahan Surveyor" : "Surveyor baru") + " tersimpan pada state lokal " + client.code + ".");
   }
   function deactivate() {
-    if (!pendingDeactivate) return;
+    if (!pendingDeactivate || readOnly) return;
     setRows((current) => current.map((row) => row.id === pendingDeactivate.id ? { ...row, status: "Tidak Aktif" } : row));
     setPendingDeactivate(null);
     setToast("Surveyor Customer dinonaktifkan pada state lokal.");
   }
   return <>
     <section className="workspace-panel">
-      <PageHeader title="Surveyor Customer" description="Surveyor milik atau terkait Customer aktif. Surveyor GIFT tidak tersedia pada form ini." action={{ label: "Tambah Surveyor", icon: Plus, onClick: () => openEditor() }} />
+      <PageHeader title="Surveyor Customer" description="Surveyor milik atau terkait Customer aktif. Surveyor GIFT tidak tersedia pada form ini." action={readOnly ? undefined : { label: "Tambah Surveyor", icon: Plus, onClick: () => openEditor() }} />
       <FilterBar fields={baseFilterFields(filters, "Kode, nama, jabatan, atau Location")} onChange={(id, value) => setFilters((current) => ({ ...current, [id]: value }))} onReset={() => setFilters({})} />
-      {visibleRows.length ? <ResponsiveTableCards columns={columns} rows={visibleRows} getRowId={(row) => row.id} getRowTitle={(row) => row.name} /> : <EmptyState title="Surveyor Customer tidak ditemukan" description="Tambah Surveyor Customer atau reset filter." />}
+      {visibleRows.length ? <ResponsiveTableCards columns={columns} rows={visibleRows} getRowId={(row) => row.id} getRowTitle={(row) => row.name} label={`Surveyor Customer ${client.name}`} pageSize={10} /> : <EmptyState title="Surveyor Customer tidak ditemukan" description="Tambah Surveyor Customer atau reset filter." />}
     </section>
+    <RecordPreview item={viewing} onClose={() => setViewing(null)} title="Detail Surveyor Customer" />
     <MasterDataDrawer client={client} controller={drawer} title={(editing ? "Edit " : "Tambah ") + "Surveyor Customer"} description="Customer dan clientId dikunci oleh route. Surveyor GIFT tetap terpisah." valid={valid} onSave={save}>
       <FormSection title="Identitas Surveyor Customer">
         <EditorField id="customer-surveyor-code" label="Kode Surveyor" value={draft.code} onChange={(value) => change("code", value)} required />
@@ -268,10 +278,11 @@ function CustomerSurveyorTab({ client, initialRows, locations }: { client: Fitne
 type ContainerTypeDraft = Omit<FitnessClientContainerType, "id" | "clientId" | "updatedAt">;
 const emptyContainerType: ContainerTypeDraft = { code: "", name: "", size: "", description: "", status: "Aktif" };
 
-function ContainerTypeTab({ client, initialRows }: { client: FitnessClientDetail; initialRows: FitnessClientContainerType[] }) {
+function ContainerTypeTab({ client, initialRows, readOnly }: { client: FitnessClientDetail; initialRows: FitnessClientContainerType[]; readOnly: boolean }) {
   const [rows, setRows] = useState(initialRows);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<FitnessClientContainerType | null>(null);
+  const [viewing, setViewing] = useState<FitnessClientContainerType | null>(null);
   const [draft, setDraft] = useState<ContainerTypeDraft>(emptyContainerType);
   const [pendingDeactivate, setPendingDeactivate] = useState<FitnessClientContainerType | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -283,7 +294,7 @@ function ContainerTypeTab({ client, initialRows }: { client: FitnessClientDetail
     { key: "size", header: "Ukuran", render: (row) => row.size },
     { key: "description", header: "Deskripsi", render: (row) => row.description },
     { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "Aktif" ? "success" : "neutral"}>{row.status}</StatusBadge> },
-    { key: "actions", header: "Aksi", render: (row) => <RowActions name={row.name} active={row.status === "Aktif"} onEdit={() => openEditor(row)} onDeactivate={() => setPendingDeactivate(row)} /> }
+    { key: "actions", header: "Aksi", render: (row) => <RowActions name={row.name} active={row.status === "Aktif"} readOnly={readOnly} onView={() => setViewing(row)} onEdit={() => openEditor(row)} onDeactivate={() => setPendingDeactivate(row)} /> }
   ];
   function openEditor(row?: FitnessClientContainerType) {
     setEditing(row ?? null); setDraft(row ? { code: row.code, name: row.name, size: row.size, description: row.description, status: row.status } : { ...emptyContainerType }); drawer.begin();
@@ -292,22 +303,23 @@ function ContainerTypeTab({ client, initialRows }: { client: FitnessClientDetail
     setDraft((current) => ({ ...current, [field]: value })); drawer.markDirty();
   }
   function save() {
-    if (!draft.code.trim() || !draft.name.trim()) return;
+    if (!draft.code.trim() || !draft.name.trim() || readOnly) return;
     const record: FitnessClientContainerType = { ...draft, id: editing?.id ?? client.id + "-container-type-local-" + Date.now(), clientId: client.id, updatedAt: "State lokal" };
     setRows((current) => editing ? current.map((row) => row.id === editing.id ? record : row) : [...current, record]);
     drawer.finish(); setToast((editing ? "Perubahan jenis" : "Jenis baru") + " tersimpan pada state lokal " + client.code + ".");
   }
   function deactivate() {
-    if (!pendingDeactivate) return;
+    if (!pendingDeactivate || readOnly) return;
     setRows((current) => current.map((row) => row.id === pendingDeactivate.id ? { ...row, status: "Tidak Aktif" } : row));
     setPendingDeactivate(null); setToast("Jenis peti kemas dinonaktifkan pada state lokal.");
   }
   return <>
     <section className="workspace-panel">
-      <PageHeader title="Container Type Customer" description="Referensi jenis container Customer; bukan peti kemas individual." action={{ label: "Tambah Container Type", icon: Plus, onClick: () => openEditor() }} />
+      <PageHeader title="Container Type Customer" description="Referensi jenis container Customer; bukan peti kemas individual." action={readOnly ? undefined : { label: "Tambah Container Type", icon: Plus, onClick: () => openEditor() }} />
       <FilterBar fields={baseFilterFields(filters, "Kode, nama, ukuran, atau deskripsi")} onChange={(id, value) => setFilters((current) => ({ ...current, [id]: value }))} onReset={() => setFilters({})} />
-      {visibleRows.length ? <ResponsiveTableCards columns={columns} rows={visibleRows} getRowId={(row) => row.id} getRowTitle={(row) => row.name} /> : <EmptyState title="Container Type Customer tidak ditemukan" description="Tambah Container Type atau reset filter." />}
+      {visibleRows.length ? <ResponsiveTableCards columns={columns} rows={visibleRows} getRowId={(row) => row.id} getRowTitle={(row) => row.name} label={`Container Type ${client.name}`} pageSize={10} /> : <EmptyState title="Container Type Customer tidak ditemukan" description="Tambah Container Type atau reset filter." />}
     </section>
+    <RecordPreview item={viewing} onClose={() => setViewing(null)} title="Detail Container Type" />
     <MasterDataDrawer client={client} controller={drawer} title={(editing ? "Edit " : "Tambah ") + "Container Type Customer"} description="Customer dikunci oleh route. Peti kemas individual tetap dikelola pada menu Peti Kemas." valid={Boolean(draft.code.trim() && draft.name.trim())} onSave={save}>
       <FormSection title="Container Type Customer">
         <EditorField id="container-type-code" label="Kode Container Type" value={draft.code} onChange={(value) => change("code", value)} required />
@@ -351,11 +363,12 @@ const emptyMasterDataReference: MasterDataReferenceDraft = {
   displayOrder: 0
 };
 
-function MasterDataReferenceTab({ client, category, initialRows }: { client: FitnessClientDetail; category: FitnessClientReferenceCategory; initialRows: FitnessClientMasterDataReference[] }) {
+function MasterDataReferenceTab({ client, category, initialRows, readOnly }: { client: FitnessClientDetail; category: FitnessClientReferenceCategory; initialRows: FitnessClientMasterDataReference[]; readOnly: boolean }) {
   const config = getFitnessMasterDataCategoryConfigByID(category);
   const [rows, setRows] = useState(initialRows);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<FitnessClientMasterDataReference | null>(null);
+  const [viewing, setViewing] = useState<FitnessClientMasterDataReference | null>(null);
   const [draft, setDraft] = useState<MasterDataReferenceDraft>(emptyMasterDataReference);
   const [pendingDeactivate, setPendingDeactivate] = useState<FitnessClientMasterDataReference | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -363,20 +376,22 @@ function MasterDataReferenceTab({ client, category, initialRows }: { client: Fit
   const visibleRows = rows.filter((row) => matchesFilters(referenceSearchText(row), row.status, filters));
   const valid = Boolean(draft.code.trim() && (category === "cedex-location" ? draft.gridCode.trim() : draft.name.trim()));
   const columns: ResponsiveColumn<FitnessClientMasterDataReference>[] = [
-    { key: "code", header: config.codeLabel, render: (row) => <strong>{row.code}</strong> },
+    { key: "code", header: category === "cedex-location" ? "CODE" : config.codeLabel, render: (row) => <strong>{row.code}</strong> },
     ...(category === "cedex-location" ? [
-      { key: "grid", header: "Face / Grid", render: (row: FitnessClientMasterDataReference) => row.category === "cedex-location" ? <span><strong>{row.face}</strong><small className="client-cell-note">{row.gridCode}</small></span> : "-" },
-      { key: "mapping", header: "Mapping / Size / Order", render: (row: FitnessClientMasterDataReference) => row.category === "cedex-location" ? <span>{row.cedexMappingCode || "-"}<small className="client-cell-note">{row.containerSize} · urutan {row.displayOrder}</small></span> : "-" }
+      { key: "face", header: "FACE", render: (row: FitnessClientMasterDataReference) => row.category === "cedex-location" ? row.face : "-" },
+      { key: "grid", header: "GRID", render: (row: FitnessClientMasterDataReference) => row.category === "cedex-location" ? row.gridCode : "-" },
+      { key: "container-size", header: "CONTAINER SIZE", render: (row: FitnessClientMasterDataReference) => row.category === "cedex-location" ? row.containerSize : "-" },
+      { key: "order", header: "ORDER", render: (row: FitnessClientMasterDataReference) => row.category === "cedex-location" ? row.displayOrder : "-" }
     ] : [
       { key: "name", header: config.nameLabel, render: (row: FitnessClientMasterDataReference) => "name" in row ? row.name : row.gridCode }
     ]),
     ...(category === "survey-type" ? [
       { key: "requirements", header: "Requirement", render: (row: FitnessClientMasterDataReference) => row.category === "survey-type" ? requirementLabels(row) : "-" }
     ] : []),
-    { key: "description", header: config.descriptionLabel, render: (row) => row.description || "-" },
+    ...(category === "cedex-location" ? [] : [{ key: "description", header: config.descriptionLabel, render: (row: FitnessClientMasterDataReference) => row.description || "-" }]),
     { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "Aktif" ? "success" : "neutral"}>{row.status}</StatusBadge> },
-    { key: "updated", header: "Pembaruan", render: (row) => row.updatedAt },
-    { key: "actions", header: "Aksi", render: (row) => <RowActions name={referenceDisplayName(row)} active={row.status === "Aktif"} onEdit={() => openEditor(row)} onDeactivate={() => setPendingDeactivate(row)} /> }
+    ...(category === "cedex-location" ? [] : [{ key: "updated", header: "Pembaruan", render: (row: FitnessClientMasterDataReference) => row.updatedAt }]),
+    { key: "actions", header: "AKSI", render: (row) => <RowActions name={referenceDisplayName(row)} active={row.status === "Aktif"} readOnly={readOnly} onView={() => setViewing(row)} onEdit={() => openEditor(row)} onDeactivate={() => setPendingDeactivate(row)} /> }
   ];
   function openEditor(row?: FitnessClientMasterDataReference) {
     setEditing(row ?? null);
@@ -396,7 +411,7 @@ function MasterDataReferenceTab({ client, category, initialRows }: { client: Fit
     drawer.markDirty();
   }
   function save() {
-    if (!valid) return;
+    if (!valid || readOnly) return;
     const common = {
       id: editing?.id ?? client.id + "-" + category + "-local-" + Date.now(),
       clientId: client.id,
@@ -418,17 +433,18 @@ function MasterDataReferenceTab({ client, category, initialRows }: { client: Fit
     setToast((editing ? "Perubahan " : "Data baru ") + config.label + " tersimpan pada state lokal " + client.code + ".");
   }
   function deactivate() {
-    if (!pendingDeactivate) return;
+    if (!pendingDeactivate || readOnly) return;
     setRows((current) => current.map((row) => row.id === pendingDeactivate.id ? { ...row, status: "Tidak Aktif" } : row));
     setPendingDeactivate(null);
     setToast(config.label + " dinonaktifkan pada state lokal.");
   }
   return <>
     <section className="workspace-panel">
-      <PageHeader title={config.label + " Customer"} description={config.description} action={{ label: config.addLabel, icon: Plus, onClick: () => openEditor() }} />
+      <PageHeader title={config.label + " Customer"} description={config.description} action={readOnly ? undefined : { label: config.addLabel, icon: Plus, onClick: () => openEditor() }} />
       <FilterBar fields={baseFilterFields(filters, config.searchPlaceholder)} onChange={(id, value) => setFilters((current) => ({ ...current, [id]: value }))} onReset={() => setFilters({})} />
-      {visibleRows.length ? <ResponsiveTableCards columns={columns} rows={visibleRows} getRowId={(row) => row.id} getRowTitle={referenceDisplayName} /> : <EmptyState title={config.emptyTitle} description={`Tambah ${config.label} atau reset filter.`} />}
+      {visibleRows.length ? <ResponsiveTableCards columns={columns} rows={visibleRows} getRowId={(row) => row.id} getRowTitle={referenceDisplayName} label={`${config.label} ${client.name}`} pageSize={10} /> : <EmptyState title={config.emptyTitle} description={`Tambah ${config.label} atau reset filter.`} />}
     </section>
+    <RecordPreview item={viewing} onClose={() => setViewing(null)} title={`Detail ${config.label}`} />
     <MasterDataDrawer client={client} controller={drawer} title={(editing ? "Edit " : "Tambah ") + config.label} description="Customer, kategori, dan clientId dikunci oleh route." valid={valid} onSave={save}>
       <FormSection title={config.label} description={config.notice}>
         <EditorField id={category + "-code"} label={config.codeLabel} value={draft.code} onChange={(value) => change("code", value)} required />
@@ -453,8 +469,31 @@ function MasterDataReferenceTab({ client, category, initialRows }: { client: Fit
   </>;
 }
 
-function RowActions({ name, active, onEdit, onDeactivate }: { name: string; active: boolean; onEdit: () => void; onDeactivate: () => void }) {
-  return <div className="client-row-actions"><button className="icon-button" aria-label={"Edit " + name} onClick={onEdit} type="button"><Pencil size={16} /></button><button className="secondary-button client-inline-action" disabled={!active} onClick={onDeactivate} type="button">Nonaktifkan</button></div>;
+function RowActions({ name, active, readOnly, onView, onEdit, onDeactivate }: { name: string; active: boolean; readOnly: boolean; onView: () => void; onEdit: () => void; onDeactivate: () => void }) {
+  return <div className="client-row-actions"><button className="icon-button" aria-label={"Lihat " + name} onClick={onView} type="button"><Eye size={16} /></button><button className="icon-button" aria-label={"Edit " + name} disabled={readOnly} onClick={onEdit} type="button"><Pencil size={16} /></button><button aria-label={"Nonaktifkan " + name} className="secondary-button client-inline-action" disabled={readOnly || !active} onClick={onDeactivate} type="button">Nonaktifkan</button></div>;
+}
+function RecordPreview<T extends object>({ item, title, onClose }: { item: T | null; title: string; onClose: () => void }) {
+  if (!item) return null;
+  const entries = Object.entries(item).filter(([key]) => key !== "id" && key !== "clientId" && key !== "category");
+  return (
+    <section className="workspace-panel" aria-label={title}>
+      <div className="section-title-row">
+        <div><Eye size={20} /><h2>{title}</h2></div>
+        <button aria-label={`Tutup ${title}`} className="icon-button" onClick={onClose} type="button"><X size={16} /></button>
+      </div>
+      <dl className="detail-grid">
+        {entries.map(([key, value]) => <div className="detail-item" key={key}><dt>{recordFieldLabel(key)}</dt><dd>{recordFieldValue(value)}</dd></div>)}
+      </dl>
+    </section>
+  );
+}
+function recordFieldLabel(value: string) {
+  return value.replace(/([a-z])([A-Z])/g, "$1 $2").replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
+}
+function recordFieldValue(value: unknown) {
+  if (Array.isArray(value)) return value.join(", ") || "-";
+  if (typeof value === "boolean") return value ? "Ya" : "Tidak";
+  return value === null || value === undefined || value === "" ? "-" : String(value);
 }
 function DeactivateDialog({ item, onClose, onConfirm }: { item?: string; onClose: () => void; onConfirm: () => void }) {
   return <ConfirmationDialog open={Boolean(item)} title="Nonaktifkan data?" description={(item ?? "Data") + " hanya dinonaktifkan pada state lokal frontend."} confirmLabel="Nonaktifkan" tone="danger" onClose={onClose} onConfirm={onConfirm} />;

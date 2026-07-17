@@ -17,11 +17,12 @@ import { StickyActionBar } from "@/components/ui/sticky-action-bar";
 import { ToastFeedback } from "@/components/ui/toast-feedback";
 import { UnsavedChangesGuard } from "@/components/ui/unsaved-changes-guard";
 import type { FitnessClientDetail, FitnessClientSummary, FitnessMasterDataCategorySummary } from "@/types/fitness-admin";
+import { customerCreateHref, masterDataDetailHref, masterDataIndexHref, type MasterDataRouteFamily } from "@/constants/fitness-master-data-client-first";
 import { CustomerMasterDataOverview } from "./customer-master-data-overview";
 
-export function FitnessClientsList({ initialClients }: { initialClients: FitnessClientSummary[] }) {
+export function FitnessClientsList({ initialClients, routeFamily = "fitness" }: { initialClients: FitnessClientSummary[]; routeFamily?: MasterDataRouteFamily }) {
   const router = useRouter();
-  const customerBase = "/fitness/master-data/customers";
+  const customerBase = masterDataIndexHref("customer", routeFamily);
   const [clients, setClients] = useState(initialClients);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [pendingClient, setPendingClient] = useState<FitnessClientSummary | null>(null);
@@ -74,10 +75,10 @@ export function FitnessClientsList({ initialClients }: { initialClients: Fitness
       header: "Aksi",
       render: (row) => (
         <div className="client-row-actions">
-          <Link className="icon-button" href={customerBase + "/" + row.id} aria-label={"Lihat detail " + row.name} title="Lihat detail"><Eye size={16} /></Link>
-          <Link className="icon-button" href={customerBase + "/" + row.id} aria-label={"Edit " + row.name} title="Edit"><Pencil size={16} /></Link>
-          <Link className="secondary-button client-inline-action" href={customerBase + "/" + row.id}>Buka Ringkasan Master Data</Link>
-          <button className="secondary-button client-inline-action" disabled={row.status !== "Aktif"} onClick={() => setPendingClient(row)} type="button">Nonaktifkan</button>
+          <Link className="icon-button" href={masterDataDetailHref("customer", row.id, routeFamily)} aria-label={"Lihat detail " + row.name} title="Lihat detail"><Eye size={16} /></Link>
+          <Link className="icon-button" href={masterDataDetailHref("customer", row.id, routeFamily)} aria-label={"Edit " + row.name} title="Edit"><Pencil size={16} /></Link>
+          <Link className="secondary-button client-inline-action" href={masterDataDetailHref("customer", row.id, routeFamily)}>Buka Ringkasan Master Data</Link>
+          <button aria-label={"Nonaktifkan " + row.name} className="secondary-button client-inline-action" disabled={row.status !== "Aktif"} onClick={() => setPendingClient(row)} type="button">Nonaktifkan</button>
         </div>
       )
     }
@@ -97,7 +98,7 @@ export function FitnessClientsList({ initialClients }: { initialClients: Fitness
         title="Customer"
         description="Customer adalah perusahaan atau organisasi pengguna jasa inspeksi GIFT."
         meta={<span>{visibleClients.length} dari {clients.length} Customer ditampilkan</span>}
-        action={{ label: "Tambah Customer", icon: Plus, onClick: () => router.push(customerBase + "/create") }}
+        action={{ label: "Tambah Customer", icon: Plus, onClick: () => router.push(customerCreateHref(routeFamily)) }}
       />
       <FilterBar
         fields={fields}
@@ -105,7 +106,7 @@ export function FitnessClientsList({ initialClients }: { initialClients: Fitness
         onReset={() => setFilters({})}
       />
       {visibleClients.length > 0 ? (
-        <ResponsiveTableCards columns={columns} rows={visibleClients} getRowId={(row) => row.id} getRowTitle={(row) => row.name} />
+        <ResponsiveTableCards columns={columns} rows={visibleClients} getRowId={(row) => row.id} getRowTitle={(row) => row.name} label="Daftar Customer" pageSize={10} />
       ) : (
         <EmptyState title="Customer tidak ditemukan" description="Ubah pencarian atau reset filter untuk menampilkan data." />
       )}
@@ -125,13 +126,16 @@ export function FitnessClientsList({ initialClients }: { initialClients: Fitness
 
 export function FitnessClientForm({
   client,
-  overview = []
+  overview = [],
+  routeFamily = "fitness"
 }: {
   client?: FitnessClientDetail;
   overview?: FitnessMasterDataCategorySummary[];
+  routeFamily?: MasterDataRouteFamily;
 }) {
   const isEdit = Boolean(client);
-  const customerBase = "/fitness/master-data/customers";
+  const customerBase = masterDataIndexHref("customer", routeFamily);
+  const readOnly = client?.status === "Tidak Aktif";
   const [form, setForm] = useState({
     code: client?.code ?? "",
     name: client?.name ?? "",
@@ -157,16 +161,18 @@ export function FitnessClientForm({
   const formInvalid = missingRequired || invalidEmail;
 
   function update(field: keyof typeof form, value: string) {
+    if (readOnly) return;
     setForm((current) => ({ ...current, [field]: value }));
     setDirty(true);
   }
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!formInvalid) setConfirmOpen(true);
+    if (!formInvalid && !readOnly) setConfirmOpen(true);
   }
 
   function saveLocal() {
+    if (readOnly) return;
     setDirty(false);
     setConfirmOpen(false);
     setToastOpen(true);
@@ -180,15 +186,19 @@ export function FitnessClientForm({
         description="Form frontend-only. Tidak ada data yang dikirim ke backend."
         meta={client ? <StatusBadge tone={client.status === "Aktif" ? "success" : "neutral"}>{client.status}</StatusBadge> : undefined}
       />
+      {readOnly ? <div className="alert alert-warning" role="alert">Customer tidak aktif. Profil dan Master Data hanya dapat dilihat.</div> : null}
       {client && overview.length ? (
         <CustomerMasterDataOverview
           clientId={client.id}
           customerName={client.name}
           items={overview}
           onEdit={() => document.getElementById("client-code")?.focus()}
+          routeFamily={routeFamily}
+          readOnly={readOnly}
         />
       ) : null}
       <form id="fitness-client-form" onSubmit={submit}>
+        <fieldset className="client-readonly-fieldset" disabled={readOnly}>
         <FormSection title="Identitas" description="Kode dan identitas perusahaan atau organisasi Customer.">
           <TextField id="client-code" label="Kode Customer" value={form.code} onChange={(value) => update("code", value)} required />
           <TextField id="client-name" label="Nama Perusahaan/Organisasi" value={form.name} onChange={(value) => update("name", value)} required />
@@ -222,6 +232,7 @@ export function FitnessClientForm({
           <TextField id="client-notes" label="Catatan Admin" value={form.adminNotes} onChange={(value) => update("adminNotes", value)} multiline />
           <TextField id="client-access" label="Informasi Akses" value={form.accessInformation} onChange={(value) => update("accessInformation", value)} multiline />
         </FormSection>
+        </fieldset>
       </form>
       {formInvalid && dirty ? <div className="alert alert-warning" role="alert">{invalidEmail ? "Perbaiki format email sebelum menyimpan." : "Lengkapi Kode Customer, nama, PIC utama, dan email sebelum menyimpan."}</div> : null}
       {toastOpen ? <ToastFeedback title="Data tersimpan di tampilan" description="Perubahan lokal akan kembali ke mock awal setelah reload." tone="success" onDismiss={() => setToastOpen(false)} /> : null}
@@ -237,7 +248,7 @@ export function FitnessClientForm({
       <StickyActionBar
         summary={<span>{dirty ? "Ada perubahan belum disimpan" : "Tidak ada perubahan lokal"}</span>}
         tertiary={{ label: "Kembali", href: customerBase }}
-        primary={{ label: "Simpan", icon: Save, type: "submit", form: "fitness-client-form", disabled: formInvalid || !dirty }}
+        primary={{ label: "Simpan", icon: Save, type: "submit", form: "fitness-client-form", disabled: readOnly || formInvalid || !dirty }}
       />
     </div>
   );

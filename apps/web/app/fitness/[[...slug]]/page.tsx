@@ -31,7 +31,6 @@ export const fitnessMasterDataCompatibility: Record<string, CompatibilityNoticeP
   "/fitness/master-data/manufacturers": notice("Pabrik Pembuat lama", "Referensi pabrik tidak diaktifkan sebagai Master Data Customer.", "Buka Peti Kemas", "/fitness/containers"),
   "/fitness/master-data/locations": notice("Location lama", "Location harus dibuka setelah memilih Customer agar data tidak tercampur.", "Pilih Customer", "/fitness/client-master-data?targetTab=locations"),
   "/fitness/master-data/surveyors": { ...notice("Surveyor lama", "Surveyor Customer dipisahkan dari Surveyor GIFT.", "Pilih Customer", "/fitness/client-master-data?targetTab=personnel", "Buka Surveyor GIFT lama", "/master/surveyors"), internalGift: true },
-  "/fitness/master-data/container-types": notice("Container Type lama", "Container Type sekarang dibatasi berdasarkan Customer.", "Pilih Customer", "/fitness/client-master-data?targetTab=container-types"),
   "/fitness/master-data/approval-categories": notice("Kategori Persetujuan lama", "Master global ini tidak diaktifkan pada workflow Customer.", "Kembali ke Master Data Customer", "/fitness/client-master-data"),
   "/fitness/master-data/maintenance-schemes": notice("Skema Pemeliharaan lama", "Master global ini tidak diaktifkan pada workflow Customer.", "Kembali ke Master Data Customer", "/fitness/client-master-data"),
   "/fitness/master-data/inspection-areas": referenceNotice("Area Pemeriksaan", "inspection-areas"),

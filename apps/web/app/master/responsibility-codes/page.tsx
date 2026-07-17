@@ -1,7 +1,5 @@
-import { ProtectedRoute } from "@/components/auth/protected-route";
-import { AppShell } from "@/components/layout/app-shell";
-import { MasterDataPage } from "@/components/master/master-data-page";
+import { ActualMasterDataIndexRoute, type ActualMasterDataSearchParams } from "@/components/master/customer-first-route";
 
-export default function ResponsibilityCodesPage() {
-  return <ProtectedRoute><AppShell title="Responsibility Code"><MasterDataPage resourceId="responsibility-codes" /></AppShell></ProtectedRoute>;
+export default function ResponsibilityCodesPage({ searchParams }: { searchParams: ActualMasterDataSearchParams }) {
+  return <ActualMasterDataIndexRoute category="responsibility-code" searchParams={searchParams} />;
 }

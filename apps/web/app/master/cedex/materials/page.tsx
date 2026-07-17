@@ -1,7 +1,5 @@
-import { ProtectedRoute } from "@/components/auth/protected-route";
-import { AppShell } from "@/components/layout/app-shell";
-import { MasterDataPage } from "@/components/master/master-data-page";
+import { ActualMasterDataIndexRoute, type ActualMasterDataSearchParams } from "@/components/master/customer-first-route";
 
-export default function CedexMaterialsPage() {
-  return <ProtectedRoute><AppShell title="CEDEX Material"><MasterDataPage resourceId="cedex-materials" /></AppShell></ProtectedRoute>;
+export default function CedexMaterialsPage({ searchParams }: { searchParams: ActualMasterDataSearchParams }) {
+  return <ActualMasterDataIndexRoute category="cedex-material" searchParams={searchParams} />;
 }

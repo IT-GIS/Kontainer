@@ -1,15 +1,5 @@
-"use client";
+import { ActualMasterDataIndexRoute, type ActualMasterDataSearchParams } from "@/components/master/customer-first-route";
 
-import { ProtectedRoute } from "@/components/auth/protected-route";
-import { AppShell } from "@/components/layout/app-shell";
-import { MasterDataPage } from "@/components/master/master-data-page";
-
-export default function SurveyorsPage() {
-  return (
-    <ProtectedRoute>
-      <AppShell title="Master Surveyor">
-        <MasterDataPage resourceId="surveyors" />
-      </AppShell>
-    </ProtectedRoute>
-  );
+export default function SurveyorsPage({ searchParams }: { searchParams: ActualMasterDataSearchParams }) {
+  return <ActualMasterDataIndexRoute category="surveyor" searchParams={searchParams} />;
 }

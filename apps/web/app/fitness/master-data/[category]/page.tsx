@@ -50,7 +50,7 @@ export default async function FitnessMasterDataCategoryPage({
         {customerState.status === "error" ? <ErrorState message={customerState.error} /> : null}
         {customerState.status === "empty" ? <EmptyState title="Customer belum tersedia" description="Tambahkan Customer sebelum mengelola data turunannya." /> : null}
         {customerState.status === "success" && config.id === "customer" ? <FitnessClientsList initialClients={customerState.data} /> : null}
-        {customerState.status === "success" && config.id !== "customer" ? <MasterDataCustomerPicker config={config} items={pickerItems} /> : null}
+        {customerState.status === "success" && config.id !== "customer" ? <MasterDataCustomerPicker key={config.id} config={config} items={pickerItems} /> : null}
       </AppShell>
     </ProtectedRoute>
   );

@@ -20,6 +20,22 @@ export type FitnessMasterDataCategoryConfig = {
   notice?: string;
 };
 
+export type MasterDataRouteFamily = "fitness" | "actual";
+
+const actualMasterDataPaths: Record<FitnessMasterDataCategory, string> = {
+  customer: "customers",
+  location: "locations",
+  surveyor: "surveyors",
+  "container-type": "container-types",
+  "survey-type": "survey-types",
+  "cedex-location": "cedex/locations",
+  "cedex-component": "cedex/components",
+  "cedex-damage": "cedex/damages",
+  "cedex-repair": "cedex/repairs",
+  "cedex-material": "cedex/materials",
+  "responsibility-code": "responsibility-codes"
+};
+
 export const fitnessMasterDataCategoryConfigs: readonly FitnessMasterDataCategoryConfig[] = [
   config({ id: "customer", slug: "customers", label: "Customer", description: "Customer adalah perusahaan atau organisasi pengguna jasa inspeksi GIFT.", searchPlaceholder: "Nama atau kode Customer", codeLabel: "Kode Customer", nameLabel: "Nama Perusahaan/Organisasi", descriptionLabel: "Catatan Admin", addLabel: "Tambah Customer", emptyTitle: "Customer belum tersedia" }),
   config({ id: "location", slug: "locations", label: "Location", description: "Location Customer yang digunakan untuk pemeriksaan.", searchPlaceholder: "Kode, nama, kota, atau PIC", codeLabel: "Kode Location", nameLabel: "Nama Location", descriptionLabel: "Catatan Akses", addLabel: "Tambah Location", emptyTitle: "Location Customer belum tersedia" }),
@@ -42,9 +58,28 @@ export function getFitnessMasterDataCategoryConfigByID(category: FitnessMasterDa
   return fitnessMasterDataCategoryConfigs.find((item) => item.id === category)!;
 }
 
-export function fitnessMasterDataCategoryHref(category: FitnessMasterDataCategory, clientId?: string) {
+export function fitnessMasterDataIndexHref(category: FitnessMasterDataCategory) {
+  return masterDataIndexHref(category, "fitness");
+}
+
+export function fitnessMasterDataDetailHref(category: FitnessMasterDataCategory, clientId: string) {
+  return masterDataDetailHref(category, clientId, "fitness");
+}
+
+export function masterDataIndexHref(category: FitnessMasterDataCategory, routeFamily: MasterDataRouteFamily = "fitness") {
   const config = getFitnessMasterDataCategoryConfigByID(category);
-  return "/fitness/master-data/" + config.slug + (clientId ? "/" + clientId : "");
+  return routeFamily === "actual"
+    ? "/master/" + actualMasterDataPaths[category]
+    : "/fitness/master-data/" + config.slug;
+}
+
+export function masterDataDetailHref(category: FitnessMasterDataCategory, customerId: string, routeFamily: MasterDataRouteFamily = "fitness") {
+  const indexHref = masterDataIndexHref(category, routeFamily);
+  return routeFamily === "actual" ? `${indexHref}/customer/${customerId}` : `${indexHref}/${customerId}`;
+}
+
+export function customerCreateHref(routeFamily: MasterDataRouteFamily = "fitness") {
+  return masterDataIndexHref("customer", routeFamily) + "/create";
 }
 
 function config(value: FitnessMasterDataCategoryConfig): FitnessMasterDataCategoryConfig {

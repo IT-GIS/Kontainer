@@ -19,6 +19,7 @@ import {
   Wrench
 } from "lucide-react";
 import type { NavigationGroup, NavigationLink, NavigationRouteMatch, NavigationWorkspace } from "@/constants/navigation";
+import { fitnessMasterDataIndexHref } from "@/constants/fitness-master-data-client-first";
 import type { RoleCode } from "@/types/auth";
 
 const admin: RoleCode[] = ["admin"];
@@ -60,16 +61,16 @@ export const containerFitnessAdminWorkspace: NavigationWorkspace = {
         { path: "/fitness/master-data/surveyors", mode: "prefix" },
         { path: "/fitness/client-master-data", mode: "prefix", query: { tab: "personnel" } }
       ]),
-      n("Container Type", "/fitness/master-data/container-types", Container, admin, [
+      n("Container Type", fitnessMasterDataIndexHref("container-type"), Container, admin, [
         { path: "/fitness/master-data/container-types", mode: "prefix" },
         { path: "/fitness/client-master-data", mode: "prefix", query: { tab: "container-types" } }
       ]),
-      n("Survey Type", "/fitness/master-data/survey-types", ClipboardCheck, admin, [{ path: "/fitness/master-data/survey-types", mode: "prefix" }]),
-      n("CEDEX Location", "/fitness/master-data/cedex-locations", MapPin, admin, [{ path: "/fitness/master-data/cedex-locations", mode: "prefix" }]),
-      n("CEDEX Component", "/fitness/master-data/cedex-components", PackageCheck, admin, [{ path: "/fitness/master-data/cedex-components", mode: "prefix" }]),
-      n("CEDEX Damage", "/fitness/master-data/cedex-damages", Layers, admin, [{ path: "/fitness/master-data/cedex-damages", mode: "prefix" }]),
-      n("CEDEX Repair", "/fitness/master-data/cedex-repairs", Wrench, admin, [{ path: "/fitness/master-data/cedex-repairs", mode: "prefix" }]),
-      n("CEDEX Material", "/fitness/master-data/cedex-materials", Boxes, admin, [{ path: "/fitness/master-data/cedex-materials", mode: "prefix" }]),
+      n("Survey Type", fitnessMasterDataIndexHref("survey-type"), ClipboardCheck, admin, [{ path: "/fitness/master-data/survey-types", mode: "prefix" }]),
+      n("CEDEX Location", fitnessMasterDataIndexHref("cedex-location"), MapPin, admin, [{ path: "/fitness/master-data/cedex-locations", mode: "prefix" }]),
+      n("CEDEX Component", fitnessMasterDataIndexHref("cedex-component"), PackageCheck, admin, [{ path: "/fitness/master-data/cedex-components", mode: "prefix" }]),
+      n("CEDEX Damage", fitnessMasterDataIndexHref("cedex-damage"), Layers, admin, [{ path: "/fitness/master-data/cedex-damages", mode: "prefix" }]),
+      n("CEDEX Repair", fitnessMasterDataIndexHref("cedex-repair"), Wrench, admin, [{ path: "/fitness/master-data/cedex-repairs", mode: "prefix" }]),
+      n("CEDEX Material", fitnessMasterDataIndexHref("cedex-material"), Boxes, admin, [{ path: "/fitness/master-data/cedex-materials", mode: "prefix" }]),
       n("Responsibility Code", "/fitness/master-data/responsibility-codes", Tags, admin, [{ path: "/fitness/master-data/responsibility-codes", mode: "prefix" }])
     ]),
     n("Permohonan", "/fitness/applications", ClipboardList, admin, [{ path: "/fitness/applications", mode: "prefix" }]),

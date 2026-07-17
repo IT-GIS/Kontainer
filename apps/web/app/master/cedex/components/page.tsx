@@ -1,15 +1,5 @@
-"use client";
+import { ActualMasterDataIndexRoute, type ActualMasterDataSearchParams } from "@/components/master/customer-first-route";
 
-import { ProtectedRoute } from "@/components/auth/protected-route";
-import { AppShell } from "@/components/layout/app-shell";
-import { MasterDataPage } from "@/components/master/master-data-page";
-
-export default function CedexComponentsPage() {
-  return (
-    <ProtectedRoute>
-      <AppShell title="CEDEX Component">
-        <MasterDataPage resourceId="cedex-components" />
-      </AppShell>
-    </ProtectedRoute>
-  );
+export default function CedexComponentsPage({ searchParams }: { searchParams: ActualMasterDataSearchParams }) {
+  return <ActualMasterDataIndexRoute category="cedex-component" searchParams={searchParams} />;
 }

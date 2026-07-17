@@ -249,3 +249,100 @@ Hasil final correction dicatat berdasarkan perintah yang benar-benar dijalankan 
 - Audit scope: nol file backend, API, database, migration, SQL, atau modul operasional berubah.
 
 Tidak ada backend, API, database, migration, SQL, atau modul operasional yang diubah oleh final correction.
+
+## 16. CLIENT-FIRST INDEX ROUTE CORRECTION
+
+### 16.1 Baseline dan gejala
+
+- Baseline koreksi: `2db52ede10e8bc301631d10ebf05600d0c0412e1` pada 16 Juli 2026.
+- Gejala yang dilaporkan adalah submenu Container Type, Survey Type, CEDEX Location, CEDEX Component, CEDEX Damage, CEDEX Repair, dan CEDEX Material dapat terasa mempertahankan workspace/detail Customer, padahal setiap klik submenu wajib kembali ke picker Customer kategori tersebut.
+- Audit source baseline menunjukkan route index dan detail sudah terpisah secara fisik. Koreksi ini memperkeras kontraknya agar index/detail tidak lagi memakai helper URL opsional yang sama dan state UI tidak dapat dipertahankan ketika kategori atau Customer berubah.
+
+### 16.2 Akar masalah dan file penyebab
+
+- `fitnessMasterDataCategoryHref(category, clientId?)` menggabungkan pembuatan URL index dan detail dalam satu interface opsional sehingga pemanggil sidebar, tombol kembali, dan CTA detail tidak dibedakan oleh TypeScript.
+- Catch-all compatibility masih mendaftarkan canonical `/fitness/master-data/container-types` sebagai `Container Type lama`, walaupun route tersebut sudah menjadi route canonical client-first.
+- Picker dan workspace belum mempunyai key berbasis kategori/Customer untuk memaksa reset filter, Drawer, draft, dan record lokal ketika konteks route berubah.
+- Picker masih menggabungkan jumlah aktif/tidak aktif pada satu kolom, dan label tombol kembali belum memakai teks acceptance criteria secara persis.
+
+File frontend yang dikoreksi:
+
+- `apps/web/constants/fitness-master-data-client-first.ts`;
+- `apps/web/constants/navigation-admin-fitness.ts`;
+- route index/detail dynamic dan catch-all compatibility di `apps/web/app/fitness`;
+- `master-data-customer-picker.tsx`, `customer-master-data-overview.tsx`, dan `client-master-workspace.tsx`.
+
+Tidak ada file baru, backend, API, database, migration, atau SQL yang dibuat.
+
+### 16.3 Sidebar dan kontrak URL
+
+- Helper lama diganti dengan `fitnessMasterDataIndexHref(category)` dan `fitnessMasterDataDetailHref(category, clientId)`.
+- Seluruh tujuh submenu memakai helper index tanpa `clientId`.
+- Picker dan shortcut overview memakai helper detail yang mewajibkan `clientId`.
+- Breadcrumb, error action, dan tombol kembali memakai helper index.
+- Prefix match tetap membuat index dan detail menyalakan satu child yang sama. Link aktif tetap dapat diklik karena href child selalu menunjuk index kategori.
+
+Href canonical:
+
+```text
+Container Type  -> /fitness/master-data/container-types
+Survey Type     -> /fitness/master-data/survey-types
+CEDEX Location  -> /fitness/master-data/cedex-locations
+CEDEX Component -> /fitness/master-data/cedex-components
+CEDEX Damage    -> /fitness/master-data/cedex-damages
+CEDEX Repair    -> /fitness/master-data/cedex-repairs
+CEDEX Material  -> /fitness/master-data/cedex-materials
+```
+
+### 16.4 Route index dan detail
+
+- `[category]/page.tsx` tetap hanya memuat Customer, summary kategori, state loading/empty/error, dan `MasterDataCustomerPicker` untuk kategori non-Customer.
+- Index tidak mengimpor atau merender `FitnessClientMasterCategoryWorkspace` dan tidak melakukan redirect atau auto-select.
+- `[category]/[clientId]/page.tsx` tetap menjadi satu-satunya route yang merender workspace setelah kategori valid dan Customer ditemukan.
+- Workspace diberi key `category:clientId`; picker diberi key kategori. Perpindahan kategori/Customer mereset filter, Drawer, draft, dan record lokal.
+- Tombol detail memakai label `Kembali ke Daftar Customer` dan kembali ke index kategori aktif.
+
+### 16.5 Customer Picker dan isolasi
+
+Picker menampilkan kolom eksplisit:
+
+- Customer;
+- Kode Customer;
+- PIC Utama;
+- Kota/Provinsi;
+- Jumlah Data Kategori;
+- Data Aktif;
+- Data Tidak Aktif;
+- Status Customer;
+- Pembaruan;
+- Aksi.
+
+Filter nama/kode, status, wilayah, reset, table desktop, card mobile, dan accessible action `Kelola [Kategori] [Customer]` tetap dipertahankan. Form detail tidak menyediakan kontrol untuk mengganti Customer; record lokal selalu memakai `client.id` dari route.
+
+### 16.6 Compatibility dan cache
+
+- Collision canonical Container Type dihapus dari `fitnessMasterDataCompatibility`.
+- Adapter lama `/fitness/client-master-data/:clientId?tab=container-types` tetap menghasilkan marker redirect ke `/fitness/master-data/container-types/:clientId`.
+- Canonical tujuh kategori langsung dilayani route `[category]` dan tidak melewati `/fitness/clients` atau `/fitness/client-master-data`.
+- Server dihentikan setelah smoke test dan `.next` dibersihkan. Churn build pada `apps/web/next-env.d.ts` dipulihkan ke hash awal `7AD303E40D4FDDF44F156129E397511953A71481C5CFD86B1862649AAAF240CC`.
+
+### 16.7 Hasil teknis dan route
+
+Hasil yang benar-benar dijalankan:
+
+- `npm run typecheck --workspace apps/web`: LULUS.
+- `npm run build --workspace apps/web`: percobaan sandbox pertama gagal pada `spawn EPERM`; rerun di luar sandbox LULUS dan menghasilkan 65 halaman.
+- `git diff --check`: LULUS; peringatan line-ending Windows tidak menghasilkan error.
+- Matriks index/detail: 21/21 route HTTP 200 dan seluruh marker picker/workspace sesuai route.
+- Isolasi record: 7/7 kategori menampilkan marker record Customer aktif tanpa marker Customer lain.
+- Unknown client/category, loading, empty, error, dan compatibility: 9/9 pemeriksaan lulus.
+- Source contract memastikan index tidak mengimpor workspace, detail tidak mengimpor picker, canonical Container Type tidak lagi berada pada compatibility map, tombol kembali benar, dan metadata Customer read-only lengkap.
+- Scan sembilan file perubahan menghasilkan nol istilah terlarang dan nol perubahan backend/database.
+
+### 16.8 Browser, responsive, accessibility, dan hal belum terverifikasi
+
+- API lokal merespons sehat dan build produksi dapat diuji melalui HTTP.
+- Browser in-app sudah dicoba, tetapi koneksi browser internal gagal sebelum navigasi karena metadata sandbox tidak tersedia. Karena itu klik submenu, Back/refresh visual, sidebar collapsed/mobile, breakpoint responsive, dan atribut aksesibilitas pada DOM runtime tidak diklaim lulus.
+- Source mempertahankan `ResponsiveTableCards`, breakpoint mobile/tablet existing, `aria-label` action yang menyebut kategori dan Customer, `aria-current` pada child aktif, `aria-expanded` pada group, dan penutupan mobile sidebar setelah klik.
+- UAT browser manual tetap diperlukan untuk menerima aspek visual dan interaksi yang belum dapat diverifikasi pada sesi ini.
+- Koreksi berhenti pada bug client-first ini. Tidak ada commit dan tidak ada push.
