@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 
 type HeaderAction = {
   label: string;
+  ariaLabel?: string;
   icon?: LucideIcon;
   href?: string;
   onClick?: () => void;
@@ -40,6 +41,6 @@ export function PageHeader({ title, description, eyebrow, meta, action, secondar
 function HeaderActionControl({ action, className }: { action: HeaderAction; className: string }) {
   const Icon = action.icon;
   const content = <>{Icon ? <Icon size={18} /> : null}<span>{action.label}</span></>;
-  if (action.href && !action.disabled) return <Link className={className} href={action.href}>{content}</Link>;
-  return <button className={className} onClick={action.onClick} disabled={action.disabled} type="button">{content}</button>;
+  if (action.href && !action.disabled) return <Link aria-label={action.ariaLabel} className={className} href={action.href}>{content}</Link>;
+  return <button aria-label={action.ariaLabel} className={className} onClick={action.onClick} disabled={action.disabled} type="button">{content}</button>;
 }

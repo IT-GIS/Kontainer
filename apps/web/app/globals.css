@@ -3160,6 +3160,11 @@ pre {
   min-width: 0;
 }
 
+.master-data-category-workspace .page-header-actions .primary-button,
+.master-data-category-workspace .ui-state-panel .primary-button {
+  min-height: 2.75rem;
+}
+
 .client-isolation-notice,
 .client-reference-note,
 .client-context-strip {
@@ -3380,7 +3385,8 @@ pre {
   .master-data-customer-picker .ui-row-card .client-inline-action,
   .master-data-category-workspace .page-header-actions,
   .master-data-category-workspace .page-header-actions a,
-  .master-data-category-workspace .page-header-actions button {
+  .master-data-category-workspace .page-header-actions button,
+  .master-data-category-workspace .ui-state-panel .primary-button {
     justify-content: center;
     width: 100%;
   }

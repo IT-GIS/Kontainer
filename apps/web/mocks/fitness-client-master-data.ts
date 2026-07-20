@@ -66,6 +66,32 @@ export const fitnessClients: FitnessClientDetail[] = [
     legalIdentity: "Identitas perusahaan menunggu verifikasi Admin.",
     adminNotes: "Lengkapi catatan akses lokasi kedua.",
     accessInformation: "Konfirmasi kedatangan melalui PIC utama."
+  },
+  {
+    id: "client-arsip",
+    code: "CL-003",
+    name: "PT Arsip Kontainer Indonesia",
+    shortName: "Arsip Kontainer",
+    addressShort: "Cakung, Jakarta Timur",
+    city: "Jakarta Timur",
+    province: "DKI Jakarta",
+    primaryContactName: "Dewi Lestari",
+    primaryContactTitle: "PIC Arsip",
+    email: "dewi.lestari@example.test",
+    phone: "+62 21 555 0303",
+    locationCount: 0,
+    personnelCount: 0,
+    containerTypeCount: 0,
+    referenceCount: 0,
+    containerCount: 0,
+    status: "Tidak Aktif",
+    completeness: "Belum Lengkap",
+    updatedAt: "17 Juli 2026, 10.00 WIB",
+    address: "Jl. Arsip Kontainer No. 3, Cakung, Jakarta Timur",
+    postalCode: "13910",
+    legalIdentity: "Customer dinonaktifkan untuk skenario read-only frontend.",
+    adminNotes: "Fixture frontend untuk verifikasi Customer tidak aktif.",
+    accessInformation: "Akses operasional dinonaktifkan."
   }
 ];
 
