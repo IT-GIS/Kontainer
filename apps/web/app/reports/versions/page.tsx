@@ -1,5 +1,5 @@
-import { NavigationPlaceholderPage } from "@/components/navigation/navigation-placeholder-page";
+import { redirect } from "next/navigation";
 
 export default function ReportVersionsPage() {
-  return <NavigationPlaceholderPage title="Report Version" backHref="/reports" backLabel="Kembali ke Report Archive" />;
+  redirect("/reports?view=archive&compat=versions");
 }

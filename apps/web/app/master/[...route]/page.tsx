@@ -1,46 +1,30 @@
-import { notFound } from "next/navigation";
-import {
-  ActualCustomerCreate,
-  ActualMasterDataDetailRoute,
-  type ActualMasterDataSearchParams
-} from "@/components/master/customer-first-route";
-import type { FitnessMasterDataCategory } from "@/types/fitness-admin";
+import { notFound, redirect } from "next/navigation";
+import { ActualCustomerCreate } from "@/components/master/customer-first-route";
 
-const categoryByActualPath: Record<string, FitnessMasterDataCategory> = {
-  customers: "customer",
-  locations: "location",
-  surveyors: "surveyor",
-  "container-types": "container-type",
-  "survey-types": "survey-type",
-  "cedex/locations": "cedex-location",
-  "cedex/components": "cedex-component",
-  "cedex/damages": "cedex-damage",
-  "cedex/repairs": "cedex-repair",
-  "cedex/materials": "cedex-material",
-  "responsibility-codes": "responsibility-code"
+const canonicalTabByPath: Record<string, string> = {
+  "container-types": "/master/inspection-references?tab=container-type",
+  "survey-types": "/master/inspection-references?tab=survey-type",
+  "cedex/locations": "/master/iso-cedex?tab=location",
+  "cedex/components": "/master/iso-cedex?tab=component",
+  "cedex/damages": "/master/iso-cedex?tab=damage",
+  "cedex/repairs": "/master/iso-cedex?tab=action-repair",
+  "cedex/materials": "/master/iso-cedex?tab=material",
+  "responsibility-codes": "/master/iso-cedex?tab=responsibility"
 };
 
-export default async function ActualMasterDataDynamicPage({
-  params,
-  searchParams
-}: {
-  params: Promise<{ route: string[] }>;
-  searchParams: ActualMasterDataSearchParams;
-}) {
+export default async function ActualMasterDataDynamicPage({ params }: { params: Promise<{ route: string[] }> }) {
   const { route } = await params;
-  if (route.join("/") === "customers/create") {
-    return <ActualCustomerCreate />;
-  }
-
-  if (route.length < 3 || route.at(-2) !== "customer") {
-    notFound();
-  }
+  if (route.join("/") === "customers/create") return <ActualCustomerCreate />;
+  if (route.length < 3 || route.at(-2) !== "customer") notFound();
 
   const customerId = route.at(-1);
-  const category = categoryByActualPath[route.slice(0, -2).join("/")];
-  if (!category || !customerId) {
-    notFound();
-  }
+  const legacyPath = route.slice(0, -2).join("/");
+  if (!customerId) notFound();
+  if (legacyPath === "customers") redirect("/master/customers/customer/" + customerId);
+  if (legacyPath === "locations") redirect("/master/customers/customer/" + customerId + "?tab=location");
+  if (legacyPath === "surveyors") redirect("/master/customers/customer/" + customerId + "?tab=personnel");
 
-  return <ActualMasterDataDetailRoute category={category} customerId={customerId} searchParams={searchParams} />;
+  const canonical = canonicalTabByPath[legacyPath];
+  if (canonical) redirect(canonical + "&customerId=" + customerId);
+  notFound();
 }

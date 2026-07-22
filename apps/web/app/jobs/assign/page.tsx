@@ -1,7 +1,5 @@
-import { ProtectedRoute } from "@/components/auth/protected-route";
-import { JobActionPicker } from "@/components/jobs/job-action-picker";
-import { AppShell } from "@/components/layout/app-shell";
+import { redirect } from "next/navigation";
 
-export default function AssignJobPickerPage() {
-  return <ProtectedRoute><AppShell title="Assign Surveyor"><JobActionPicker mode="assign" /></AppShell></ProtectedRoute>;
+export default function LegacyJobAssignPage() {
+  redirect("/jobs?view=unassigned&compat=assign");
 }

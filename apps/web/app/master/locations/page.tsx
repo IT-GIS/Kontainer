@@ -1,5 +1,2 @@
-import { ActualMasterDataIndexRoute, type ActualMasterDataSearchParams } from "@/components/master/customer-first-route";
-
-export default function LocationsPage({ searchParams }: { searchParams: ActualMasterDataSearchParams }) {
-  return <ActualMasterDataIndexRoute category="location" searchParams={searchParams} />;
-}
+import { redirect } from "next/navigation";
+export default function LegacyLocationsPage() { redirect("/master/customers?tab=location&compat=locations"); }

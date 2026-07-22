@@ -134,6 +134,37 @@ export const masterResources: Record<string, MasterResource> = {
       statusField
     ]
   },
+  "customer-personnel": {
+    id: "customer-personnel",
+    title: "Personel/PIC Customer",
+    description: "Personnel operasional milik Customer yang dapat dipilih sebagai PIC pekerjaan.",
+    endpoint: "/master/customer-personnel",
+    permissionModule: "customers",
+    columns: [
+      { key: "personnel_code", label: "Kode" },
+      { key: "full_name", label: "Nama" },
+      { key: "position_title", label: "Jabatan" },
+      { key: "personnel_type", label: "Tipe" },
+      { key: "phone", label: "Telepon" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "personnel_code", label: "Kode Personnel", required: true },
+      { name: "full_name", label: "Nama Lengkap", required: true },
+      { name: "position_title", label: "Jabatan", nullable: true },
+      {
+        name: "personnel_type",
+        label: "Tipe Personnel",
+        type: "select",
+        required: true,
+        options: ["pic", "surveyor", "approver", "billing", "other"].map((value) => ({ label: value, value }))
+      },
+      { name: "email", label: "Email", type: "email", nullable: true },
+      { name: "phone", label: "Telepon", type: "tel", nullable: true, maxLength: 50 },
+      { name: "notes", label: "Catatan", type: "textarea", nullable: true },
+      statusField
+    ]
+  },
   "container-types": {
     id: "container-types",
     title: "Master Container Type",
@@ -445,7 +476,7 @@ export const masterResources: Record<string, MasterResource> = {
   "fitness-checklist-templates": {
     id: "fitness-checklist-templates",
     title: "Template Checklist Kelaikan",
-    description: "CRUD header template checklist kelaikan. Item checklist dapat dikelola dari halaman detail item, tetapi belum mengaktifkan flow Surveyor.",
+    description: "Template checklist per Customer yang disnapshot saat Surveyor memulai pemeriksaan.",
     endpoint: "/fitness/master-data/checklist-templates",
     permissionModule: "fitness_checklist_templates",
     columns: [
@@ -461,7 +492,8 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "template_code", label: "Kode Template", required: true },
       { name: "template_name", label: "Nama Template", required: true },
       { name: "approval_category_id", label: "Kategori Persetujuan", type: "searchable-select", nullable: true, relation: { endpoint: "/fitness/master-data/approval-categories", labelKeys: ["code", "name"] } },
-      { name: "container_type_id", label: "Jenis Peti Kemas", type: "searchable-select", nullable: true, relation: { endpoint: "/fitness/master-data/container-types", labelKeys: ["code", "type"] } },
+      { name: "survey_type_id", label: "Survey Type Customer", type: "searchable-select", required: true, relation: { endpoint: "/master/survey-types", labelKeys: ["code", "name"] } },
+      { name: "container_type_id", label: "Container Type Customer", type: "searchable-select", required: true, relation: { endpoint: "/master/container-types", labelKeys: ["code", "type"] } },
       { name: "description", label: "Deskripsi", type: "textarea", nullable: true },
       { name: "version_no", label: "Versi", type: "number", min: 1, step: 1, omitWhenEmpty: true, defaultValue: 1 },
       { name: "status", label: "Status", type: "select", defaultValue: "draft", options: checklistStatusOptions }
@@ -470,7 +502,7 @@ export const masterResources: Record<string, MasterResource> = {
   "fitness-checklist-template-items": {
     id: "fitness-checklist-template-items",
     title: "Item Template Checklist Kelaikan",
-    description: "CRUD item checklist untuk membangun form Surveyor dari master data pada tahap berikutnya. Flow Surveyor belum aktif.",
+    description: "CRUD item snapshot checklist yang dipakai pada flow Surveyor.",
     endpoint: "/fitness/master-data/checklist-templates",
     permissionModule: "fitness_checklist_templates",
     columns: [
@@ -490,11 +522,11 @@ export const masterResources: Record<string, MasterResource> = {
       { name: "inspection_area_id", label: "Area Pemeriksaan", type: "searchable-select", nullable: true, relation: { endpoint: "/fitness/master-data/inspection-areas", labelKeys: ["code", "area_name"] } },
       { name: "structural_component_id", label: "Komponen Struktur", type: "searchable-select", nullable: true, relation: { endpoint: "/fitness/master-data/structural-components", labelKeys: ["code", "component_name"] } },
       { name: "test_parameter_id", label: "Parameter Pengujian", type: "searchable-select", nullable: true, relation: { endpoint: "/fitness/master-data/test-parameters", labelKeys: ["code", "parameter_name"] } },
-      { name: "response_type", label: "Response Type", type: "select", required: true, defaultValue: "ok_not_ok", options: ["ok_not_ok", "yes_no", "text", "number", "date", "photo_required", "not_applicable"].map((value) => ({ label: value, value })) },
+      { name: "response_type", label: "Response Type", type: "select", required: true, defaultValue: "ok_not_ok", options: ["ok_not_ok", "yes_no", "text", "numeric", "date", "photo_required", "not_applicable"].map((value) => ({ label: value, value })) },
       { name: "expected_value", label: "Expected Value", nullable: true },
       { name: "is_required", label: "Wajib Diisi", type: "checkbox", defaultValue: true },
       { name: "is_critical", label: "Critical Item", type: "checkbox", defaultValue: false },
-      { name: "fail_requires_perbaikan", label: "Jika Gagal Perlu Perbaikan", type: "checkbox", defaultValue: false },
+      { name: "fail_requires_repair", label: "Jika Gagal Perlu Perbaikan", type: "checkbox", defaultValue: false },
       { name: "fail_marks_unfit", label: "Jika Gagal Tidak Layak", type: "checkbox", defaultValue: false },
       { name: "display_order", label: "Urutan Tampil", type: "number", min: 0, step: 1, omitWhenEmpty: true, defaultValue: 0 },
       statusField
@@ -649,7 +681,7 @@ export const masterResources: Record<string, MasterResource> = {
   },
   "cedex-components": codeNameResource("cedex-components", "Master CEDEX Component", "CEDEX component references for survey damage records.", "/master/cedex/components", "cedex_components", "component_name", "Component Name"),
   "cedex-damages": codeNameResource("cedex-damages", "Master CEDEX Damage", "Damage code references used by surveyors.", "/master/cedex/damages", "cedex_damages", "damage_name", "Damage Name"),
-  "cedex-repairs": codeNameResource("cedex-repairs", "Master CEDEX Repair", "Repair action code references used in damage records.", "/master/cedex/repairs", "cedex_repairs", "repair_name", "Repair Name"),
+  "cedex-repairs": codeNameResource("cedex-repairs", "Master Action Repair Code", "Action Repair hanya menjadi referensi teknis atau rekomendasi tindakan.", "/master/cedex/repairs", "cedex_repairs", "repair_name", "Action Name"),
   "cedex-materials": codeNameResource("cedex-materials", "Master CEDEX Material", "Material references used by survey damage records.", "/master/cedex/materials", "cedex_materials", "material_name", "Material Name"),
   "responsibility-codes": codeNameResource("responsibility-codes", "Master Responsibility Code", "Responsibility codes used by survey damage records.", "/master/responsibility-codes", "responsibility_codes", "name", "Name")
 };

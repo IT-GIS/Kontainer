@@ -1,7 +1,5 @@
-import { ProtectedRoute } from "@/components/auth/protected-route";
-import { AppShell } from "@/components/layout/app-shell";
-import { SurveyListPage } from "@/components/surveys/survey-list-page";
+import { redirect } from "next/navigation";
 
-export default function InProgressSurveyPage() {
-  return <ProtectedRoute><AppShell title="Survey In Progress"><SurveyListPage title="Survey In Progress" description="Survey yang sudah dimulai dan belum disubmit." endpoint="/surveys/monitoring" fixedStatus="in_progress" /></AppShell></ProtectedRoute>;
+export default function LegacySurveyInProgressPage() {
+  redirect("/jobs?view=in-progress&compat=monitoring");
 }

@@ -21,7 +21,7 @@ type UserRow = {
 };
 
 export default function UsersPage() {
-  return <ProtectedRoute><AppShell title="User Management"><UsersContent /></AppShell></ProtectedRoute>;
+  return <ProtectedRoute><AppShell title="User & Hak Akses"><UsersContent /></AppShell></ProtectedRoute>;
 }
 
 function UsersContent() {
@@ -56,7 +56,7 @@ function UsersContent() {
   }, [load]);
 
   return <div className="page-stack">
-    <PageHeader title="User Management" description="Daftar akun read-only. Perubahan akun dan role hanya tersedia untuk Super Admin." />
+    <PageHeader title="User & Hak Akses" description="Daftar akun dan referensi Role & Permission existing dalam satu halaman Pengaturan." />
     <div className="toolbar">
       <label className="search-box"><Search size={17} /><input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Cari nama, email, username" /></label>
       <select value={role} onChange={(event) => { setPage(1); setRole(event.target.value); }}><option value="">Semua Role</option>{["super_admin", "admin", "surveyor", "supervisor", "finance", "management"].map((item) => <option value={item} key={item}>{item.replaceAll("_", " ")}</option>)}</select>
@@ -71,5 +71,12 @@ function UsersContent() {
       { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "active" ? "success" : row.status === "locked" ? "danger" : "neutral"}>{row.status.toUpperCase()}</StatusBadge> },
       { key: "last_login", header: "Last Login", render: (row) => row.last_login_at ?? "-" }
     ]} />
+    <section className="workspace-panel page-stack" id="role-permission" aria-labelledby="role-permission-heading">
+      <div>
+        <h2 id="role-permission-heading">Role & Permission</h2>
+        <p className="muted-text">Permission backend existing tetap menjadi sumber hak akses. Tahap ini hanya menggabungkan presentation navigasi.</p>
+      </div>
+      <div className="alert alert-warning">Pengelolaan Role & Permission tetap mengikuti kemampuan dan permission existing; tidak ada action backend baru.</div>
+    </section>
   </div>;
 }

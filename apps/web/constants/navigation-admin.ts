@@ -1,91 +1,90 @@
 import {
-  Activity, BarChart3, BookOpenCheck, Boxes, Building2, CheckCircle2, ClipboardCheck,
-  ClipboardList, Clock3, Container, Database, FileClock, FilePlus2, FileText,
-  Gauge, History, Layers, ListChecks, MapPin, PackageCheck, QrCode, RotateCcw, ScanSearch, Send,
-  Settings,
-  ShieldCheck, Tags, Truck, Upload, UserCog, UserRoundCheck, UsersRound, Wrench
+  BookOpenCheck, Building2, ClipboardList, Database, FilePlus2, FileText, Gauge,
+  ListChecks, Settings, ShieldCheck, UserCog, UserRoundCheck, UsersRound
 } from "lucide-react";
-import type {
-  NavigationGroup, NavigationLink, NavigationRouteMatch, NavigationWorkspace
-} from "@/constants/navigation";
+import type { NavigationGroup, NavigationLink, NavigationRouteMatch, NavigationWorkspace } from "@/constants/navigation";
 import type { RoleCode } from "@/types/auth";
 
 const admin: RoleCode[] = ["admin"];
-const reviewer: RoleCode[] = ["admin", "supervisor"];
-const reporter: RoleCode[] = ["admin", "supervisor", "management"];
-const n = (
-  label: string, href: string, icon: NavigationLink["icon"], roles: RoleCode[],
-  permissions: string[], matches?: NavigationRouteMatch[]
-): NavigationLink => ({ kind: "link", id: href, label, href, icon, roles, permissions, matches });
-const g = (label: string, icon: NavigationLink["icon"], roles: RoleCode[], children: NavigationLink[]): NavigationGroup => ({
-  kind: "group", id: label.toLowerCase().replaceAll(" ", "-"), label, icon, roles, children
-});
+const shared: RoleCode[] = ["admin", "supervisor", "management"];
+const n = (label: string, href: string, icon: NavigationLink["icon"], roles: RoleCode[], permissions: string[], matches?: NavigationRouteMatch[]): NavigationLink =>
+  ({ kind: "link", id: href, label, href, icon, roles, permissions, matches });
+
+const g = (label: string, icon: NavigationLink["icon"], roles: RoleCode[], children: NavigationLink[]): NavigationGroup =>
+  ({ kind: "group", id: label, label, icon, roles, children });
 
 export const adminWorkspace: NavigationWorkspace = {
   id: "admin",
   label: "Admin",
-  roles: ["admin", "supervisor", "management"],
+  roles: shared,
   items: [
-    {
-      ...n("Dashboard Admin", "/dashboard", Gauge, ["admin", "management"], ["dashboard.view.all"]),
-      roleLabels: { management: "Dashboard" }
-    },
+    { ...n("Dashboard", "/dashboard", Gauge, ["admin", "management"], ["dashboard.view.all"]), roleLabels: { management: "Dashboard" } },
+    g("Pekerjaan Inspeksi", ClipboardList, admin, [
+      n("Semua Pekerjaan", "/jobs", ClipboardList, admin, ["jobs.view.all", "jobs.manage.all"], [
+        { path: "/jobs" },
+        { path: "/jobs/:id", mode: "pattern" },
+        { path: "/jobs/import" },
+        { path: "/jobs/assign" },
+        { path: "/surveys/monitoring", mode: "prefix" }
+      ]),
+      n("Buat Job/SPK", "/jobs/create", FilePlus2, admin, ["jobs.create.all", "jobs.manage.all"])
+    ]),
     g("Master Data", Database, admin, [
-      n("Customer", "/master/customers", UsersRound, admin, ["customers.view.all"], [{ path: "/master/customers", mode: "prefix" }]),
-      n("Location", "/master/locations", MapPin, admin, ["locations.view.all"], [{ path: "/master/locations", mode: "prefix" }]),
-      n("Surveyor", "/master/surveyors", UserRoundCheck, admin, ["surveyors.view.all"], [{ path: "/master/surveyors", mode: "prefix" }]),
-      n("Container Type", "/master/container-types", Container, admin, ["container_types.view.all"], [{ path: "/master/container-types", mode: "prefix" }]),
-      n("Survey Type", "/master/survey-types", ClipboardCheck, admin, ["survey_types.view.all"], [{ path: "/master/survey-types", mode: "prefix" }]),
-      n("CEDEX Location", "/master/cedex/locations", MapPin, admin, ["cedex_locations.view.all"], [{ path: "/master/cedex/locations", mode: "prefix" }]),
-      n("CEDEX Component", "/master/cedex/components", PackageCheck, admin, ["cedex_components.view.all"], [{ path: "/master/cedex/components", mode: "prefix" }]),
-      n("CEDEX Damage", "/master/cedex/damages", Layers, admin, ["cedex_damages.view.all"], [{ path: "/master/cedex/damages", mode: "prefix" }]),
-      n("CEDEX Repair", "/master/cedex/repairs", Wrench, admin, ["cedex_repairs.view.all"], [{ path: "/master/cedex/repairs", mode: "prefix" }]),
-      n("CEDEX Material", "/master/cedex/materials", Boxes, admin, ["cedex_materials.view.all"], [{ path: "/master/cedex/materials", mode: "prefix" }]),
-      n("Responsibility Code", "/master/responsibility-codes", Tags, admin, ["responsibility_codes.view.all"], [{ path: "/master/responsibility-codes", mode: "prefix" }])
-    ]),
-    g("Job Order", Truck, admin, [
-      n("Job List", "/jobs", ClipboardList, admin, ["jobs.view.all", "jobs.manage.all"], [
-        { path: "/jobs" }, { path: "/jobs/:id", mode: "pattern" }
+      n("Customer", "/master/customers", UsersRound, admin, ["customers.view.all"], [
+        { path: "/master/customers", mode: "prefix" },
+        { path: "/master/locations", mode: "prefix" }
       ]),
-      n("Create Job", "/jobs/create", FilePlus2, admin, ["jobs.create.all", "jobs.manage.all"]),
-      n("Import Container", "/jobs/import", Upload, admin, ["job_containers.import.all"], [
-        { path: "/jobs/import" }, { path: "/jobs/:id/containers/import", mode: "pattern" }
+      n("Referensi Pemeriksaan", "/master/inspection-references", ListChecks, admin, [
+        "container_types.view.all", "survey_types.view.all", "fitness_checklist_templates.view.all",
+        "inspection_test_parameters.view.all", "evidence_photo_categories.view.all", "finding_severities.view.all"
+      ], [
+        { path: "/master/inspection-references", mode: "prefix" },
+        { path: "/master/container-types", mode: "prefix" },
+        { path: "/master/survey-types", mode: "prefix" },
+        { path: "/fitness/master-data/checklist-templates", mode: "prefix" }
       ]),
-      n("Assign Surveyor", "/jobs/assign", UserRoundCheck, admin, ["assignments.assign.all", "assignments.manage.all"], [
-        { path: "/jobs/assign" }, { path: "/jobs/:id", mode: "pattern", query: { action: "assign" } }
+      n("ISO CEDEX", "/master/iso-cedex", BookOpenCheck, admin, [
+        "cedex_locations.view.all", "cedex_components.view.all", "cedex_damages.view.all",
+        "cedex_repairs.view.all", "cedex_materials.view.all", "responsibility_codes.view.all"
+      ], [
+        { path: "/master/iso-cedex", mode: "prefix" },
+        { path: "/master/cedex", mode: "prefix" },
+        { path: "/master/responsibility-codes", mode: "prefix" }
       ])
     ]),
-    g("Monitoring Survey", ScanSearch, admin, [
-      n("All Survey", "/surveys/monitoring", ClipboardCheck, admin, ["surveys.view.all"]),
-      n("In Progress", "/surveys/monitoring/in-progress", Activity, admin, ["surveys.view.all"]),
-      n("Submitted", "/surveys/monitoring/submitted", Send, admin, ["surveys.view.all"]),
-      n("Need Revision", "/surveys/monitoring/need-revision", RotateCcw, admin, ["surveys.view.all"]),
-      n("Approved", "/surveys/monitoring/approved", CheckCircle2, admin, ["surveys.view.all"])
-    ]),
-    g("Review", ShieldCheck, reviewer, [
-      n("Pending Review", "/review/pending", Clock3, reviewer, ["reviews.view.all", "reviews.manage.all"], [
-        { path: "/review/pending" }, { path: "/review/:id", mode: "pattern" }
+    g("Review & Keputusan", ShieldCheck, shared, [
+      n("Menunggu Review", "/review/pending", ShieldCheck, shared, ["reviews.view.all", "reviews.manage.all"], [
+        { path: "/review/pending" },
+        { path: "/review/:id", mode: "pattern" }
       ]),
-      n("Review History", "/review/history", History, reviewer, ["reviews.view.all"], [
-        { path: "/review/history" }, { path: "/review/need-revision" }, { path: "/review/approved" }
+      n("Riwayat Keputusan", "/review/history", ClipboardList, shared, ["reviews.view.all"], [
+        { path: "/review/history" },
+        { path: "/review/need-revision" },
+        { path: "/review/approved" }
       ])
     ]),
-    g("Report", FileText, reporter, [
-      n("Report Archive", "/reports", BookOpenCheck, reporter, ["reports.view.all"], [
-        { path: "/reports" }, { path: "/reports/:id", mode: "pattern" }
+    g("Dokumen & Laporan", FileText, shared, [
+      n("Laporan Pemeriksaan", "/reports", FileText, shared, ["reports.view.all"], [
+        { path: "/reports" },
+        { path: "/reports/:id", mode: "pattern" },
+        { path: "/reports/qr-validation" }
       ]),
-      n("Report Version", "/reports/versions", FileClock, ["admin", "supervisor"], ["reports.version.all"]),
-      n("QR Validation", "/reports/qr-validation", QrCode, ["admin", "supervisor"], ["reports.view.all"])
+      n("Arsip Laporan", "/reports?view=archive", ClipboardList, shared, ["reports.view.all", "reports.version.all"], [
+        { path: "/reports", query: { view: "archive" } },
+        { path: "/reports/versions" }
+      ])
     ]),
-    g("Setting", Settings, admin, [
+    g("Pengaturan", Settings, admin, [
+      n("Surveyor GIFT", "/master/surveyors", UserRoundCheck, admin, ["surveyors.view.all"], [
+        { path: "/master/surveyors", mode: "prefix" }
+      ]),
       n("Company Profile", "/settings/company-profile", Building2, admin, ["company_profiles.view.all", "company_profiles.manage.all"]),
-      n("Numbering Setting", "/settings/numbering", ListChecks, admin, ["numbering_settings.view.all", "numbering_settings.manage.all"]),
-      n("Audit Log", "/settings/audit-log", BarChart3, admin, ["audit.view.all"]),
-      n("User Management", "/settings/users", UserCog, admin, ["users.view.all"]),
-      {
-        ...n("Role & Permission", "/settings/roles", ShieldCheck, admin, ["roles.view.all", "roles.manage.all"]),
-        exactRoles: ["super_admin"]
-      }
+      n("Penomoran", "/settings/numbering", ListChecks, admin, ["numbering_settings.view.all", "numbering_settings.manage.all"]),
+      n("User & Hak Akses", "/settings/users", UserCog, admin, ["users.view.all", "roles.view.all", "roles.manage.all"], [
+        { path: "/settings/users", mode: "prefix" },
+        { path: "/settings/roles", mode: "prefix" }
+      ]),
+      n("Audit Log", "/settings/audit-log", ShieldCheck, admin, ["audit.view.all"])
     ])
   ]
 };

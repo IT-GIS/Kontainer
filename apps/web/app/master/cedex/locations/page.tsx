@@ -1,5 +1,2 @@
-import { ActualMasterDataIndexRoute, type ActualMasterDataSearchParams } from "@/components/master/customer-first-route";
-
-export default function CedexLocationsPage({ searchParams }: { searchParams: ActualMasterDataSearchParams }) {
-  return <ActualMasterDataIndexRoute category="cedex-location" searchParams={searchParams} />;
-}
+import { redirect } from "next/navigation";
+export default function LegacyCedexLocationsPage() { redirect("/master/iso-cedex?tab=location"); }

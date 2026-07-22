@@ -1,7 +1,5 @@
-import { ProtectedRoute } from "@/components/auth/protected-route";
-import { AppShell } from "@/components/layout/app-shell";
-import { SurveyListPage } from "@/components/surveys/survey-list-page";
+import { redirect } from "next/navigation";
 
-export default function NeedRevisionMonitoringPage() {
-  return <ProtectedRoute><AppShell title="Need Revision"><SurveyListPage title="Need Revision" description="Survey yang dikembalikan untuk diperbaiki." endpoint="/surveys/monitoring" fixedStatus="need_revision" /></AppShell></ProtectedRoute>;
+export default function LegacyNeedRevisionSurveyPage() {
+  redirect("/jobs?view=need-revision&compat=monitoring");
 }

@@ -1,5 +1,2 @@
-import { ActualMasterDataIndexRoute, type ActualMasterDataSearchParams } from "@/components/master/customer-first-route";
-
-export default function CedexMaterialsPage({ searchParams }: { searchParams: ActualMasterDataSearchParams }) {
-  return <ActualMasterDataIndexRoute category="cedex-material" searchParams={searchParams} />;
-}
+import { redirect } from "next/navigation";
+export default function LegacyCedexMaterialsPage() { redirect("/master/iso-cedex?tab=material"); }

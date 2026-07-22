@@ -12,14 +12,14 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/hooks/use-auth";
 import { apiData } from "@/lib/api-client";
-import { can } from "@/lib/permissions";
+import { can, hasRole } from "@/lib/permissions";
 import type { ReviewDetail } from "@/types/reviews";
 
 const tabs = ["Summary", "General Info", "Checklist", "Damage", "Photos", "Log"] as const;
 type Tab = (typeof tabs)[number];
 
 export default function ReviewDetailPage() {
-  return <ProtectedRoute><AppShell title="Review Survey"><ReviewDetailContent /></AppShell></ProtectedRoute>;
+  return <ProtectedRoute><AppShell title="Review & Keputusan"><ReviewDetailContent /></AppShell></ProtectedRoute>;
 }
 
 function ReviewDetailContent() {
@@ -77,12 +77,13 @@ function ReviewDetailContent() {
   }
 
   if (!review) return <div className="center-screen">Memuat review...</div>;
-  const canManageReview = can(user, "reviews.manage.all");
+  const canManageReview = can(user, "reviews.manage.all") && (hasRole(user, "supervisor") || hasRole(user, "super_admin"));
   const canDecide = canManageReview && review.status === "submitted";
 
   return (
     <div className="page-stack">
-      <PageHeader title={`Review Survey: ${review.survey_no}`} description={`Container: ${review.container_no} - ${review.customer_name}`} />
+      <PageHeader title={`Review & Keputusan: ${review.survey_no}`} description={`Peti kemas: ${review.container_no} - ${review.customer_name}`} />
+      {!canManageReview ? <div className="alert alert-warning">Mode read-only. Keputusan teknis hanya tersedia bagi Supervisor/Super Admin yang juga memiliki permission <code>reviews.manage.all</code>.</div> : null}
       {canManageReview ? <div className="job-actions">
         <button className="secondary-button" disabled={!canDecide} onClick={() => setDialog("revision")}><RotateCcw size={17} /><span>Need Revision</span></button>
         <button className="secondary-button" disabled={!canDecide} onClick={() => setDialog("reject")}><X size={17} /><span>Reject</span></button>

@@ -13,7 +13,7 @@ import { apiPaginated, buildQuery } from "@/lib/api-client";
 import type { PendingReview } from "@/types/reviews";
 
 export default function PendingReviewPage() {
-  return <ProtectedRoute><AppShell title="Pending Review"><PendingReviewContent /></AppShell></ProtectedRoute>;
+  return <ProtectedRoute><AppShell title="Menunggu Review"><PendingReviewContent /></AppShell></ProtectedRoute>;
 }
 
 function PendingReviewContent() {
@@ -44,9 +44,9 @@ function PendingReviewContent() {
 
   return (
     <div className="page-stack">
-      <PageHeader title="Pending Review" description="Survey submitted yang menunggu keputusan supervisor." />
+      <PageHeader title="Menunggu Review" description="Hasil Surveyor yang sudah disubmit dan menunggu keputusan teknis Supervisor." />
       <div className="toolbar">
-        <label className="search-box"><Search size={17} /><input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Search survey/container/job" /></label>
+        <label className="search-box"><Search size={17} /><input aria-label="Cari survey, peti kemas, atau pekerjaan" value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Cari survey, peti kemas, atau pekerjaan" /></label>
       </div>
       {error ? <div className="alert alert-danger">{error}</div> : null}
       <DataTable rows={rows} isLoading={isLoading} page={page} totalPages={totalPages} onPageChange={setPage} columns={[

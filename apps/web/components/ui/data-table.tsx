@@ -24,7 +24,7 @@ export function DataTable<T>({ columns, rows, isLoading, emptyText = "Data belum
           <thead>
             <tr>
               {columns.map((column) => (
-                <th key={column.key}>{column.header}</th>
+                <th key={column.key} scope="col">{column.header}</th>
               ))}
             </tr>
           </thead>
@@ -51,13 +51,13 @@ export function DataTable<T>({ columns, rows, isLoading, emptyText = "Data belum
       </div>
       {onPageChange ? (
         <div className="table-pagination">
-          <button className="icon-button" disabled={page <= 1} onClick={() => onPageChange(page - 1)} title="Previous page">
+          <button aria-label="Halaman sebelumnya" className="icon-button" disabled={page <= 1} onClick={() => onPageChange(page - 1)} title="Halaman sebelumnya">
             <ChevronLeft size={18} />
           </button>
           <span>
             Page {page} of {Math.max(totalPages, 1)}
           </span>
-          <button className="icon-button" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)} title="Next page">
+          <button aria-label="Halaman berikutnya" className="icon-button" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)} title="Halaman berikutnya">
             <ChevronRight size={18} />
           </button>
         </div>

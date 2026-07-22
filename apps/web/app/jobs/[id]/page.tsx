@@ -1,38 +1,69 @@
 "use client";
 
-import { PackagePlus, Send, Upload } from "lucide-react";
-import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
+import {
+  JobAssignmentTab,
+  JobContainersTab,
+  JobDocumentsTab,
+  JobHistoryTab,
+  JobProgressTab,
+  JobReviewTab,
+  JobSummaryTab,
+  JobSurveyResultsTab
+} from "@/components/jobs/job-detail-tabs";
 import { AppShell } from "@/components/layout/app-shell";
-import { DataTable } from "@/components/ui/data-table";
 import { FormDialog } from "@/components/ui/form-dialog";
 import { PageHeader } from "@/components/ui/page-header";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/hooks/use-auth";
-import { apiData } from "@/lib/api-client";
+import { apiData, apiPaginated, buildQuery } from "@/lib/api-client";
 import { loadOptions } from "@/lib/options";
 import { can } from "@/lib/permissions";
-import type { AssignmentSummary, JobContainer, JobDetail, JobEvent, OptionItem } from "@/types/jobs";
+import type { ContainerTypeOption, JobDetailSupportingData } from "@/types/job-detail-workspace";
+import type { JobDetail, OptionItem } from "@/types/jobs";
+import type { ReportSummary, ReportVersion, ReviewDetail } from "@/types/reviews";
+import type { SurveyListItem } from "@/types/surveys";
 
-const tabs = ["Overview", "Containers", "Assignment", "Survey Progress", "Reports", "Timeline"] as const;
-type Tab = (typeof tabs)[number];
+const tabs = [
+  { id: "ringkasan", label: "Ringkasan" },
+  { id: "peti-kemas", label: "Peti Kemas" },
+  { id: "penugasan", label: "Penugasan" },
+  { id: "progress", label: "Progress Pemeriksaan" },
+  { id: "hasil-survey", label: "Hasil Survey" },
+  { id: "review", label: "Review" },
+  { id: "dokumen", label: "Dokumen" },
+  { id: "riwayat", label: "Riwayat" }
+] as const;
+type TabID = (typeof tabs)[number]["id"];
 
 type ContainerForm = {
-  container_no: string; container_type_id: string; iso_type_code: string; seal_no: string; cargo_status: string;
-  gross_weight: string; tare_weight: string; payload: string; manufacture_date: string; check_digit_override_reason: string;
-  truck_no: string; driver_name: string; csc_plate_status: string; remark: string;
+  container_no: string;
+  container_type_id: string;
+  iso_type_code: string;
+  seal_no: string;
+  cargo_status: string;
+  gross_weight: string;
+  tare_weight: string;
+  payload: string;
+  manufacture_date: string;
+  check_digit_override_reason: string;
+  truck_no: string;
+  driver_name: string;
+  csc_plate_status: string;
+  remark: string;
 };
 type ContainerCheck = { is_format_valid: boolean; is_check_digit_valid: boolean };
+
 const emptyContainer: ContainerForm = {
   container_no: "", container_type_id: "", iso_type_code: "", seal_no: "", cargo_status: "unknown",
   gross_weight: "", tare_weight: "", payload: "", manufacture_date: "", check_digit_override_reason: "",
   truck_no: "", driver_name: "", csc_plate_status: "not_checked", remark: ""
 };
+const emptySupport: JobDetailSupportingData = { surveys: [], reviews: [], documents: [], versions: {} };
 
 export default function JobDetailPage() {
-  return <ProtectedRoute><AppShell title="Job Detail"><JobDetailContent /></AppShell></ProtectedRoute>;
+  return <ProtectedRoute><AppShell title="Detail Pekerjaan"><JobDetailContent /></AppShell></ProtectedRoute>;
 }
 
 function JobDetailContent() {
@@ -41,17 +72,23 @@ function JobDetailContent() {
   const jobID = params.id;
   const { accessToken, user } = useAuth();
   const [job, setJob] = useState<JobDetail | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>("Overview");
+  const [support, setSupport] = useState<JobDetailSupportingData>(emptySupport);
+  const [activeTab, setActiveTab] = useState<TabID>("ringkasan");
   const [error, setError] = useState<string | null>(null);
+  const [supportWarning, setSupportWarning] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [containerDialog, setContainerDialog] = useState(false);
   const [assignDialog, setAssignDialog] = useState(false);
+  const [reassignDialog, setReassignDialog] = useState(false);
   const [containerForm, setContainerForm] = useState<ContainerForm>(emptyContainer);
   const [selectedContainers, setSelectedContainers] = useState<string[]>([]);
   const [surveyorID, setSurveyorID] = useState("");
   const [assignmentStartDate, setAssignmentStartDate] = useState("");
   const [assignmentDueDate, setAssignmentDueDate] = useState("");
   const [assignmentInstruction, setAssignmentInstruction] = useState("");
-  const [containerTypes, setContainerTypes] = useState<OptionItem[]>([]);
+  const [reassignSurveyorID, setReassignSurveyorID] = useState("");
+  const [reassignReason, setReassignReason] = useState("");
+  const [containerTypes, setContainerTypes] = useState<ContainerTypeOption[]>([]);
   const [surveyors, setSurveyors] = useState<OptionItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const assignmentOpened = useRef(false);
@@ -59,155 +96,254 @@ function JobDetailContent() {
   const canAddContainer = can(user, "job_containers.create.all");
   const canImport = can(user, "job_containers.import.all");
   const canAssign = can(user, "assignments.assign.all");
+  const canReassign = can(user, "job_containers.reassign.all");
+  const canViewReviews = can(user, "reviews.view.all");
+  const canViewReports = can(user, "reports.view.all");
+
+  const loadSupportingData = useCallback(async (item: JobDetail) => {
+    if (!accessToken) return;
+    const warnings: string[] = [];
+    let surveys: SurveyListItem[] = [];
+    let reviews: ReviewDetail[] = [];
+    let documents: ReportSummary[] = [];
+    const versions: Record<string, ReportVersion[]> = {};
+    if (canViewReviews) {
+      try {
+        const result = await apiPaginated<SurveyListItem>(`/surveys/monitoring${buildQuery({ page: 1, per_page: 100, search: item.job_order_no })}`, { accessToken });
+        surveys = result.rows.filter((row) => row.job_order_no === item.job_order_no);
+        const details = await Promise.all(surveys.map((survey) => apiData<ReviewDetail>(`/reviews/${survey.survey_id}`, { accessToken }).catch(() => null)));
+        reviews = details.filter((detail): detail is ReviewDetail => detail !== null);
+      } catch {
+        warnings.push("Hasil survey dan review tidak dapat dimuat untuk sesi ini.");
+      }
+    }
+    if (canViewReports) {
+      try {
+        const result = await apiPaginated<ReportSummary>(`/reports${buildQuery({ page: 1, per_page: 100, job_order_id: item.id })}`, { accessToken });
+        documents = result.rows;
+        await Promise.all(documents.map(async (document) => {
+          versions[document.id] = await apiData<ReportVersion[]>(`/reports/${document.id}/versions`, { accessToken }).catch(() => []);
+        }));
+      } catch {
+        warnings.push("Metadata dokumen tidak dapat dimuat untuk sesi ini.");
+      }
+    }
+    setSupport({ surveys, reviews, documents, versions });
+    setSupportWarning(warnings.join(" ") || null);
+  }, [accessToken, canViewReports, canViewReviews]);
 
   const loadJob = useCallback(async () => {
     if (!accessToken || !jobID) return;
+    setIsLoading(true);
     setError(null);
     try {
       const item = await apiData<JobDetail>(`/jobs/${jobID}`, { accessToken });
       setJob(item);
-    } catch (err) { setError(err instanceof Error ? err.message : "Gagal mengambil job."); }
-  }, [accessToken, jobID]);
+      await loadSupportingData(item);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal mengambil detail pekerjaan.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [accessToken, jobID, loadSupportingData]);
 
-  useEffect(() => { const timer = window.setTimeout(() => void loadJob(), 0); return () => window.clearTimeout(timer); }, [loadJob]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadJob(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadJob]);
+
   useEffect(() => {
     if (!accessToken) return;
-    void Promise.all([
-      loadOptions(accessToken, "/master/container-types", "type", "code"),
-      loadOptions(accessToken, "/master/surveyors", "name", "surveyor_code")
-    ]).then(([types, people]) => { setContainerTypes(types); setSurveyors(people); }).catch(() => undefined);
+    loadOptions(accessToken, "/master/surveyors", "name", "surveyor_code")
+      .then(setSurveyors)
+      .catch(() => setSupportWarning("Pilihan Surveyor GIFT tidak dapat dimuat."));
   }, [accessToken]);
+
   useEffect(() => {
-    if (!assignmentOpened.current && job && canAssign && searchParams.get("action") === "assign") {
-      assignmentOpened.current = true;
-      setActiveTab("Containers");
-      setAssignDialog(true);
-    }
+    if (!accessToken || !job?.customer_id) return;
+    apiPaginated<Record<string, unknown>>(
+      `/customers/${job.customer_id}/container-types?page=1&per_page=100&status=active`,
+      { accessToken }
+    ).then((typeResult) => {
+      setContainerTypes(typeResult.rows.map((row) => ({
+        id: String(row.id),
+        label: String(row.type ?? row.type_name ?? row.code ?? row.id),
+        code: String(row.code ?? ""),
+        isoCode: String(row.iso_code ?? "")
+      })));
+    }).catch(() => setSupportWarning("Pilihan Container Type milik Customer tidak dapat dimuat."));
+  }, [accessToken, job?.customer_id]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const requested = searchParams.get("tab");
+      if (tabs.some((tab) => tab.id === requested)) setActiveTab(requested as TabID);
+      if (!assignmentOpened.current && job && canAssign && searchParams.get("action") === "assign") {
+        assignmentOpened.current = true;
+        setActiveTab("penugasan");
+        setAssignDialog(true);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [canAssign, job, searchParams]);
 
   async function addContainer() {
     if (!accessToken) return;
-    setIsSubmitting(true); setError(null);
+    setIsSubmitting(true);
+    setError(null);
     try {
-      if (!containerForm.container_no.trim()) throw new Error("Container No wajib diisi.");
+      if (!containerForm.container_no.trim()) throw new Error("Nomor peti kemas wajib diisi.");
       for (const [label, value] of [["Gross Weight", containerForm.gross_weight], ["Tare Weight", containerForm.tare_weight], ["Payload", containerForm.payload]]) {
-        if (value !== "" && (!Number.isFinite(Number(value)) || Number(value) < 0)) throw new Error(label + " tidak boleh negatif.");
+        if (value !== "" && (!Number.isFinite(Number(value)) || Number(value) < 0)) throw new Error(`${label} tidak boleh negatif.`);
       }
-      if (containerForm.manufacture_date && containerForm.manufacture_date > new Date().toISOString().slice(0, 10)) {
-        throw new Error("Manufacture Date tidak boleh di masa depan.");
-      }
+      if (containerForm.manufacture_date && containerForm.manufacture_date > new Date().toISOString().slice(0, 10)) throw new Error("Tanggal pembuatan tidak boleh di masa depan.");
       const validation = await apiData<ContainerCheck>("/job-containers/validate-container-no", { method: "POST", accessToken, body: JSON.stringify({ container_no: containerForm.container_no }) });
-      if (!validation.is_format_valid) throw new Error("Format Container No tidak valid.");
-      if (!validation.is_check_digit_valid && !containerForm.check_digit_override_reason.trim()) {
-        throw new Error("Override reason wajib diisi untuk check digit yang tidak valid.");
-      }
+      if (!validation.is_format_valid) throw new Error("Format nomor peti kemas tidak valid.");
+      if (!validation.is_check_digit_valid && !containerForm.check_digit_override_reason.trim()) throw new Error("Alasan override wajib diisi untuk check digit yang tidak valid.");
       await apiData(`/jobs/${jobID}/containers`, { method: "POST", accessToken, body: JSON.stringify(containerPayload(containerForm)) });
-      setContainerDialog(false); setContainerForm(emptyContainer); await loadJob();
-    } catch (err) { setError(err instanceof Error ? err.message : "Gagal menambah container."); }
-    finally { setIsSubmitting(false); }
+      setContainerDialog(false);
+      setContainerForm(emptyContainer);
+      await loadJob();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menambah peti kemas.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   async function assignSurveyor() {
     if (!accessToken) return;
-    setIsSubmitting(true); setError(null);
+    setIsSubmitting(true);
+    setError(null);
     try {
-      if (!surveyorID) throw new Error("Surveyor wajib dipilih.");
-      if (selectedContainers.length === 0) throw new Error("Pilih minimal satu container.");
-      if (assignmentStartDate && assignmentDueDate && assignmentDueDate < assignmentStartDate) {
-        throw new Error("Due Date tidak boleh lebih kecil dari Start Date.");
-      }
+      if (!surveyorID) throw new Error("Surveyor GIFT wajib dipilih.");
+      if (selectedContainers.length === 0) throw new Error("Pilih minimal satu peti kemas pada tab Peti Kemas.");
+      if (assignmentStartDate && assignmentDueDate && assignmentDueDate < assignmentStartDate) throw new Error("Due Date tidak boleh lebih kecil dari Start Date.");
       await apiData(`/jobs/${jobID}/assign`, {
-        method: "POST", accessToken,
+        method: "POST",
+        accessToken,
         body: JSON.stringify({ surveyor_id: surveyorID, container_ids: selectedContainers, start_date: assignmentStartDate || undefined, due_date: assignmentDueDate || undefined, instruction: assignmentInstruction || undefined })
       });
-      setAssignDialog(false); setSurveyorID(""); setAssignmentStartDate(""); setAssignmentDueDate(""); setAssignmentInstruction(""); setSelectedContainers([]); await loadJob();
-    } catch (err) { setError(err instanceof Error ? err.message : "Gagal assign surveyor."); }
-    finally { setIsSubmitting(false); }
+      setAssignDialog(false);
+      setSurveyorID("");
+      setAssignmentStartDate("");
+      setAssignmentDueDate("");
+      setAssignmentInstruction("");
+      setSelectedContainers([]);
+      await loadJob();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menugaskan Surveyor GIFT.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
-  if (!job) {
-    return <div className="center-screen">Memuat job...</div>;
+  async function reassignSurveyor() {
+    if (!accessToken) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      if (selectedContainers.length === 0) throw new Error("Pilih minimal satu peti kemas pada tab Peti Kemas.");
+      if (!reassignSurveyorID) throw new Error("Surveyor GIFT baru wajib dipilih.");
+      if (!reassignReason.trim()) throw new Error("Alasan perubahan penugasan wajib diisi.");
+      await Promise.all(selectedContainers.map((containerID) => apiData(`/job-containers/${containerID}/reassign`, {
+        method: "POST",
+        accessToken,
+        body: JSON.stringify({ from_surveyor_id: job?.assignments?.[0]?.surveyor_id ?? "", to_surveyor_id: reassignSurveyorID, reason: reassignReason })
+      })));
+      setReassignDialog(false);
+      setReassignSurveyorID("");
+      setReassignReason("");
+      setSelectedContainers([]);
+      await loadJob();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal mengubah penugasan.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
+
+  function selectContainerType(value: string) {
+    const selected = containerTypes.find((item) => item.id === value);
+    setContainerForm((current) => ({ ...current, container_type_id: value, iso_type_code: selected?.isoCode ?? "" }));
+  }
+
+  if (isLoading && !job) return <div className="center-screen">Memuat detail pekerjaan...</div>;
+  if (!job) return <div className="page-stack"><div className="alert alert-danger">{error ?? "Pekerjaan tidak ditemukan."}</div></div>;
 
   return (
-    <div className="page-stack">
-      <PageHeader title={job.job_order_no} description={`${job.customer?.customer_name ?? job.customer_name ?? "-"} - ${job.survey_type?.name ?? job.survey_type_name ?? "-"}`} />
+    <div className="page-stack job-detail-workspace">
+      <PageHeader title={job.job_order_no} description={`${job.customer?.customer_name ?? job.customer_name} — ${job.survey_type?.name ?? job.survey_type_name}`} />
       {error ? <div className="alert alert-danger">{error}</div> : null}
-      <div className="job-actions">
-        {canAddContainer ? <button className="secondary-button" onClick={() => setContainerDialog(true)}><PackagePlus size={18} /><span>Add Container</span></button> : null}
-        {canImport ? <Link className="secondary-button" href={`/jobs/${jobID}/containers/import`}><Upload size={18} /><span>Import Container</span></Link> : null}
-        {canAssign ? <button className="primary-button" onClick={() => setAssignDialog(true)}><Send size={18} /><span>Assign Surveyor</span></button> : null}
-      </div>
-      <div className="tab-list">{tabs.map((tab) => <button className={activeTab === tab ? "tab-active" : ""} key={tab} onClick={() => setActiveTab(tab)}>{tab}</button>)}</div>
-      {activeTab === "Overview" ? <Overview job={job} /> : null}
-      {activeTab === "Containers" ? <Containers containers={job.containers ?? []} selected={selectedContainers} onSelected={setSelectedContainers} /> : null}
-      {activeTab === "Assignment" ? <Assignments rows={job.assignments ?? []} /> : null}
-      {activeTab === "Survey Progress" ? <Progress containers={job.containers ?? []} /> : null}
-      {activeTab === "Reports" ? <section className="workspace-panel"><div className="section-title-row"><div><h2>Reports</h2><p className="muted-text">Lihat report yang sudah dibuat untuk job order ini.</p></div><Link className="primary-button" href={`/reports?job_order_id=${jobID}`}>Open Report Archive</Link></div></section> : null}
-      {activeTab === "Timeline" ? <Timeline rows={job.timeline ?? []} /> : null}
+      {supportWarning ? <div className="alert alert-warning">{supportWarning}</div> : null}
+      <div aria-label="Tab detail pekerjaan" className="tab-list" role="tablist">{tabs.map((tab) => <button aria-controls={`panel-${tab.id}`} aria-selected={activeTab === tab.id} className={activeTab === tab.id ? "tab-active" : ""} id={`tab-${tab.id}`} key={tab.id} onClick={() => setActiveTab(tab.id)} role="tab" type="button">{tab.label}</button>)}</div>
 
-      <FormDialog title="Add Container" open={containerDialog} onClose={() => setContainerDialog(false)} onSubmit={addContainer} isSubmitting={isSubmitting} submitLabel="Add">
+      <TabPanel active={activeTab === "ringkasan"} id="ringkasan"><JobSummaryTab job={job} support={support} /></TabPanel>
+      <TabPanel active={activeTab === "peti-kemas"} id="peti-kemas"><JobContainersTab jobID={jobID} containers={job.containers ?? []} selected={selectedContainers} canAdd={canAddContainer} canImport={canImport} onSelected={setSelectedContainers} onAdd={() => setContainerDialog(true)} /></TabPanel>
+      <TabPanel active={activeTab === "penugasan"} id="penugasan"><JobAssignmentTab assignments={job.assignments ?? []} selectedCount={selectedContainers.length} canAssign={canAssign} canReassign={canReassign} onAssign={() => setAssignDialog(true)} onReassign={() => setReassignDialog(true)} /></TabPanel>
+      <TabPanel active={activeTab === "progress"} id="progress"><JobProgressTab containers={job.containers ?? []} support={support} /></TabPanel>
+      <TabPanel active={activeTab === "hasil-survey"} id="hasil-survey"><JobSurveyResultsTab support={support} /></TabPanel>
+      <TabPanel active={activeTab === "review"} id="review"><JobReviewTab support={support} /></TabPanel>
+      <TabPanel active={activeTab === "dokumen"} id="dokumen"><JobDocumentsTab support={support} /></TabPanel>
+      <TabPanel active={activeTab === "riwayat"} id="riwayat"><JobHistoryTab rows={job.timeline ?? []} /></TabPanel>
+
+      <FormDialog title="Tambah Peti Kemas" open={containerDialog} onClose={() => setContainerDialog(false)} onSubmit={addContainer} isSubmitting={isSubmitting} submitLabel="Tambah">
         <div className="form-grid">
-          <Field label="Container No"><input value={containerForm.container_no} onChange={(e) => setContainerFormValue(setContainerForm, "container_no", e.target.value.toUpperCase())} /></Field>
-          <Field label="Container Type"><Select value={containerForm.container_type_id} options={containerTypes} onChange={(value) => setContainerFormValue(setContainerForm, "container_type_id", value)} /></Field>
-          <Field label="ISO Type"><input value={containerForm.iso_type_code} onChange={(e) => setContainerFormValue(setContainerForm, "iso_type_code", e.target.value)} /></Field>
-          <Field label="Seal No"><input value={containerForm.seal_no} onChange={(e) => setContainerFormValue(setContainerForm, "seal_no", e.target.value)} /></Field>
-          <Field label="Cargo Status"><select value={containerForm.cargo_status} onChange={(e) => setContainerFormValue(setContainerForm, "cargo_status", e.target.value)}><option value="unknown">unknown</option><option value="empty">empty</option><option value="laden">laden</option></select></Field>
-          <Field label="Gross Weight"><input min="0" step="0.01" type="number" value={containerForm.gross_weight} onChange={(e) => setContainerFormValue(setContainerForm, "gross_weight", e.target.value)} /></Field>
-          <Field label="Tare Weight"><input min="0" step="0.01" type="number" value={containerForm.tare_weight} onChange={(e) => setContainerFormValue(setContainerForm, "tare_weight", e.target.value)} /></Field>
-          <Field label="Payload"><input min="0" step="0.01" type="number" value={containerForm.payload} onChange={(e) => setContainerFormValue(setContainerForm, "payload", e.target.value)} /></Field>
-          <Field label="Manufacture Date"><input type="date" value={containerForm.manufacture_date} onChange={(e) => setContainerFormValue(setContainerForm, "manufacture_date", e.target.value)} /></Field>
-          <Field label="CSC Plate"><input value={containerForm.csc_plate_status} onChange={(e) => setContainerFormValue(setContainerForm, "csc_plate_status", e.target.value)} /></Field>
-          <Field label="Truck No"><input value={containerForm.truck_no} onChange={(e) => setContainerFormValue(setContainerForm, "truck_no", e.target.value)} /></Field>
-          <Field label="Driver"><input value={containerForm.driver_name} onChange={(e) => setContainerFormValue(setContainerForm, "driver_name", e.target.value)} /></Field>
-          <label className="field form-span-2"><span>Check Digit Override Reason</span><textarea rows={2} value={containerForm.check_digit_override_reason} onChange={(e) => setContainerFormValue(setContainerForm, "check_digit_override_reason", e.target.value)} /></label>
-          <label className="field form-span-2"><span>Remark</span><textarea rows={3} value={containerForm.remark} onChange={(e) => setContainerFormValue(setContainerForm, "remark", e.target.value)} /></label>
+          <Field label="Nomor Peti Kemas"><input value={containerForm.container_no} onChange={(event) => updateContainer(setContainerForm, "container_no", event.target.value.toUpperCase())} /></Field>
+          <Field label="Container Type"><select value={containerForm.container_type_id} onChange={(event) => selectContainerType(event.target.value)}><option value="">Pilih Container Type</option>{containerTypes.map((item) => <option key={item.id} value={item.id}>{item.code} - {item.label}</option>)}</select></Field>
+          <Field label="ISO Type"><input readOnly value={containerForm.iso_type_code} placeholder="Otomatis dari Container Type" /></Field>
+          <Field label="Seal Number"><input value={containerForm.seal_no} onChange={(event) => updateContainer(setContainerForm, "seal_no", event.target.value)} /></Field>
+          <Field label="Cargo Status"><select value={containerForm.cargo_status} onChange={(event) => updateContainer(setContainerForm, "cargo_status", event.target.value)}><option value="unknown">Unknown</option><option value="empty">Empty</option><option value="laden">Laden</option></select></Field>
+          <Field label="Gross Weight"><input min="0" step="0.01" type="number" value={containerForm.gross_weight} onChange={(event) => updateContainer(setContainerForm, "gross_weight", event.target.value)} /></Field>
+          <Field label="Tare Weight"><input min="0" step="0.01" type="number" value={containerForm.tare_weight} onChange={(event) => updateContainer(setContainerForm, "tare_weight", event.target.value)} /></Field>
+          <Field label="Payload"><input min="0" step="0.01" type="number" value={containerForm.payload} onChange={(event) => updateContainer(setContainerForm, "payload", event.target.value)} /></Field>
+          <Field label="Tanggal Pembuatan"><input type="date" value={containerForm.manufacture_date} onChange={(event) => updateContainer(setContainerForm, "manufacture_date", event.target.value)} /></Field>
+          <Field label="CSC Plate Status"><select value={containerForm.csc_plate_status} onChange={(event) => updateContainer(setContainerForm, "csc_plate_status", event.target.value)}><option value="not_checked">Not Checked</option><option value="available">Available</option><option value="missing">Missing</option><option value="damaged">Damaged</option></select></Field>
+          <Field label="Truck Number"><input value={containerForm.truck_no} onChange={(event) => updateContainer(setContainerForm, "truck_no", event.target.value)} /></Field>
+          <Field label="Driver"><input value={containerForm.driver_name} onChange={(event) => updateContainer(setContainerForm, "driver_name", event.target.value)} /></Field>
+          <label className="field form-span-2"><span>Alasan Override Check Digit</span><textarea rows={2} value={containerForm.check_digit_override_reason} onChange={(event) => updateContainer(setContainerForm, "check_digit_override_reason", event.target.value)} /></label>
+          <label className="field form-span-2"><span>Remark</span><textarea rows={3} value={containerForm.remark} onChange={(event) => updateContainer(setContainerForm, "remark", event.target.value)} /></label>
         </div>
       </FormDialog>
 
-      <FormDialog title="Assign Surveyor" open={assignDialog} onClose={() => setAssignDialog(false)} onSubmit={assignSurveyor} isSubmitting={isSubmitting} submitLabel="Assign">
+      <FormDialog title="Tugaskan Surveyor GIFT" open={assignDialog} onClose={() => setAssignDialog(false)} onSubmit={assignSurveyor} isSubmitting={isSubmitting} submitLabel="Tugaskan">
         <div className="form-grid">
-          <Field label="Surveyor"><Select value={surveyorID} options={surveyors} onChange={setSurveyorID} /></Field>
-          <Field label="Start Date"><input type="date" value={assignmentStartDate} onChange={(e) => setAssignmentStartDate(e.target.value)} /></Field>
-          <Field label="Due Date"><input min={assignmentStartDate || undefined} type="date" value={assignmentDueDate} onChange={(e) => setAssignmentDueDate(e.target.value)} /></Field>
-          <div className="field form-span-2"><span>Selected Containers</span><p className="muted-text">{selectedContainers.length} container selected from Containers tab.</p></div>
-          <label className="field form-span-2"><span>Instruction</span><textarea rows={3} value={assignmentInstruction} onChange={(e) => setAssignmentInstruction(e.target.value)} /></label>
+          <Field label="Surveyor GIFT"><OptionSelect value={surveyorID} options={surveyors} onChange={setSurveyorID} /></Field>
+          <Field label="Start Date"><input type="date" value={assignmentStartDate} onChange={(event) => setAssignmentStartDate(event.target.value)} /></Field>
+          <Field label="Due Date"><input min={assignmentStartDate || undefined} type="date" value={assignmentDueDate} onChange={(event) => setAssignmentDueDate(event.target.value)} /></Field>
+          <div className="field form-span-2"><span>Peti Kemas Dipilih</span><p className="muted-text">{selectedContainers.length} peti kemas dipilih dari tab Peti Kemas.</p></div>
+          <label className="field form-span-2"><span>Instruksi Penugasan</span><textarea rows={3} value={assignmentInstruction} onChange={(event) => setAssignmentInstruction(event.target.value)} /></label>
+        </div>
+      </FormDialog>
+
+      <FormDialog title="Ubah Penugasan" description="Reassign hanya tersedia untuk peti kemas yang belum approved/reported." open={reassignDialog} onClose={() => setReassignDialog(false)} onSubmit={reassignSurveyor} isSubmitting={isSubmitting} submitLabel="Ubah Penugasan">
+        <div className="form-grid">
+          <div className="field"><span>Peti Kemas Dipilih</span><strong>{selectedContainers.length}</strong></div>
+          <Field label="Surveyor GIFT Baru"><OptionSelect value={reassignSurveyorID} options={surveyors} onChange={setReassignSurveyorID} /></Field>
+          <label className="field form-span-2"><span>Alasan Perubahan</span><textarea rows={3} value={reassignReason} onChange={(event) => setReassignReason(event.target.value)} /></label>
         </div>
       </FormDialog>
     </div>
   );
 }
 
-function Overview({ job }: { job: JobDetail }) {
-  const rows: Array<[string, React.ReactNode]> = [
-    ["Status", <StatusBadge key="status" tone={job.status === "cancelled" ? "danger" : "success"}>{job.status.toUpperCase()}</StatusBadge>],
-    ["Job Date", job.job_date], ["Priority", job.priority], ["Location", job.location?.location_name ?? job.location_name],
-    ["Reference", job.reference_no ?? "-"], ["Booking", job.booking_no ?? "-"], ["Vessel", job.vessel ?? "-"], ["Instruction", job.instruction ?? "-"]
-  ];
-  return <section className="workspace-panel detail-grid">{rows.map(([label, value]) => <div key={String(label)}><span>{label}</span><strong>{value}</strong></div>)}</section>;
+function TabPanel({ id, active, children }: { id: TabID; active: boolean; children: React.ReactNode }) {
+  if (!active) return null;
+  return <div aria-labelledby={`tab-${id}`} id={`panel-${id}`} role="tabpanel" tabIndex={0}>{children}</div>;
 }
 
-function Containers({ containers, selected, onSelected }: { containers: JobContainer[]; selected: string[]; onSelected: (ids: string[]) => void }) {
-  return <DataTable rows={containers} columns={[
-    { key: "select", header: "Select", render: (row) => <input type="checkbox" checked={selected.includes(row.id)} onChange={(e) => onSelected(e.target.checked ? [...selected, row.id] : selected.filter((id) => id !== row.id))} /> },
-    { key: "container_no", header: "Container No", render: (row) => row.container_no },
-    { key: "check", header: "Check Digit", render: (row) => <StatusBadge tone={row.check_digit_status === "valid" ? "success" : "warning"}>{row.check_digit_status.toUpperCase()}</StatusBadge> },
-    { key: "type", header: "Type", render: (row) => row.container_type_code ?? "-" },
-    { key: "identity", header: "ISO / Seal / Cargo", render: (row) => `${row.iso_type_code ?? "-"} / ${row.seal_no ?? "-"} / ${row.cargo_status}` },
-    { key: "weight", header: "Gross / Tare / Payload", render: (row) => `${row.gross_weight ?? "-"} / ${row.tare_weight ?? "-"} / ${row.payload ?? "-"}` },
-    { key: "manufacture", header: "Manufacture / CSC", render: (row) => `${row.manufacture_date ?? "-"} / ${row.csc_plate_status ?? "-"}` },
-    { key: "vehicle", header: "Vehicle", render: (row) => `${row.truck_no ?? "-"} / ${row.driver_name ?? "-"}` },
-    { key: "notes", header: "Override / Remark", render: (row) => <><span>{row.check_digit_override_reason ?? "-"}</span><br /><span className="muted-text">{row.remark ?? "-"}</span></> },
-    { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "not_started" ? "warning" : "success"}>{row.status.toUpperCase()}</StatusBadge> }
-  ]} />;
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label className="field"><span>{label}</span>{children}</label>;
 }
 
-function Assignments({ rows }: { rows: AssignmentSummary[] }) { return <DataTable rows={rows} columns={[{ key: "assignment_no", header: "Assignment No", render: (r) => r.assignment_no }, { key: "surveyor", header: "Surveyor", render: (r) => r.surveyor_name }, { key: "period", header: "Period", render: (r) => `${r.start_date ?? "-"} - ${r.due_date ?? "-"}` }, { key: "instruction", header: "Instruction", render: (r) => r.instruction ?? "-" }, { key: "containers", header: "Containers", render: (r) => r.total_containers }, { key: "status", header: "Status", render: (r) => <StatusBadge tone="success">{r.status.toUpperCase()}</StatusBadge> }]} />; }
-function Progress({ containers }: { containers: JobContainer[] }) { return <section className="metric-grid">{["not_started","assigned","in_progress","submitted","need_revision","rejected","approved","reported"].map((status) => <div className="metric-tile" key={status}><p>{status}</p><strong>{containers.filter((c) => c.status === status).length}</strong></div>)}</section>; }
-function Timeline({ rows }: { rows: JobEvent[] }) { return <section className="workspace-panel timeline-list">{rows.length === 0 ? <p className="muted-text">Timeline kosong.</p> : rows.map((row) => <div key={row.id}><strong>{row.event_title}</strong><p>{row.description}</p><span>{row.actor ?? "System"} - {row.created_at}</span></div>)}</section>; }
-function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="field"><span>{label}</span>{children}</label>; }
-function Select({ value, options, onChange }: { value: string; options: OptionItem[]; onChange: (value: string) => void }) { return <select value={value} onChange={(e) => onChange(e.target.value)}><option value="">Select</option>{options.map((item) => <option key={item.id} value={item.id}>{item.code ? `${item.code} - ${item.label}` : item.label}</option>)}</select>; }
-function setContainerFormValue(setter: React.Dispatch<React.SetStateAction<ContainerForm>>, key: keyof ContainerForm, value: string) { setter((current) => ({ ...current, [key]: value })); }
+function OptionSelect({ value, options, onChange }: { value: string; options: OptionItem[]; onChange: (value: string) => void }) {
+  return <select value={value} onChange={(event) => onChange(event.target.value)}><option value="">Pilih</option>{options.map((item) => <option key={item.id} value={item.id}>{item.code ? `${item.code} - ${item.label}` : item.label}</option>)}</select>;
+}
+
+function updateContainer(setter: React.Dispatch<React.SetStateAction<ContainerForm>>, key: keyof ContainerForm, value: string) {
+  setter((current) => ({ ...current, [key]: value }));
+}
+
 function containerPayload(values: ContainerForm) {
   const payload: Record<string, string | number> = { ...values };
   for (const key of ["gross_weight", "tare_weight", "payload"] as const) {

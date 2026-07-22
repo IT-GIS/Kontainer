@@ -1,7 +1,5 @@
-import { ProtectedRoute } from "@/components/auth/protected-route";
-import { JobActionPicker } from "@/components/jobs/job-action-picker";
-import { AppShell } from "@/components/layout/app-shell";
+import { redirect } from "next/navigation";
 
-export default function ImportJobPickerPage() {
-  return <ProtectedRoute><AppShell title="Import Container"><JobActionPicker mode="import" /></AppShell></ProtectedRoute>;
+export default function LegacyJobImportPage() {
+  redirect("/jobs?view=unassigned&compat=import");
 }

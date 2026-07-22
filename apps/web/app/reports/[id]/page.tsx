@@ -1,6 +1,5 @@
-﻿"use client";
+"use client";
 
-import { Download, QrCode } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
@@ -12,10 +11,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiData } from "@/lib/api-client";
 import type { ReportDetail, ReportVersion } from "@/types/reviews";
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api/v1";
-
 export default function ReportDetailPage() {
-  return <ProtectedRoute><AppShell title="Report Detail"><ReportDetailContent /></AppShell></ProtectedRoute>;
+  return <ProtectedRoute><AppShell title="Metadata Dokumen Kelaikan"><ReportDetailContent /></AppShell></ProtectedRoute>;
 }
 
 function ReportDetailContent() {
@@ -24,9 +21,11 @@ function ReportDetailContent() {
   const [report, setReport] = useState<ReportDetail | null>(null);
   const [versions, setVersions] = useState<ReportVersion[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadReport = useCallback(async () => {
     if (!accessToken || !params.id) return;
+    setIsLoading(true);
     setError(null);
     try {
       const [detail, versionRows] = await Promise.all([
@@ -36,53 +35,46 @@ function ReportDetailContent() {
       setReport(detail);
       setVersions(versionRows);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mengambil report.");
+      setError(err instanceof Error ? err.message : "Gagal mengambil metadata dokumen.");
+    } finally {
+      setIsLoading(false);
     }
   }, [accessToken, params.id]);
 
   useEffect(() => { const timer = window.setTimeout(() => void loadReport(), 0); return () => window.clearTimeout(timer); }, [loadReport]);
 
-  if (!report) return <div className="center-screen">Memuat report...</div>;
-  const validateUrl = report.qr_token ? `/reports/qr-validation?token=${encodeURIComponent(report.qr_token)}` : "-";
+  if (isLoading && !report) return <div className="center-screen">Memuat metadata dokumen...</div>;
+  if (!report) return <div className="alert alert-danger">{error ?? "Metadata dokumen tidak ditemukan."}</div>;
 
-  return (
-    <div className="page-stack">
-      <PageHeader title={`Report Detail: ${report.report_no}`} description={`${report.customer_name} - ${report.container_no}`} />
-      {error ? <div className="alert alert-danger">{error}</div> : null}
-      <div className="job-actions">
-        <button className="primary-button" onClick={() => void downloadReport(report.id, report.report_no, accessToken)}><Download size={17} /><span>Download PDF</span></button>
-        {report.qr_token ? <a className="secondary-button" href={validateUrl}><QrCode size={17} /><span>Validate QR</span></a> : null}
-      </div>
-      <section className="workspace-panel detail-grid">
-        <div><span>Status</span><strong><StatusBadge tone={report.status === "failed" ? "danger" : report.status === "pending_generation" ? "warning" : "success"}>{report.status.toUpperCase()}</StatusBadge></strong></div>
-        <div><span>Version</span><strong>Rev. {report.current_version_no ?? report.revision_no ?? 0}</strong></div>
-        <div><span>Survey No</span><strong>{report.survey_no}</strong></div>
-        <div><span>Job No</span><strong>{report.job_order_no}</strong></div>
-        <div><span>QR Token</span><strong>{report.qr_token ?? "-"}</strong></div>
-        <div><span>Created At</span><strong>{report.created_at}</strong></div>
-      </section>
-      <section className="workspace-panel">
-        <div className="section-title-row"><h2>Versions</h2><p className="muted-text">Versioning dasar report.</p></div>
-        <DataTable rows={versions} columns={[
-          { key: "version", header: "Version", render: (row) => `Rev. ${row.version_no}` },
-          { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "draft" ? "warning" : "success"}>{row.status.toUpperCase()}</StatusBadge> },
-          { key: "reason", header: "Reason", render: (row) => row.change_reason ?? "-" },
-          { key: "created", header: "Created At", render: (row) => row.created_at }
-        ]} />
-      </section>
-    </div>
-  );
+  return <div className="page-stack">
+    <PageHeader title={report.report_no} description={`${report.customer_name} — ${report.container_no}`} />
+    {error ? <div className="alert alert-danger">{error}</div> : null}
+    <div className="alert alert-warning">Halaman ini hanya menampilkan metadata dokumen. PDF final, QR, penandatangan, dan verifikasi publik belum aktif.</div>
+    <section className="workspace-panel detail-grid">
+      <div><span>Status</span><strong><StatusBadge tone={report.status === "failed" ? "danger" : "warning"}>{humanize(report.status)}</StatusBadge></strong></div>
+      <div><span>Versi Aktif</span><strong>Rev. {report.current_version_no ?? report.revision_no ?? 0}</strong></div>
+      <div><span>Nomor Survey</span><strong>{report.survey_no}</strong></div>
+      <div><span>Nomor Pekerjaan</span><strong>{report.job_order_no}</strong></div>
+      <div><span>Customer</span><strong>{report.customer_name}</strong></div>
+      <div><span>Peti Kemas</span><strong>{report.container_no}</strong></div>
+      <div><span>Jenis Dokumen</span><strong>{humanize(report.report_type)}</strong></div>
+      <div><span>Penandatangan</span><strong>Belum tersedia</strong></div>
+      <div><span>Dibuat</span><strong>{formatDateTime(report.created_at)}</strong></div>
+      <div><span>Diperbarui</span><strong>{formatDateTime(report.updated_at)}</strong></div>
+    </section>
+    <section className="workspace-panel job-tab-stack">
+      <div><h2>Riwayat Versi</h2><p className="muted-text">Metadata versi existing tanpa file PDF final.</p></div>
+      <DataTable rows={versions} emptyText="Riwayat versi belum tersedia." columns={[
+        { key: "version", header: "Versi", render: (row) => `Rev. ${row.version_no}` },
+        { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "draft" ? "warning" : "success"}>{humanize(row.status)}</StatusBadge> },
+        { key: "reason", header: "Alasan Perubahan", render: (row) => row.change_reason ?? "Belum tersedia" },
+        { key: "creator", header: "Dibuat Oleh", render: () => "Belum tersedia pada kontrak existing" },
+        { key: "created", header: "Waktu", render: (row) => formatDateTime(row.created_at) },
+        { key: "active", header: "Versi Aktif", render: (row) => row.version_no === (report.current_version_no ?? report.revision_no) ? <StatusBadge tone="success">Aktif</StatusBadge> : "-" }
+      ]} />
+    </section>
+  </div>;
 }
 
-async function downloadReport(id: string, reportNo: string, accessToken: string | null) {
-  if (!accessToken) return;
-  const response = await fetch(`${apiBase}/reports/${id}/download`, { headers: { Authorization: `Bearer ${accessToken}` } });
-  if (!response.ok) return;
-  const blob = await response.blob();
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${reportNo}.pdf`;
-  link.click();
-  window.URL.revokeObjectURL(url);
-}
+function formatDateTime(value?: string | null) { if (!value) return "Belum tersedia"; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(date); }
+function humanize(value: string) { return value.replaceAll("_", " ").replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }

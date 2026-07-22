@@ -22,6 +22,10 @@ type MasterDataPageProps = {
   endpointOverride?: string;
   fixedValues?: MasterRow;
   backHref?: string;
+  detailBaseHref?: string;
+  detailQuery?: string;
+  relationEndpointOverrides?: Record<string, string>;
+  checklistItemsBaseHref?: string;
 };
 
 const defaultStatusOptions = [
@@ -29,7 +33,7 @@ const defaultStatusOptions = [
   { label: "Tidak Aktif", value: "inactive" }
 ];
 
-export function MasterDataPage({ resourceId, endpointOverride, fixedValues, backHref }: MasterDataPageProps) {
+export function MasterDataPage({ resourceId, endpointOverride, fixedValues, backHref, detailBaseHref, detailQuery, relationEndpointOverrides, checklistItemsBaseHref }: MasterDataPageProps) {
   const resource = masterResources[resourceId];
   const resourceEndpoint = endpointOverride ?? resource.endpoint;
   const fixedPayload = useMemo(() => fixedValues ?? {}, [fixedValues]);
@@ -96,37 +100,38 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
   }, [searchInput]);
 
   useEffect(() => {
-    void loadRows();
+    const timer = window.setTimeout(() => void loadRows(), 0);
+    return () => window.clearTimeout(timer);
   }, [loadRows]);
 
   useEffect(() => {
-    setFormData({ ...defaultFormData(resource), ...fixedPayload });
-    setSelected(null);
-    setDetailRow(null);
-    setPage(1);
-    setSearchInput("");
-    setDebouncedSearch("");
-    setSuccess(null);
-    setFormError(null);
-    setRelationSearch({});
-    setRelationOptions({});
+    const timer = window.setTimeout(() => {
+      setFormData({ ...defaultFormData(resource), ...fixedPayload });
+      setSelected(null);
+      setDetailRow(null);
+      setPage(1);
+      setSearchInput("");
+      setDebouncedSearch("");
+      setSuccess(null);
+      setFormError(null);
+      setRelationSearch({});
+      setRelationOptions({});
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [fixedPayload, resource, resourceEndpoint]);
 
   useEffect(() => {
-    if (!accessToken || !dialogMode || relationFields.length === 0) {
-      if (!dialogMode) setRelationOptions({});
-      return;
-    }
+    if (!accessToken || !dialogMode || relationFields.length === 0) return;
     const requestID = ++relationRequestSeq.current;
-    setRelationOptions((current) => {
-      const next = { ...current };
-      for (const field of relationFields) {
-        next[field.name] = { options: current[field.name]?.options ?? [], isLoading: true, error: null };
-      }
-      return next;
-    });
 
     const timer = window.setTimeout(() => {
+      setRelationOptions((current) => {
+        const next = { ...current };
+        for (const field of relationFields) {
+          next[field.name] = { options: current[field.name]?.options ?? [], isLoading: true, error: null };
+        }
+        return next;
+      });
       void Promise.all(relationFields.map(async (field) => {
         const relation = field.relation;
         if (!relation) return [field.name, { options: [], isLoading: false, error: null }] as const;
@@ -134,10 +139,11 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
           const currentValue = String(formData[field.name] ?? selected?.[field.name] ?? "");
           const query: Record<string, string | number> = { page: 1, per_page: 20, ...(relation.query ?? {}), search: relationSearch[field.name] ?? "" };
           if (!relation.query?.status) query.status = "active";
-          const result = await apiPaginated<MasterRow>(`${relation.endpoint}${buildQuery(query)}`, { accessToken });
+          const relationEndpoint = relationEndpointOverrides?.[field.name] ?? relation.endpoint;
+          const result = await apiPaginated<MasterRow>(`${relationEndpoint}${buildQuery(query)}`, { accessToken });
           const options = result.rows.map((row) => ({ value: String(row.id ?? ""), label: relationLabel(row, relation.labelKeys) })).filter((option) => option.value);
           if (currentValue && !options.some((option) => option.value === currentValue)) {
-            const currentOption = await currentRelationOption(field, currentValue, selected, accessToken);
+            const currentOption = await currentRelationOption(field, currentValue, selected, accessToken, relationEndpoint);
             options.unshift(currentOption);
           }
           return [field.name, { options, isLoading: false, error: null }] as const;
@@ -154,7 +160,7 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
     return () => {
       window.clearTimeout(timer);
     };
-  }, [accessToken, dialogMode, relationFields, relationSearch, resourceEndpoint, selected, selectedRelationValuesKey]);
+  }, [accessToken, dialogMode, relationEndpointOverrides, relationFields, relationSearch, resourceEndpoint, selected, selectedRelationValuesKey]);
 
   const columns = [
     ...resource.columns.map((column) => ({
@@ -167,11 +173,17 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
       header: "Aksi",
       render: (row: MasterRow) => (
         <div className="row-actions">
-          <button className="icon-button" onClick={() => setDetailRow(row)} title="Detail">
-            <Eye size={16} />
-          </button>
+          {detailBaseHref && row.id ? (
+            <Link className="icon-button" href={detailBaseHref + "/" + row.id + (detailQuery ?? "")} title="Buka detail">
+              <Eye size={16} />
+            </Link>
+          ) : (
+            <button className="icon-button" onClick={() => setDetailRow(row)} title="Detail">
+              <Eye size={16} />
+            </button>
+          )}
           {resourceId === "fitness-checklist-templates" && row.id ? (
-            <Link className="icon-button" href={`/fitness/master-data/checklist-templates/${row.id}/items`} title="Item checklist">
+            <Link className="icon-button" href={`${checklistItemsBaseHref ?? "/fitness/master-data/checklist-templates"}/${row.id}/items`} title="Item checklist">
               <ClipboardList size={16} />
             </Link>
           ) : null}
@@ -416,7 +428,7 @@ function FieldInput({ field, value, onChange, optionsOverride, relationState, re
   );
 }
 
-async function currentRelationOption(field: MasterField, currentValue: string, selected: MasterRow | null, accessToken: string): Promise<SelectOption> {
+async function currentRelationOption(field: MasterField, currentValue: string, selected: MasterRow | null, accessToken: string, relationEndpoint?: string): Promise<SelectOption> {
   const relation = field.relation;
   if (!relation) return { value: currentValue, label: "Referensi saat ini" };
   if (relation.endpoint === "/users" && selected) {
@@ -424,7 +436,7 @@ async function currentRelationOption(field: MasterField, currentValue: string, s
     return { value: currentValue, label: `${name} - profil saat ini` };
   }
   try {
-    const current = await apiData<MasterRow>(`${relation.endpoint}/${currentValue}`, { accessToken });
+    const current = await apiData<MasterRow>(`${relationEndpoint ?? relation.endpoint}/${currentValue}`, { accessToken });
     return { value: currentValue, label: relationLabel(current, relation.labelKeys) };
   } catch {
     return { value: currentValue, label: "Referensi lama tidak ditemukan" };

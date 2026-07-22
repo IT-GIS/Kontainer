@@ -12,6 +12,7 @@ export type JobSummary = {
   location_name: string;
   total_containers: number;
   created_at: string;
+  updated_at?: string;
 };
 
 export type JobDetail = JobSummary & {
@@ -22,6 +23,9 @@ export type JobDetail = JobSummary & {
   assignments?: AssignmentSummary[];
   timeline?: JobEvent[];
   instruction?: string | null;
+  pic_customer_name?: string | null;
+  pic_customer_phone?: string | null;
+  pic_customer_email?: string | null;
   reference_no?: string | null;
   booking_no?: string | null;
   do_no?: string | null;
