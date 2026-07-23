@@ -1,0 +1,93 @@
+name: Validate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  go-unit:
+    name: Go API and Worker tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+          cache-dependency-path: |
+            services/api/go.sum
+            services/worker/go.sum
+      - name: Test API
+        working-directory: services/api
+        run: go test ./...
+      - name: Test Worker
+        working-directory: services/worker
+        run: go test ./...
+
+  mysql-integration:
+    name: MySQL integration test
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_DATABASE: kontainer_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+          cache-dependency-path: services/api/go.sum
+      - name: Apply test schema
+        run: |
+          for migration in services/api/migrations/*.up.sql; do
+            mysql -h 127.0.0.1 -uroot kontainer_test < "$migration"
+          done
+      - name: Run MySQL integration test
+        working-directory: services/api
+        env:
+          MASTERDATA_SMOKE_DSN: root@tcp(127.0.0.1:3306)/kontainer_test?parseTime=true&charset=utf8mb4&loc=UTC
+        run: go test ./internal/masterdata -run TestMasterDataSmokeWithTestDatabase -count=1
+
+  web:
+    name: Web typecheck and production build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck --workspace apps/web
+      - name: Production build
+        run: npm run build --workspace apps/web
+
+  whitespace:
+    name: Whitespace check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Check diff whitespace
+        run: git diff --check

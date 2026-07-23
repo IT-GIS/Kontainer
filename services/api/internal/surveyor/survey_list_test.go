@@ -34,7 +34,7 @@ func TestValidSurveyListStatus(t *testing.T) {
 func TestDamageValidationAcceptsCedexMaterialAndResponsibility(t *testing.T) {
 	length, width := 12.0, 6.0
 	input := DamageInput{
-		Face: "left", InternalLocation: "L1", ComponentID: uuid.NewString(),
+		CEDEXLocationID: uuid.NewString(), ComponentID: uuid.NewString(),
 		DamageID: uuid.NewString(), MaterialID: uuid.NewString(), ResponsibilityID: uuid.NewString(),
 		Severity: "major", Length: &length, Width: &width,
 	}

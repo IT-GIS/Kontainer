@@ -76,7 +76,13 @@ export type ChecklistItem = {
   item_key: string;
   item_label?: string;
   value?: string;
+  numeric_value?: number | null;
   note?: string;
+  response_type?: string;
+  unit?: string | null;
+  standard_reference?: string | null;
+  requires_attachment?: boolean;
+  attachment_file_id?: string | null;
   is_required?: boolean;
   is_critical?: boolean;
 };
@@ -86,6 +92,9 @@ export type SurveyDamage = {
   damage_no: string;
   face: string;
   internal_location: string;
+  cedex_location_id?: string | null;
+  cedex_location_code?: string | null;
+  manual_location_reason?: string | null;
   component_id?: string;
   component_code?: string;
   component_name?: string;
@@ -136,6 +145,16 @@ export type SurveyDetail = {
   location_name: string;
   survey_type_name: string;
   surveyor_name: string;
+  customer_id?: string;
+  survey_type_id?: string;
+  container_type_id?: string | null;
+  container_type_name?: string | null;
+  container_type_code?: string | null;
+  iso_type_code?: string | null;
+  job_instruction?: string | null;
+  job_deadline?: string | null;
+  assignment_instruction?: string | null;
+  assignment_due_at?: string | null;
   general_info?: SurveyGeneralInfo;
   checklist?: ChecklistItem[];
   damages?: SurveyDamage[];
@@ -151,10 +170,38 @@ export type SurveyWarning = {
 };
 
 export type SheetLocation = {
+  id: string;
   code: string;
   label: string;
   has_damage: boolean;
   damage_markers: Array<{ damage_id: string; damage_no: string; severity: string }>;
+};
+
+export type SurveyMasterOption = {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  face?: string;
+  grid_code?: string;
+  container_size?: string | null;
+  unit?: string | null;
+  standard_reference?: string | null;
+};
+
+export type SurveyMasterOptions = {
+  customer: Record<string, unknown>;
+  survey_type: Record<string, unknown>;
+  container_type: Record<string, unknown>;
+  cedex_locations: SurveyMasterOption[];
+  cedex_components: SurveyMasterOption[];
+  cedex_damages: SurveyMasterOption[];
+  cedex_repairs: SurveyMasterOption[];
+  cedex_materials: SurveyMasterOption[];
+  responsibility_codes: SurveyMasterOption[];
+  finding_severities: SurveyMasterOption[];
+  test_parameters: SurveyMasterOption[];
+  photo_categories: SurveyMasterOption[];
 };
 
 export type SheetFace = {

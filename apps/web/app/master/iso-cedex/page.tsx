@@ -34,7 +34,7 @@ export default async function IsoCedexPage({ searchParams }: { searchParams: Que
         <div className="page-stack">
           <PageHeader
             title="Master ISO CEDEX"
-            description="Enam referensi teknis disatukan dalam satu halaman tanpa mengubah source, API, atau ownership data existing."
+            description="Kelola referensi kode yang digunakan dalam pencatatan hasil pemeriksaan peti kemas."
           />
           <WorkspaceTabs
             activeID={active.id}
@@ -42,13 +42,13 @@ export default async function IsoCedexPage({ searchParams }: { searchParams: Que
             tabs={tabs.map((tab) => ({ id: tab.id, label: tab.label, href: "/master/iso-cedex?tab=" + tab.id }))}
           />
           <div className="alert alert-warning">
-            Model kepemilikan CEDEX global atau customer-scoped belum diubah pada tahap ini. Tahap ini hanya menyederhanakan struktur menu dan halaman Admin.
+            Data ISO CEDEX ditampilkan sesuai Customer yang dipilih.
           </div>
           {active.id === "location" ? (
-            <div className="alert alert-warning">Format Location Code final mengikuti daftar dan contoh resmi GIS/Pak Agus.</div>
+            <div className="alert alert-warning">Gunakan kode lokasi yang telah disahkan dalam referensi teknis GIFT.</div>
           ) : null}
           {active.id === "action-repair" ? (
-            <div className="alert alert-warning">Action Repair hanya referensi teknis atau rekomendasi tindakan; bukan workshop, work order, biaya, invoice, spare part, inventory, atau vendor billing.</div>
+            <div className="alert alert-warning">Action Repair Code digunakan sebagai referensi atau rekomendasi tindakan pemeriksaan.</div>
           ) : null}
           {customerId ? (
             <CustomerScopedMasterDetail

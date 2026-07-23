@@ -191,7 +191,7 @@ function workColumns(view: InspectionWorkView): ResponsiveColumn<InspectionWorkR
   }
   if (view === "pending-review") {
     columns.splice(9, 0,
-      { key: "reviewer", header: "Reviewer / Supervisor", render: () => "Belum ditetapkan pada data existing" },
+      { key: "reviewer", header: "Reviewer / Supervisor", render: () => "Belum ditetapkan" },
       { key: "queue", header: "Antrean Review", render: (row) => `Disubmit ${formatDateTime(row.surveys.find((item) => item.status === "submitted")?.submitted_at)}` }
     );
   }
@@ -222,10 +222,10 @@ function RevisionSummary({ row }: { row: InspectionWorkRow }) {
 
 function CompatibilityNotice({ type }: { type: string }) {
   const message = type === "import"
-    ? "Route Import Container lama diarahkan ke daftar ini. Pilih pekerjaan, lalu gunakan Import Peti Kemas pada tab Peti Kemas."
+    ? "Pilih pekerjaan, lalu gunakan Import Peti Kemas pada tab Peti Kemas."
     : type === "assign"
-      ? "Route Assign Surveyor lama diarahkan ke daftar ini. Pilih pekerjaan, lalu gunakan Tugaskan Surveyor GIFT pada tab Penugasan."
-      : "Route Monitoring Survey lama telah digabungkan ke filter Pekerjaan Inspeksi ini.";
+      ? "Pilih pekerjaan, lalu gunakan Tugaskan Surveyor GIFT pada tab Penugasan."
+      : "Gunakan filter Pekerjaan Inspeksi untuk melihat perkembangan pemeriksaan.";
   return <div className="alert alert-warning inspection-compat-notice"><AlertTriangle size={18} /><span>{message}</span></div>;
 }
 

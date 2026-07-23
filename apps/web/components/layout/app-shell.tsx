@@ -138,7 +138,7 @@ export function AppShell({ title, subtitle = defaultSubtitle, breadcrumbs = [], 
             <strong>Sistem Kelaikan Peti Kemas</strong>
             <span>PT Global Inspeksi Forensik Teknik</span>
           </div>
-          <button className="icon-button sidebar-close" onClick={() => setIsOpen(false)} title="Tutup menu" type="button">
+          <button aria-label="Tutup menu" className="icon-button sidebar-close" onClick={() => setIsOpen(false)} title="Tutup menu" type="button">
             <X size={18} />
           </button>
         </div>
@@ -171,7 +171,7 @@ export function AppShell({ title, subtitle = defaultSubtitle, breadcrumbs = [], 
 
       <div className="main-area source-main-area">
         <header className="topbar source-topbar">
-          <button className="icon-button menu-button" onClick={() => setIsOpen(true)} title="Buka menu" type="button">
+          <button aria-label="Buka menu" className="icon-button menu-button" onClick={() => setIsOpen(true)} title="Buka menu" type="button">
             <Menu size={19} />
           </button>
           <div className="topbar-title source-topbar-copy">
@@ -182,7 +182,7 @@ export function AppShell({ title, subtitle = defaultSubtitle, breadcrumbs = [], 
           {actions.length > 0 ? <div className="source-page-actions">{actions.map(renderAction)}</div> : null}
           <div className="topbar-actions source-profile-actions">
             <span className="source-role-badge">{roleSummary}</span>
-            <button className="source-notification-button" type="button" title="Notifikasi"><Bell size={17} /></button>
+            <button aria-label="Notifikasi" className="source-notification-button" type="button" title="Notifikasi"><Bell size={17} /></button>
             <div className="source-profile">
               <div className="source-avatar">{initials}</div>
               <div className="source-profile-copy">

@@ -89,8 +89,13 @@ func (r Repository) surveyBaseTx(ctx context.Context, tx database.Tx, surveyID u
 func surveyBaseQuery() string {
 	return `
 		SELECT s.id, s.survey_no, s.status, s.job_order_id, s.job_container_id, s.surveyor_id,
-		       s.survey_type_id, s.started_at, s.submitted_at, s.final_remark,
-		       jo.job_order_no, jc.container_no, c.customer_name, l.location_name, st.name AS survey_type_name,
+		       s.survey_type_id, s.checklist_template_id, s.started_at, s.submitted_at, s.final_remark,
+		       jo.job_order_no, jo.customer_id, jo.location_id, jo.instruction AS job_instruction,
+		       jo.deadline AS job_deadline, jc.container_no, jc.container_type_id, jc.iso_type_code,
+		       c.customer_code, c.customer_name, l.location_code, l.location_name,
+		       st.code AS survey_type_code, st.name AS survey_type_name,
+		       ct.code AS container_type_code, ct.type_name AS container_type_name, ct.size AS container_size,
+		       a.instruction AS assignment_instruction, a.due_date AS assignment_due_at,
 		       sp.full_name AS surveyor_name
 		FROM surveys s
 		JOIN job_orders jo ON jo.id=s.job_order_id
@@ -98,6 +103,8 @@ func surveyBaseQuery() string {
 		JOIN customers c ON c.id=jo.customer_id
 		JOIN locations l ON l.id=jo.location_id
 		JOIN survey_types st ON st.id=s.survey_type_id
+		LEFT JOIN container_types ct ON ct.id=jc.container_type_id
+		LEFT JOIN assignments a ON a.id=s.assignment_id
 		JOIN surveyor_profiles sp ON sp.id=s.surveyor_id
 		WHERE s.id=$1 AND s.deleted_at IS NULL
 		  AND sp.user_id=$2
@@ -116,26 +123,38 @@ func (r Repository) damageSurveyID(ctx context.Context, damageID uuid.UUID) (uui
 	return id, nil
 }
 
-func (r Repository) resolveCEDEXLocation(ctx context.Context, tx database.Tx, input DamageInput) (*uuid.UUID, error) {
-	if input.CEDEXLocationID != "" {
-		id, err := uuid.Parse(input.CEDEXLocationID)
-		if err != nil {
-			return nil, ErrInvalidInput
-		}
-		return &id, nil
-	}
-	if strings.TrimSpace(input.CEDEXLocationCode) == "" {
-		return nil, nil
-	}
+func (r Repository) resolveCEDEXLocation(ctx context.Context, tx database.Tx, customerID uuid.UUID, input DamageInput) (*uuid.UUID, string, string, error) {
+	query := `SELECT id, face, COALESCE(NULLIF(grid_code,''), code) FROM cedex_locations WHERE %s AND customer_id=$2 AND status='active' LIMIT 1`
 	var id uuid.UUID
-	err := tx.QueryRow(ctx, `SELECT id FROM cedex_locations WHERE LOWER(code)=LOWER($1) AND status='active' LIMIT 1`, input.CEDEXLocationCode).Scan(&id)
-	if err != nil {
-		if errors.Is(err, database.ErrNoRows) {
-			return nil, ErrInvalidInput
+	var face, internalLocation string
+	if input.CEDEXLocationID != "" {
+		parsed, err := uuid.Parse(input.CEDEXLocationID)
+		if err != nil {
+			return nil, "", "", validationError("CEDEX_LOCATION_INVALID", "Lokasi CEDEX tidak valid.")
 		}
-		return nil, err
+		err = tx.QueryRow(ctx, fmt.Sprintf(query, "id=$1"), parsed, customerID).Scan(&id, &face, &internalLocation)
+		if errors.Is(err, database.ErrNoRows) {
+			return nil, "", "", validationError("CEDEX_LOCATION_SCOPE", "Lokasi CEDEX tidak aktif atau bukan milik Customer survei.")
+		}
+		if err != nil {
+			return nil, "", "", err
+		}
+		return &id, face, internalLocation, nil
 	}
-	return &id, nil
+	if strings.TrimSpace(input.CEDEXLocationCode) != "" {
+		err := tx.QueryRow(ctx, fmt.Sprintf(query, "LOWER(code)=LOWER($1)"), input.CEDEXLocationCode, customerID).Scan(&id, &face, &internalLocation)
+		if errors.Is(err, database.ErrNoRows) {
+			return nil, "", "", validationError("CEDEX_LOCATION_SCOPE", "Lokasi CEDEX tidak aktif atau bukan milik Customer survei.")
+		}
+		if err != nil {
+			return nil, "", "", err
+		}
+		return &id, face, internalLocation, nil
+	}
+	if strings.TrimSpace(input.ManualLocationReason) == "" || strings.TrimSpace(input.Face) == "" || strings.TrimSpace(input.InternalLocation) == "" {
+		return nil, "", "", validationError("MANUAL_LOCATION_REASON_REQUIRED", "Alasan lokasi manual, face, dan internal location wajib diisi saat lokasi CEDEX tidak tersedia.")
+	}
+	return nil, strings.TrimSpace(input.Face), strings.TrimSpace(input.InternalLocation), nil
 }
 
 func (r Repository) nextDamageNo(ctx context.Context, tx database.Tx, surveyID uuid.UUID) (string, error) {
@@ -342,17 +361,24 @@ func editableStatus(status string) bool {
 }
 
 func validateDamageInput(input DamageInput) error {
-	if strings.TrimSpace(input.Face) == "" || strings.TrimSpace(input.InternalLocation) == "" || strings.TrimSpace(input.ComponentID) == "" || strings.TrimSpace(input.DamageID) == "" {
-		return ErrInvalidInput
+	if strings.TrimSpace(input.ComponentID) == "" || strings.TrimSpace(input.DamageID) == "" {
+		return validationError("DAMAGE_REFERENCE_REQUIRED", "Component dan damage type wajib dipilih.")
 	}
-	severity := defaultString(input.Severity, "minor")
-	if severity != "minor" && severity != "major" && severity != "critical" {
-		return ErrInvalidInput
+	if strings.TrimSpace(input.CEDEXLocationID) == "" && strings.TrimSpace(input.CEDEXLocationCode) == "" && strings.TrimSpace(input.ManualLocationReason) == "" {
+		return validationError("DAMAGE_LOCATION_REQUIRED", "Lokasi CEDEX wajib dipilih atau gunakan fallback manual dengan alasan.")
 	}
+	if strings.TrimSpace(input.Severity) == "" {
+		return validationError("DAMAGE_SEVERITY_REQUIRED", "Severity wajib dipilih.")
+	}
+	severity := strings.ToLower(strings.TrimSpace(input.Severity))
 	if (severity == "major" || severity == "critical") && (input.Length == nil || input.Width == nil) {
-		return ErrInvalidInput
+		return validationError("DAMAGE_SIZE_REQUIRED", "Damage major atau critical wajib memiliki ukuran panjang dan lebar.")
 	}
 	return nil
+}
+
+func validationError(code, message string) error {
+	return SurveyValidationError{Warnings: []ValidationWarning{{Code: code, Message: message}}}
 }
 
 func (r Repository) validateSurvey(survey map[string]any) []ValidationWarning {
@@ -378,9 +404,20 @@ func (r Repository) validateSurvey(survey map[string]any) []ValidationWarning {
 		warnings = append(warnings, ValidationWarning{Code: "CHECKLIST_REQUIRED", Message: "Checklist wajib diisi."})
 	} else {
 		for _, item := range checklist {
-			required, _ := item["is_required"].(bool)
-			if required && strings.TrimSpace(fmt.Sprint(item["value"])) == "" {
+			required := truthy(item["is_required"])
+			responseType := strings.TrimSpace(fmt.Sprint(item["response_type"]))
+			hasValue := strings.TrimSpace(fmt.Sprint(item["value"])) != "" && fmt.Sprint(item["value"]) != "<nil>"
+			hasNumeric := item["numeric_value"] != nil && fmt.Sprint(item["numeric_value"]) != "<nil>"
+			if required && responseType == "numeric" && !hasNumeric {
+				warnings = append(warnings, ValidationWarning{Code: "CHECKLIST_NUMERIC_REQUIRED", Message: "Hasil numerik checklist wajib diisi."})
+				break
+			}
+			if required && responseType != "numeric" && !hasValue {
 				warnings = append(warnings, ValidationWarning{Code: "CHECKLIST_INCOMPLETE", Message: "Checklist wajib belum lengkap."})
+				break
+			}
+			if truthy(item["requires_attachment"]) && (item["attachment_file_id"] == nil || fmt.Sprint(item["attachment_file_id"]) == "<nil>") {
+				warnings = append(warnings, ValidationWarning{Code: "CHECKLIST_ATTACHMENT_REQUIRED", Message: "Attachment checklist wajib belum dilampirkan."})
 				break
 			}
 		}
@@ -407,6 +444,22 @@ func (r Repository) validateSurvey(survey map[string]any) []ValidationWarning {
 	return warnings
 }
 
+func truthy(value any) bool {
+	switch typed := value.(type) {
+	case bool:
+		return typed
+	case int64:
+		return typed != 0
+	case int:
+		return typed != 0
+	case []byte:
+		return string(typed) == "1" || strings.EqualFold(string(typed), "true")
+	default:
+		text := strings.TrimSpace(fmt.Sprint(value))
+		return text == "1" || strings.EqualFold(text, "true")
+	}
+}
+
 func recommendedResult(survey map[string]any) string {
 	damages, _ := survey["damages"].([]map[string]any)
 	if len(damages) == 0 {
@@ -418,33 +471,6 @@ func recommendedResult(survey map[string]any) string {
 		}
 	}
 	return "damage"
-}
-
-func defaultChecklist() []map[string]any {
-	keys := []string{"container_number_readable", "iso_code_readable", "csc_plate_available", "exterior_condition_ok", "interior_clean", "door_can_open_close", "floor_condition_ok", "roof_condition_ok", "light_test_pass"}
-	items := []map[string]any{}
-	for index, key := range keys {
-		items = append(items, map[string]any{"item_key": key, "item_label": defaultChecklistLabel(key), "value": "", "note": "", "is_required": true, "is_critical": key == "light_test_pass", "display_order": index + 1})
-	}
-	return items
-}
-
-func defaultChecklistLabel(key string) string {
-	labels := map[string]string{
-		"container_number_readable": "Container number readable",
-		"iso_code_readable":         "ISO code readable",
-		"csc_plate_available":       "CSC plate available",
-		"exterior_condition_ok":     "Exterior condition OK",
-		"interior_clean":            "Interior clean",
-		"door_can_open_close":       "Door can open/close",
-		"floor_condition_ok":        "Floor condition OK",
-		"roof_condition_ok":         "Roof condition OK",
-		"light_test_pass":           "Light test pass",
-	}
-	if label, ok := labels[key]; ok {
-		return label
-	}
-	return strings.ReplaceAll(key, "_", " ")
 }
 
 func faceLabel(face string) string {

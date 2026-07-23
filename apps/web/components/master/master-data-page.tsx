@@ -2,7 +2,7 @@
 
 import { ClipboardList, Edit, Eye, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { masterResources, type MasterField, type MasterResource } from "@/constants/master-data";
 import { useAuth } from "@/hooks/use-auth";
 import { apiData, apiPaginated, buildQuery } from "@/lib/api-client";
@@ -35,6 +35,8 @@ const defaultStatusOptions = [
 
 export function MasterDataPage({ resourceId, endpointOverride, fixedValues, backHref, detailBaseHref, detailQuery, relationEndpointOverrides, checklistItemsBaseHref }: MasterDataPageProps) {
   const resource = masterResources[resourceId];
+  const accessibilityID = useId();
+  const formErrorID = `${accessibilityID}-form-error`;
   const resourceEndpoint = endpointOverride ?? resource.endpoint;
   const fixedPayload = useMemo(() => fixedValues ?? {}, [fixedValues]);
   const { accessToken, user } = useAuth();
@@ -174,31 +176,31 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
       render: (row: MasterRow) => (
         <div className="row-actions">
           {detailBaseHref && row.id ? (
-            <Link className="icon-button" href={detailBaseHref + "/" + row.id + (detailQuery ?? "")} title="Buka detail">
+            <Link aria-label={`Buka detail ${recordLabel(resource, row)}`} className="icon-button" href={detailBaseHref + "/" + row.id + (detailQuery ?? "")} title="Buka detail">
               <Eye size={16} />
             </Link>
           ) : (
-            <button className="icon-button" onClick={() => setDetailRow(row)} title="Detail">
+            <button aria-label={`Lihat detail ${recordLabel(resource, row)}`} className="icon-button" onClick={() => setDetailRow(row)} title="Detail">
               <Eye size={16} />
             </button>
           )}
           {resourceId === "fitness-checklist-templates" && row.id ? (
-            <Link className="icon-button" href={`${checklistItemsBaseHref ?? "/fitness/master-data/checklist-templates"}/${row.id}/items`} title="Item checklist">
+            <Link aria-label={`Kelola item ${recordLabel(resource, row)}`} className="icon-button" href={`${checklistItemsBaseHref ?? "/fitness/master-data/checklist-templates"}/${row.id}/items`} title="Item checklist">
               <ClipboardList size={16} />
             </Link>
           ) : null}
           {canUpdate ? (
-            <button className="icon-button" onClick={() => openEdit(row)} title="Edit">
+            <button aria-label={`Edit ${recordLabel(resource, row)}`} className="icon-button" onClick={() => openEdit(row)} title="Edit">
               <Edit size={16} />
             </button>
           ) : null}
           {canUpdate && isInactiveRow(resource, row) ? (
-            <button className="icon-button" onClick={() => void handleActivate(row)} title="Aktifkan">
+            <button aria-label={`Aktifkan ${recordLabel(resource, row)}`} className="icon-button" onClick={() => void handleActivate(row)} title="Aktifkan">
               <RotateCcw size={16} />
             </button>
           ) : null}
           {canDelete && !isInactiveRow(resource, row) ? (
-            <button className="icon-button danger-action" onClick={() => void handleDelete(row)} title="Nonaktifkan">
+            <button aria-label={`Nonaktifkan ${recordLabel(resource, row)}`} className="icon-button danger-action" onClick={() => void handleDelete(row)} title="Nonaktifkan">
               <Trash2 size={16} />
             </button>
           ) : null}
@@ -312,12 +314,16 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
       <div className="toolbar">
         <label className="search-box">
           <Search size={17} />
+          <span className="sr-only">Cari {resource.title}</span>
           <input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Cari" />
         </label>
-        <select value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }}>
-          <option value="">Semua Status</option>
-          {statusOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
-        </select>
+        <label>
+          <span className="sr-only">Filter status {resource.title}</span>
+          <select value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }}>
+            <option value="">Semua Status</option>
+            {statusOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+          </select>
+        </label>
         {error ? <button className="secondary-button" onClick={() => void loadRows()} type="button"><RotateCcw size={16} /> Retry</button> : null}
       </div>
 
@@ -330,7 +336,7 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
         <section className="workspace-panel">
           <div className="section-title-row">
             <div><Eye size={20} /><h2>Detail</h2></div>
-            <button className="icon-button" onClick={() => setDetailRow(null)} title="Tutup detail"><X size={16} /></button>
+            <button aria-label="Tutup detail" className="icon-button" onClick={() => setDetailRow(null)} title="Tutup detail"><X size={16} /></button>
           </div>
           <div className="detail-grid">
             {resource.fields.filter((field) => field.type !== "hidden").map((field) => (
@@ -351,7 +357,7 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
         isSubmitting={isSubmitting}
         submitLabel={dialogMode === "create" ? "Simpan" : "Update"}
       >
-        {formError ? <div className="alert alert-danger">{formError}</div> : null}
+        {formError ? <div className="alert alert-danger" id={formErrorID} role="alert">{formError}</div> : null}
         <div className="form-grid">
           {resource.fields.map((field) => (
             <FieldInput
@@ -361,6 +367,7 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
               optionsOverride={relationOptions[field.name]?.options}
               relationState={relationOptions[field.name]}
               relationSearch={relationSearch[field.name] ?? ""}
+              errorID={formError ? formErrorID : undefined}
               onRelationSearch={(value) => setRelationSearch((current) => ({ ...current, [field.name]: value }))}
               onChange={(value) => setFormData((current) => ({ ...current, [field.name]: value }))}
             />
@@ -371,7 +378,7 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
   );
 }
 
-function FieldInput({ field, value, onChange, optionsOverride, relationState, relationSearch, onRelationSearch }: { field: MasterField; value: MasterRow[string]; onChange: (value: MasterRow[string]) => void; optionsOverride?: SelectOption[]; relationState?: RelationFieldState; relationSearch?: string; onRelationSearch?: (value: string) => void }) {
+function FieldInput({ field, value, onChange, optionsOverride, relationState, relationSearch, onRelationSearch, errorID }: { field: MasterField; value: MasterRow[string]; onChange: (value: MasterRow[string]) => void; optionsOverride?: SelectOption[]; relationState?: RelationFieldState; relationSearch?: string; onRelationSearch?: (value: string) => void; errorID?: string }) {
   if (field.type === "hidden") {
     return null;
   }
@@ -379,7 +386,7 @@ function FieldInput({ field, value, onChange, optionsOverride, relationState, re
   if (field.type === "checkbox") {
     return (
       <label className="check-row form-check">
-        <input checked={Boolean(value)} onChange={(event) => onChange(event.target.checked)} type="checkbox" />
+        <input aria-describedby={errorID} checked={Boolean(value)} onChange={(event) => onChange(event.target.checked)} type="checkbox" />
         <span>{field.label}</span>
         {field.helpText ? <small className="muted-text">{field.helpText}</small> : null}
       </label>
@@ -395,8 +402,8 @@ function FieldInput({ field, value, onChange, optionsOverride, relationState, re
       <span>{field.label}{field.required ? " *" : ""}</span>
       {isRelation ? (
         <>
-          <input value={relationSearch ?? ""} onChange={(event) => onRelationSearch?.(event.target.value)} placeholder="Cari data referensi" type="search" />
-          <select value={String(value ?? "")} onChange={(event) => onChange(event.target.value)} required={field.required}>
+          <input aria-describedby={errorID} aria-label={`Cari ${field.label}`} value={relationSearch ?? ""} onChange={(event) => onRelationSearch?.(event.target.value)} placeholder="Cari data referensi" type="search" />
+          <select aria-describedby={errorID} aria-label={`Pilih ${field.label}`} value={String(value ?? "")} onChange={(event) => onChange(event.target.value)} required={field.required}>
             <option value="">Pilih</option>
             {options?.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
           </select>
@@ -404,14 +411,15 @@ function FieldInput({ field, value, onChange, optionsOverride, relationState, re
           {relationState?.error ? <small className="alert-danger">{relationState.error}</small> : null}
         </>
       ) : field.type === "select" || optionsOverride ? (
-        <select value={String(value ?? "")} onChange={(event) => onChange(event.target.value)} required={field.required}>
+        <select aria-describedby={errorID} value={String(value ?? "")} onChange={(event) => onChange(event.target.value)} required={field.required}>
           <option value="">Pilih</option>
           {options?.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
         </select>
       ) : field.type === "textarea" ? (
-        <textarea value={String(value ?? "")} onChange={(event) => onChange(event.target.value)} required={field.required} maxLength={field.maxLength} />
+        <textarea aria-describedby={errorID} value={String(value ?? "")} onChange={(event) => onChange(event.target.value)} required={field.required} maxLength={field.maxLength} />
       ) : (
         <input
+          aria-describedby={errorID}
           value={String(value ?? "")}
           onChange={(event) => onChange(field.type === "number" || field.type === "decimal" ? numberOrEmpty(event.target.value) : event.target.value)}
           required={field.required}

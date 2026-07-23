@@ -469,7 +469,14 @@ a:focus-visible {
 }
 
 .search-box input:focus {
-  outline: 0;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.search-box:focus-within {
+  border-radius: 6px;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .table-frame {
@@ -2588,7 +2595,13 @@ pre {
 }
 
 .ui-filter-input input:focus {
-  outline: 0;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.ui-filter-input:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .ui-b-flow-grid,

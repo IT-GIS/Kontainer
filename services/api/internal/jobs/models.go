@@ -15,6 +15,12 @@ var (
 	ErrForbiddenState = errors.New("forbidden state")
 )
 
+type FieldValidationError struct {
+	Fields map[string]string
+}
+
+func (e FieldValidationError) Error() string { return "job field validation failed" }
+
 type Actor struct {
 	UserID     uuid.UUID
 	ActiveRole string
@@ -50,23 +56,24 @@ type ListResult struct {
 }
 
 type JobInput struct {
-	JobDate          string  `json:"job_date"`
-	CustomerID       string  `json:"customer_id"`
-	SurveyTypeID     string  `json:"survey_type_id"`
-	LocationID       string  `json:"location_id"`
-	PICCustomerName  string  `json:"pic_customer_name"`
-	PICCustomerPhone string  `json:"pic_customer_phone"`
-	PICCustomerEmail string  `json:"pic_customer_email"`
-	ReferenceNo      string  `json:"reference_no"`
-	BookingNo        string  `json:"booking_no"`
-	DONo             string  `json:"do_no"`
-	BLNo             string  `json:"bl_no"`
-	Vessel           string  `json:"vessel"`
-	Voyage           string  `json:"voyage"`
-	TruckingCompany  string  `json:"trucking_company"`
-	Priority         string  `json:"priority"`
-	Deadline         *string `json:"deadline"`
-	Instruction      string  `json:"instruction"`
+	JobDate                string  `json:"job_date"`
+	CustomerID             string  `json:"customer_id"`
+	SurveyTypeID           string  `json:"survey_type_id"`
+	LocationID             string  `json:"location_id"`
+	PICCustomerPersonnelID string  `json:"pic_customer_personnel_id"`
+	PICCustomerName        string  `json:"pic_customer_name"`
+	PICCustomerPhone       string  `json:"pic_customer_phone"`
+	PICCustomerEmail       string  `json:"pic_customer_email"`
+	ReferenceNo            string  `json:"reference_no"`
+	BookingNo              string  `json:"booking_no"`
+	DONo                   string  `json:"do_no"`
+	BLNo                   string  `json:"bl_no"`
+	Vessel                 string  `json:"vessel"`
+	Voyage                 string  `json:"voyage"`
+	TruckingCompany        string  `json:"trucking_company"`
+	Priority               string  `json:"priority"`
+	Deadline               *string `json:"deadline"`
+	Instruction            string  `json:"instruction"`
 }
 
 type ContainerInput struct {

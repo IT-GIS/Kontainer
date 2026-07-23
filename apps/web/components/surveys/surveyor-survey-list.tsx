@@ -48,8 +48,8 @@ export function SurveyorSurveyList({ title, description, fixedStatus = "", histo
   return <div className="page-stack">
     <PageHeader title={title} description={description} />
     <div className="toolbar">
-      <label className="search-box"><Search size={17} /><input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Cari survey, job, container, customer" /></label>
-      {history ? <select value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }}><option value="">Semua Status</option>{["draft", "need_revision", "submitted", "approved", "rejected"].map((item) => <option key={item} value={item}>{item.replaceAll("_", " ")}</option>)}</select> : null}
+      <label className="search-box"><Search size={17} /><span className="sr-only">Cari pekerjaan survei</span><input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Cari survey, job, container, customer" /></label>
+      {history ? <label><span className="sr-only">Filter status pekerjaan survei</span><select value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }}><option value="">Semua Status</option>{["draft", "need_revision", "submitted", "approved", "rejected"].map((item) => <option key={item} value={item}>{item.replaceAll("_", " ")}</option>)}</select></label> : null}
     </div>
     {error ? <div className="alert alert-danger">{error}</div> : null}
     <DataTable rows={rows} isLoading={isLoading} page={page} totalPages={totalPages} onPageChange={setPage} emptyText="Survey belum tersedia." columns={[

@@ -88,7 +88,7 @@ export function DocumentReportWorkspace() {
   return <div className="page-stack document-report-workspace">
     <PageHeader
       title={view === "archive" ? "Arsip Laporan" : view === "recap" ? "Rekap Pemeriksaan" : "Laporan Pemeriksaan"}
-      description={view === "archive" ? "Arsip metadata laporan dan akses ke riwayat versi pada detail." : view === "recap" ? "Rekap berdasarkan data existing." : "Laporan hasil pemeriksaan; PDF final dan QR belum aktif."}
+      description={view === "archive" ? "Arsip metadata laporan dan akses ke riwayat versi pada detail." : view === "recap" ? "Rekap berdasarkan data pemeriksaan yang tersedia." : "Laporan hasil pemeriksaan; PDF final dan QR belum aktif."}
     />
     <WorkspaceTabs activeID={view === "archive" ? "archive" : "reports"} label="Dokumen dan Laporan" tabs={[
       { id: "reports", label: "Laporan Pemeriksaan", href: "/reports" },

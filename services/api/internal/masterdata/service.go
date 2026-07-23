@@ -65,6 +65,9 @@ func (s *Service) Create(ctx context.Context, resource Resource, payload map[str
 
 	var created map[string]any
 	err = s.repo.WithTx(ctx, func(repo repositoryPort) error {
+		if err := validateDomainMutation(ctx, repo, resource, normalized, nil); err != nil {
+			return err
+		}
 		exists, err := repo.DuplicateExists(ctx, resource, normalized, nil)
 		if err != nil {
 			return err
@@ -103,6 +106,9 @@ func (s *Service) Update(ctx context.Context, resource Resource, id uuid.UUID, p
 			return err
 		}
 		merged := mergeForDuplicate(resource, oldValue, normalized)
+		if err := validateDomainMutation(ctx, repo, resource, merged, &id); err != nil {
+			return err
+		}
 		exists, err := repo.DuplicateExists(ctx, resource, merged, &id)
 		if err != nil {
 			return err
@@ -120,6 +126,18 @@ func (s *Service) Update(ctx context.Context, resource Resource, id uuid.UUID, p
 		return nil, classifyMutationError(err)
 	}
 	return updated, nil
+}
+
+type domainMutationValidator interface {
+	ValidateDomainMutation(context.Context, Resource, map[string]any, *uuid.UUID) error
+}
+
+func validateDomainMutation(ctx context.Context, repo repositoryPort, resource Resource, payload map[string]any, id *uuid.UUID) error {
+	validator, ok := repo.(domainMutationValidator)
+	if !ok {
+		return nil
+	}
+	return validator.ValidateDomainMutation(ctx, resource, payload, id)
 }
 
 func (s *Service) Delete(ctx context.Context, resource Resource, id uuid.UUID, actor Actor) (map[string]any, error) {

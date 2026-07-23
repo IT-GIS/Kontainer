@@ -110,7 +110,7 @@ function CustomerProfile({ customer }: { customer: CustomerRecord }) {
   ];
   return (
     <section className="workspace-panel page-stack" aria-labelledby="customer-profile-title">
-      <div className="section-title-row"><div><h2 id="customer-profile-title">Profil Customer</h2><p className="muted-text">Field existing tetap menjadi sumber profil.</p></div><StatusBadge tone={customer.status === "active" ? "success" : "warning"}>{customer.status === "active" ? "Aktif" : "Tidak Aktif"}</StatusBadge></div>
+      <div className="section-title-row"><div><h2 id="customer-profile-title">Profil Customer</h2><p className="muted-text">Informasi perusahaan dan kontak utama Customer.</p></div><StatusBadge tone={customer.status === "active" ? "success" : "warning"}>{customer.status === "active" ? "Aktif" : "Tidak Aktif"}</StatusBadge></div>
       <div className="detail-grid">{fields.map(([label, value]) => <div key={String(label)}><span>{label}</span><strong>{value || "Belum tersedia"}</strong></div>)}</div>
       <Link className="secondary-button" href="/master/customers">Kelola Data Customer</Link>
     </section>

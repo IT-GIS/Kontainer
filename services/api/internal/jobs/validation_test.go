@@ -49,7 +49,7 @@ func TestBuildAndParseImportXLSXTemplate(t *testing.T) {
 }
 
 func TestValidateContainerInputRequiresOverrideReason(t *testing.T) {
-	input := ContainerInput{ContainerNo: "MSKU1234560", CargoStatus: "empty"}
+	input := ContainerInput{ContainerNo: "MSKU1234560", ContainerTypeCode: "20GP", CargoStatus: "empty"}
 	if !errors.Is(validateContainerInput(input), ErrInvalidInput) {
 		t.Fatal("expected invalid check digit without override reason to fail")
 	}

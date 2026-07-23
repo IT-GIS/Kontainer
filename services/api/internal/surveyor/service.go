@@ -62,6 +62,10 @@ func (s *Service) GetSurvey(ctx context.Context, id uuid.UUID, actor Actor) (map
 	return s.repo.GetSurvey(ctx, id, actor)
 }
 
+func (s *Service) MasterOptions(ctx context.Context, id uuid.UUID, actor Actor) (SurveyMasterOptions, error) {
+	return s.repo.MasterOptions(ctx, id, actor)
+}
+
 func (s *Service) UpdateGeneralInfo(ctx context.Context, id uuid.UUID, input GeneralInfoInput, actor Actor) (map[string]any, error) {
 	return s.repo.UpdateGeneralInfo(ctx, id, input, actor)
 }

@@ -22,12 +22,12 @@ var Resources = map[string]Resource{
 		DefaultSort:   "manufacturer_name",
 	},
 	"locations": {
-		Name: "locations", Table: "locations", CodeField: "location_code", SoftDelete: true,
+		Name: "locations", Table: "locations", CodeField: "location_code", SoftDelete: true, LegacyOnly: true,
 		Fields: []Field{
 			{Name: "location_code", Required: true}, {Name: "location_name", Required: true}, {Name: "location_type", Required: true}, {Name: "address", Nullable: true},
-			{Name: "city", Nullable: true}, {Name: "gps_latitude", Type: "decimal", Nullable: true}, {Name: "gps_longitude", Type: "decimal", Nullable: true}, {Name: "pic_name", Nullable: true}, {Name: "pic_phone", Nullable: true}, {Name: "status"},
+			{Name: "city", Nullable: true}, {Name: "province", Nullable: true}, {Name: "postal_code", Nullable: true}, {Name: "gps_latitude", Type: "decimal", Nullable: true}, {Name: "gps_longitude", Type: "decimal", Nullable: true}, {Name: "pic_name", Nullable: true}, {Name: "pic_phone", Nullable: true}, {Name: "pic_email", Type: "email", Nullable: true}, {Name: "access_notes", Nullable: true}, {Name: "status"},
 		},
-		SearchColumns: []string{"location_code", "location_name", "city", "pic_name", "pic_phone"},
+		SearchColumns: []string{"location_code", "location_name", "city", "province", "pic_name", "pic_phone", "pic_email"},
 		Filters:       map[string]string{"status": "status", "location_type": "location_type"},
 		DefaultSort:   "location_name",
 	},
@@ -42,7 +42,7 @@ var Resources = map[string]Resource{
 		DefaultSort:   "full_name",
 	},
 	"container_types": {
-		Name: "container_types", Table: "container_types", CodeField: "code",
+		Name: "container_types", Table: "container_types", CodeField: "code", LegacyOnly: true,
 		Fields:        []Field{{Name: "code", Required: true}, {Name: "iso_code", Nullable: true}, {Name: "size", Required: true}, {Name: "type_name", APIName: "type", Required: true}, {Name: "description", Nullable: true}, {Name: "status"}},
 		SearchColumns: []string{"code", "iso_code", "size", "type_name"}, Filters: map[string]string{"status": "status"}, DefaultSort: "code",
 	},
@@ -116,7 +116,7 @@ var Resources = map[string]Resource{
 		DefaultSort:   "display_order",
 	},
 	"fitness_checklist_templates": {
-		Name: "fitness_checklist_templates", Table: "fitness_checklist_templates", CodeField: "template_code", SoftDelete: true, ActiveStatusValue: "draft",
+		Name: "fitness_checklist_templates", Table: "fitness_checklist_templates", CodeField: "template_code", SoftDelete: true, LegacyOnly: true, ActiveStatusValue: "draft",
 		AllowedStatusValues: []string{"draft", "active", "inactive"},
 		Fields: []Field{
 			{Name: "template_code", Required: true}, {Name: "template_name", Required: true}, {Name: "approval_category_id", Nullable: true}, {Name: "container_type_id", Nullable: true},
@@ -189,20 +189,64 @@ var Resources = map[string]Resource{
 		DefaultSort:   "company_name",
 	},
 	"survey_types": {
-		Name: "survey_types", Table: "survey_types", CodeField: "code",
+		Name: "survey_types", Table: "survey_types", CodeField: "code", LegacyOnly: true,
 		Fields:        []Field{{Name: "code", Required: true}, {Name: "name", Required: true}, {Name: "description", Nullable: true}, {Name: "requires_eir"}, {Name: "requires_light_test"}, {Name: "requires_cargo_worthy_result"}, {Name: "status"}},
 		SearchColumns: []string{"code", "name"}, Filters: map[string]string{"status": "status"}, DefaultSort: "code",
 	},
 	"cedex_locations": {
-		Name: "cedex_locations", Table: "cedex_locations", CodeField: "code", ScopedCode: true,
+		Name: "cedex_locations", Table: "cedex_locations", CodeField: "code", ScopedCode: true, LegacyOnly: true,
 		Fields:        []Field{{Name: "code", Required: true}, {Name: "face", Required: true}, {Name: "grid_code", Required: true}, {Name: "cedex_mapping_code"}, {Name: "container_size"}, {Name: "description", Nullable: true}, {Name: "display_order", UseDatabaseDefault: true, DefaultValue: 0}, {Name: "status"}},
 		SearchColumns: []string{"code", "grid_code", "cedex_mapping_code", "description"}, Filters: map[string]string{"status": "status", "face": "face", "container_size": "container_size"}, DefaultSort: "display_order",
 	},
-	"cedex_components":     codeNameResource("cedex_components", "cedex_components", "component_name"),
-	"cedex_damages":        codeNameResource("cedex_damages", "cedex_damages", "damage_name"),
-	"cedex_repairs":        codeNameResource("cedex_repairs", "cedex_repairs", "repair_name"),
-	"cedex_materials":      codeNameResource("cedex_materials", "cedex_materials", "material_name"),
-	"responsibility_codes": codeNameResource("responsibility_codes", "responsibility_codes", "name"),
+	"cedex_components":     legacyCodeNameResource("cedex_components", "cedex_components", "component_name"),
+	"cedex_damages":        legacyCodeNameResource("cedex_damages", "cedex_damages", "damage_name"),
+	"cedex_repairs":        legacyCodeNameResource("cedex_repairs", "cedex_repairs", "repair_name"),
+	"cedex_materials":      legacyCodeNameResource("cedex_materials", "cedex_materials", "material_name"),
+	"responsibility_codes": legacyCodeNameResource("responsibility_codes", "responsibility_codes", "name"),
+	"customer_personnel": {
+		Name: "customer_personnel", PermissionModule: "customers", Table: "customer_personnel", CodeField: "personnel_code", SoftDelete: true,
+		DuplicateFields: []string{"customer_id", "personnel_code"},
+		Fields: []Field{
+			{Name: "customer_id", Required: true}, {Name: "personnel_code", Required: true}, {Name: "full_name", APIName: "name", Required: true},
+			{Name: "position_title", Nullable: true}, {Name: "personnel_type", Required: true}, {Name: "email", Type: "email", Nullable: true},
+			{Name: "phone", Nullable: true}, {Name: "notes", Nullable: true}, {Name: "status"},
+		},
+		SearchColumns: []string{"personnel_code", "full_name", "position_title", "personnel_type", "email", "phone"},
+		Filters:       map[string]string{"status": "status", "customer_id": "customer_id", "personnel_type": "personnel_type"}, DefaultSort: "full_name",
+	},
+}
+
+func legacyCodeNameResource(name string, table string, nameField string) Resource {
+	resource := codeNameResource(name, table, nameField)
+	resource.LegacyOnly = true
+	return resource
+}
+
+func customerScopedResource(resource Resource) Resource {
+	resource.LegacyOnly = false
+	resource.ScopedCode = false
+	resource.Fields = append([]Field{{Name: "customer_id", Required: true}}, resource.Fields...)
+	filters := map[string]string{}
+	for key, value := range resource.Filters {
+		filters[key] = value
+	}
+	filters["customer_id"] = "customer_id"
+	if resource.Name == "fitness_checklist_templates" {
+		resource.Fields = append(resource.Fields, Field{Name: "survey_type_id", Required: true})
+		filters["survey_type_id"] = "survey_type_id"
+		for index := range resource.Fields {
+			if resource.Fields[index].Name == "container_type_id" {
+				resource.Fields[index].Required = true
+				resource.Fields[index].Nullable = false
+			}
+		}
+		resource.RelationDisplays = append(resource.RelationDisplays, RelationDisplay{Field: "survey_type_id", Alias: "survey_type_label", Table: "survey_types", CodeColumn: "code", NameColumn: "name"})
+	}
+	resource.Filters = filters
+	if resource.CodeField != "" {
+		resource.DuplicateFields = []string{"customer_id", resource.CodeField}
+	}
+	return resource
 }
 
 func codeNameResource(name string, table string, nameField string) Resource {

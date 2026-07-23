@@ -253,10 +253,27 @@ func (r Repository) StartSurvey(ctx context.Context, input StartSurveyInput, act
 	jobID := parseUUIDString(container["job_order_id"])
 	assignmentID := parseUUIDString(container["assignment_id"])
 	surveyTypeID := parseUUIDString(container["survey_type_id"])
+	containerTypeID := parseUUIDString(container["container_type_id"])
+	if containerTypeID == uuid.Nil {
+		return nil, validationError("CONTAINER_TYPE_REQUIRED", "Container Type pada Job Container belum dikonfigurasi.")
+	}
+	checklistTemplateID, err := r.checklistTemplateTx(
+		ctx,
+		tx,
+		parseUUIDString(container["customer_id"]),
+		surveyTypeID,
+		containerTypeID,
+	)
+	if err != nil {
+		return nil, err
+	}
 	err = tx.QueryRow(ctx, `
-		INSERT INTO surveys (survey_no, job_order_id, job_container_id, assignment_id, surveyor_id, survey_type_id, started_at)
-		VALUES ($1,$2,$3,$4,$5,$6,now()) RETURNING id
-	`, surveyNo, jobID, containerID, assignmentID, surveyorID, surveyTypeID).Scan(&surveyID)
+		INSERT INTO surveys (
+		  survey_no, job_order_id, job_container_id, assignment_id, surveyor_id,
+		  survey_type_id, checklist_template_id, started_at
+		)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,now()) RETURNING id
+	`, surveyNo, jobID, containerID, assignmentID, surveyorID, surveyTypeID, checklistTemplateID).Scan(&surveyID)
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "duplicate") {
 			return nil, ErrDuplicate
@@ -272,10 +289,17 @@ func (r Repository) StartSurvey(ctx context.Context, input StartSurveyInput, act
 	if err != nil {
 		return nil, err
 	}
+	if err := r.instantiateChecklistTx(ctx, tx, surveyID, checklistTemplateID); err != nil {
+		return nil, err
+	}
 	_, _ = tx.Exec(ctx, `UPDATE job_containers SET status='in_progress', updated_at=now() WHERE id=$1 AND status IN ('assigned','not_started')`, containerID)
 	_, _ = tx.Exec(ctx, `UPDATE job_orders SET status='in_progress', updated_by=$2, updated_at=now() WHERE id=$1 AND status IN ('draft','assigned')`, jobID, actor.UserID)
 	_, _ = tx.Exec(ctx, `UPDATE assignments SET status='in_progress', updated_at=now() WHERE id=$1 AND status IN ('assigned','accepted')`, assignmentID)
-	item := map[string]any{"id": surveyID.String(), "survey_no": surveyNo, "status": "draft", "job_order_no": container["job_order_no"], "container_no": container["container_no"]}
+	item := map[string]any{
+		"id": surveyID.String(), "survey_no": surveyNo, "status": "draft",
+		"job_order_no": container["job_order_no"], "container_no": container["container_no"],
+		"checklist_template_id": checklistTemplateID.String(),
+	}
 	_ = r.insertJobEvent(ctx, tx, jobID, "survey_started", "Survey dimulai.", fmt.Sprint(container["container_no"]), actor.UserID, item)
 	_ = r.insertAudit(ctx, tx, actor, "surveys.start", "surveys", &surveyID, nil, item)
 	if err := tx.Commit(ctx); err != nil {
@@ -350,7 +374,15 @@ func (r Repository) Checklist(ctx context.Context, surveyID uuid.UUID, actor Act
 	if _, err := r.surveyBase(ctx, surveyID, actor); err != nil {
 		return nil, err
 	}
-	rows, err := r.pool.Query(ctx, `SELECT id, item_code AS item_key, item_label, response_value AS value, response_text AS note, is_required, is_critical, display_order FROM survey_checklist_responses WHERE survey_id=$1 ORDER BY display_order, item_code`, surveyID)
+	rows, err := r.pool.Query(ctx, `
+		SELECT id, template_item_id, item_code AS item_key, item_label,
+		       response_value AS value, response_numeric AS numeric_value, response_text AS note,
+		       response_type, unit, standard_reference, is_required, is_critical,
+		       requires_attachment, attachment_file_id, display_order
+		FROM survey_checklist_responses
+		WHERE survey_id=$1
+		ORDER BY display_order, item_code
+	`, surveyID)
 	if err != nil {
 		return nil, err
 	}
@@ -358,9 +390,6 @@ func (r Repository) Checklist(ctx context.Context, surveyID uuid.UUID, actor Act
 	items, err := rowsToMaps(rows)
 	if err != nil {
 		return nil, err
-	}
-	if len(items) == 0 {
-		return defaultChecklist(), nil
 	}
 	return items, nil
 }
@@ -382,20 +411,45 @@ func (r Repository) UpdateChecklist(ctx context.Context, surveyID uuid.UUID, inp
 		return nil, ErrInvalidStatus
 	}
 	completed := 0
-	for index, item := range input.Items {
+	for _, item := range input.Items {
 		key := strings.TrimSpace(item.ItemKey)
 		if key == "" {
 			return nil, ErrInvalidInput
 		}
-		label := defaultChecklistLabel(key)
-		if strings.TrimSpace(item.Value) != "" {
+		var existingID uuid.UUID
+		if err := tx.QueryRow(ctx, `
+			SELECT id FROM survey_checklist_responses
+			WHERE survey_id=$1 AND item_code=$2
+			LIMIT 1
+		`, surveyID, key).Scan(&existingID); errors.Is(err, database.ErrNoRows) {
+			return nil, validationError("CHECKLIST_ITEM_SCOPE", "Item checklist tidak berasal dari snapshot template survei.")
+		} else if err != nil {
+			return nil, err
+		}
+		var attachmentID *uuid.UUID
+		if strings.TrimSpace(item.AttachmentFileID) != "" {
+			parsed, err := uuid.Parse(item.AttachmentFileID)
+			if err != nil {
+				return nil, validationError("CHECKLIST_ATTACHMENT_INVALID", "Attachment checklist tidak valid.")
+			}
+			attachmentID = &parsed
+			var count int
+			if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM file_objects WHERE id=$1 AND deleted_at IS NULL`, parsed).Scan(&count); err != nil {
+				return nil, err
+			}
+			if count != 1 {
+				return nil, validationError("CHECKLIST_ATTACHMENT_NOT_FOUND", "Attachment checklist tidak ditemukan.")
+			}
+		}
+		if strings.TrimSpace(item.Value) != "" || item.NumericValue != nil {
 			completed++
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO survey_checklist_responses (survey_id,item_code,item_label,response_value,response_text,display_order)
-			VALUES ($1,$2,$3,NULLIF($4,''),NULLIF($5,''),$6)
-			ON DUPLICATE KEY UPDATE response_value=VALUES(response_value), response_text=VALUES(response_text), updated_at=now()
-		`, surveyID, key, label, item.Value, item.Note, index+1)
+			UPDATE survey_checklist_responses
+			SET response_value=NULLIF($3,''), response_numeric=$4, response_text=NULLIF($5,''),
+			    attachment_file_id=$6, updated_at=now()
+			WHERE survey_id=$1 AND item_code=$2
+		`, surveyID, key, item.Value, item.NumericValue, item.Note, attachmentID)
 		if err != nil {
 			return nil, err
 		}
@@ -417,9 +471,10 @@ func (r Repository) Sheet(ctx context.Context, surveyID uuid.UUID, actor Actor) 
 	rows, err := r.pool.Query(ctx, `
 		SELECT cl.id, cl.code, cl.face, cl.grid_code, cl.description, cl.display_order
 		FROM surveys s
+		JOIN job_orders jo ON jo.id=s.job_order_id
 		JOIN job_containers jc ON jc.id=s.job_container_id
 		LEFT JOIN container_types ct ON ct.id=jc.container_type_id
-		JOIN cedex_locations cl ON cl.status='active'
+		JOIN cedex_locations cl ON cl.status='active' AND cl.customer_id=jo.customer_id
 		  AND (
 		    cl.container_size IS NULL OR cl.container_size='all'
 		    OR cl.container_size=CASE
@@ -472,8 +527,8 @@ func (r Repository) Damages(ctx context.Context, surveyID uuid.UUID, actor Actor
 		return nil, err
 	}
 	rows, err := r.pool.Query(ctx, `
-		SELECT sd.id, sd.damage_no, sd.face, sd.internal_location,
-		       cl.code AS cedex_location_code,
+		SELECT sd.id, sd.damage_no, sd.face, sd.internal_location, sd.manual_location_reason,
+		       cl.id AS cedex_location_id, cl.code AS cedex_location_code,
 		       cc.id AS component_id, cc.code AS component_code, cc.component_name AS component_name,
 		       cd.id AS damage_code_id, cd.code AS damage_code, cd.damage_name AS damage_name,
 		       cr.id AS repair_code_id, cr.code AS repair_code, cr.repair_name AS repair_name,
@@ -585,6 +640,15 @@ func (r Repository) CreatePhotoMetadata(ctx context.Context, damageID uuid.UUID,
 	if !editableStatus(fmt.Sprint(base["status"])) {
 		return nil, ErrInvalidStatus
 	}
+	if err := r.validatePhotoCategoryTx(
+		ctx,
+		tx,
+		parseUUIDString(base["customer_id"]),
+		parseUUIDString(base["survey_type_id"]),
+		input.PhotoCategory,
+	); err != nil {
+		return nil, err
+	}
 	fileID := uuid.Nil
 	err = tx.QueryRow(ctx, `
 		INSERT INTO file_objects (bucket_name, object_key, original_file_name, mime_type, file_size, checksum_sha256, visibility, uploaded_by)
@@ -607,8 +671,8 @@ func (r Repository) CreatePhotoMetadata(ctx context.Context, damageID uuid.UUID,
 			survey_id, damage_id, file_id, watermarked_file_id, photo_type, photo_category,
 			caption, taken_at, gps_latitude, gps_longitude, watermark_text, uploaded_by
 		) VALUES ($1,$2,$3,$4,$5,NULLIF($6,''),NULLIF($7,''),$8,$9,$10,$11,$12)
-		RETURNING id, survey_id, damage_id, file_id, watermarked_file_id, photo_type, caption, created_at
-	`, surveyID, damageID, fileID, watermarkedFileID, photoType, input.PhotoCategory, input.Caption, input.TakenAt, input.GPSLatitude, input.GPSLongitude, input.WatermarkText, actor.UserID), []string{"id", "survey_id", "damage_id", "file_id", "watermarked_file_id", "photo_type", "caption", "created_at"})
+		RETURNING id, survey_id, damage_id, file_id, watermarked_file_id, photo_type, photo_category, caption, created_at
+	`, surveyID, damageID, fileID, watermarkedFileID, photoType, input.PhotoCategory, input.Caption, input.TakenAt, input.GPSLatitude, input.GPSLongitude, input.WatermarkText, actor.UserID), []string{"id", "survey_id", "damage_id", "file_id", "watermarked_file_id", "photo_type", "photo_category", "caption", "created_at"})
 	if err != nil {
 		return nil, err
 	}
@@ -754,17 +818,56 @@ func (r Repository) saveDamage(ctx context.Context, damageID uuid.UUID, surveyID
 	if !editableStatus(fmt.Sprint(base["status"])) {
 		return nil, ErrInvalidStatus
 	}
-	cedexLocationID, err := r.resolveCEDEXLocation(ctx, tx, input)
+	customerID := parseUUIDString(base["customer_id"])
+	surveyTypeID := parseUUIDString(base["survey_type_id"])
+	cedexLocationID, face, internalLocation, err := r.resolveCEDEXLocation(ctx, tx, customerID, input)
 	if err != nil {
 		return nil, err
 	}
 	componentID, err := uuid.Parse(input.ComponentID)
 	if err != nil {
-		return nil, ErrInvalidInput
+		return nil, validationError("COMPONENT_INVALID", "Component tidak valid.")
 	}
 	damageCodeID, err := uuid.Parse(input.DamageID)
 	if err != nil {
-		return nil, ErrInvalidInput
+		return nil, validationError("DAMAGE_CODE_INVALID", "Damage type tidak valid.")
+	}
+	if err := r.validateScopedReferenceTx(ctx, tx, "cedex_components", componentID, customerID, "COMPONENT_SCOPE"); err != nil {
+		return nil, err
+	}
+	if err := r.validateScopedReferenceTx(ctx, tx, "cedex_damages", damageCodeID, customerID, "DAMAGE_CODE_SCOPE"); err != nil {
+		return nil, err
+	}
+	repairID, err := parseOptionalReferenceID(input.RepairID, "REPAIR_INVALID", "Repair code tidak valid.")
+	if err != nil {
+		return nil, err
+	}
+	if repairID != nil {
+		if err := r.validateScopedReferenceTx(ctx, tx, "cedex_repairs", *repairID, customerID, "REPAIR_SCOPE"); err != nil {
+			return nil, err
+		}
+	}
+	materialID, err := parseOptionalReferenceID(input.MaterialID, "MATERIAL_INVALID", "Material code tidak valid.")
+	if err != nil {
+		return nil, err
+	}
+	if materialID != nil {
+		if err := r.validateScopedReferenceTx(ctx, tx, "cedex_materials", *materialID, customerID, "MATERIAL_SCOPE"); err != nil {
+			return nil, err
+		}
+	}
+	responsibilityID, err := parseOptionalReferenceID(input.ResponsibilityID, "RESPONSIBILITY_INVALID", "Responsibility code tidak valid.")
+	if err != nil {
+		return nil, err
+	}
+	if responsibilityID != nil {
+		if err := r.validateScopedReferenceTx(ctx, tx, "responsibility_codes", *responsibilityID, customerID, "RESPONSIBILITY_SCOPE"); err != nil {
+			return nil, err
+		}
+	}
+	severity := strings.ToLower(strings.TrimSpace(input.Severity))
+	if err := r.validateSeverityTx(ctx, tx, customerID, surveyTypeID, severity); err != nil {
+		return nil, err
 	}
 	if damageID == uuid.Nil {
 		damageNo, err := r.nextDamageNo(ctx, tx, surveyID)
@@ -772,10 +875,19 @@ func (r Repository) saveDamage(ctx context.Context, damageID uuid.UUID, surveyID
 			return nil, err
 		}
 		item, err := scanRow(tx.QueryRow(ctx, `
-			INSERT INTO survey_damages (survey_id, damage_no, face, internal_location, cedex_location_id, component_id, damage_id, repair_id, material_id, responsibility_id, severity, quantity, length_value, width_value, depth_value, unit, is_repair_required, is_cargo_worthy_impact, is_photo_only, remark, created_by, updated_by)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,NULLIF($20,''),$21,$21)
+			INSERT INTO survey_damages (
+			  survey_id, damage_no, face, internal_location, cedex_location_id, manual_location_reason,
+			  component_id, damage_id, repair_id, material_id, responsibility_id, severity, quantity,
+			  length_value, width_value, depth_value, unit, is_repair_required,
+			  is_cargo_worthy_impact, is_photo_only, remark, created_by, updated_by
+			)
+			VALUES ($1,$2,$3,$4,$5,NULLIF($6,''),$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,NULLIF($21,''),$22,$22)
 			RETURNING id, damage_no, face, internal_location, severity
-		`, surveyID, damageNo, input.Face, input.InternalLocation, cedexLocationID, componentID, damageCodeID, nullableUUIDString(input.RepairID), nullableUUIDString(input.MaterialID), nullableUUIDString(input.ResponsibilityID), defaultString(input.Severity, "minor"), input.Quantity, input.Length, input.Width, input.Depth, defaultString(input.Unit, "cm"), input.IsRepairRequired, input.IsCargoWorthyImpact, input.IsPhotoOnly, input.Remark, actor.UserID), []string{"id", "damage_no", "face", "internal_location", "severity"})
+		`, surveyID, damageNo, face, internalLocation, cedexLocationID, input.ManualLocationReason,
+			componentID, damageCodeID, repairID, materialID, responsibilityID, severity, input.Quantity,
+			input.Length, input.Width, input.Depth, defaultString(input.Unit, "cm"), input.IsRepairRequired,
+			input.IsCargoWorthyImpact, input.IsPhotoOnly, input.Remark, actor.UserID,
+		), []string{"id", "damage_no", "face", "internal_location", "severity"})
 		if err != nil {
 			return nil, err
 		}
@@ -784,12 +896,19 @@ func (r Repository) saveDamage(ctx context.Context, damageID uuid.UUID, surveyID
 		return item, tx.Commit(ctx)
 	}
 	item, err := scanRow(tx.QueryRow(ctx, `
-		UPDATE survey_damages SET face=$2, internal_location=$3, cedex_location_id=$4, component_id=$5, damage_id=$6, repair_id=$7, material_id=$8,
-		  responsibility_id=$9, severity=$10, quantity=$11, length_value=$12, width_value=$13, depth_value=$14, unit=$15, is_repair_required=$16,
-		  is_cargo_worthy_impact=$17, is_photo_only=$18, remark=NULLIF($19,''), updated_by=$20, updated_at=now()
+		UPDATE survey_damages
+		SET face=$2, internal_location=$3, cedex_location_id=$4, manual_location_reason=NULLIF($5,''),
+		  component_id=$6, damage_id=$7, repair_id=$8, material_id=$9, responsibility_id=$10,
+		  severity=$11, quantity=$12, length_value=$13, width_value=$14, depth_value=$15, unit=$16,
+		  is_repair_required=$17, is_cargo_worthy_impact=$18, is_photo_only=$19,
+		  remark=NULLIF($20,''), updated_by=$21, updated_at=now()
 		WHERE id=$1 AND deleted_at IS NULL
 		RETURNING id, damage_no, face, internal_location, severity
-	`, damageID, input.Face, input.InternalLocation, cedexLocationID, componentID, damageCodeID, nullableUUIDString(input.RepairID), nullableUUIDString(input.MaterialID), nullableUUIDString(input.ResponsibilityID), defaultString(input.Severity, "minor"), input.Quantity, input.Length, input.Width, input.Depth, defaultString(input.Unit, "cm"), input.IsRepairRequired, input.IsCargoWorthyImpact, input.IsPhotoOnly, input.Remark, actor.UserID), []string{"id", "damage_no", "face", "internal_location", "severity"})
+	`, damageID, face, internalLocation, cedexLocationID, input.ManualLocationReason,
+		componentID, damageCodeID, repairID, materialID, responsibilityID, severity, input.Quantity,
+		input.Length, input.Width, input.Depth, defaultString(input.Unit, "cm"), input.IsRepairRequired,
+		input.IsCargoWorthyImpact, input.IsPhotoOnly, input.Remark, actor.UserID,
+	), []string{"id", "damage_no", "face", "internal_location", "severity"})
 	if err != nil {
 		return nil, err
 	}

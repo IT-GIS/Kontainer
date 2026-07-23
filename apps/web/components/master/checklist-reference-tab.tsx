@@ -47,7 +47,7 @@ export function ChecklistReferenceTab({ customerId, baseHref }: { customerId?: s
 
   return (
     <div className="page-stack master-data-customer-picker">
-      <PageHeader title="Checklist" description="Pilih Customer sebelum mengelola template dan item checklist existing." />
+      <PageHeader title="Checklist" description="Pilih Customer sebelum mengelola template dan item checklist pemeriksaan." />
       {error ? <div className="alert alert-danger">{error}</div> : null}
       {loading ? <div className="workspace-panel" role="status">Memuat Customer...</div> : null}
       {!loading ? (

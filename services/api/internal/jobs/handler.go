@@ -280,7 +280,14 @@ func (h Handler) ValidateContainerNo(c *gin.Context) {
 }
 
 func (h Handler) writeError(c *gin.Context, err error) {
+	var fieldErr FieldValidationError
 	switch {
+	case errors.As(err, &fieldErr):
+		details := make([]apphttp.ErrorDetail, 0, len(fieldErr.Fields))
+		for field, message := range fieldErr.Fields {
+			details = append(details, apphttp.ErrorDetail{Field: field, Message: message})
+		}
+		apphttp.Fail(c, http.StatusUnprocessableEntity, "Validasi gagal.", "VALIDATION_ERROR", details)
 	case errors.Is(err, ErrNotFound):
 		apphttp.Fail(c, http.StatusNotFound, "Data tidak ditemukan.", "NOT_FOUND", nil)
 	case errors.Is(err, ErrDuplicate):

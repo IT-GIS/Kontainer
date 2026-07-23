@@ -1,0 +1,975 @@
+{
+  "runAt": "2026-07-23T07:00:26.893Z",
+  "baseURL": "http://localhost:3000",
+  "adminLanding": "/dashboard",
+  "customerPath": "/master/customers/customer/4d388157-406a-47e6-9343-8ad39bbf6700",
+  "jobPath": "/jobs/9cb28aad-c5f8-4a6e-93c6-7718905972fe",
+  "screenshots": [
+    {
+      "name": "01-sidebar-admin-desktop.png",
+      "requested": "/dashboard",
+      "finalURL": "/dashboard",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "02-sidebar-admin-mobile.png",
+      "requested": "/dashboard",
+      "finalURL": "/dashboard",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "03-iso-cedex-location.png",
+      "requested": "/master/iso-cedex?tab=location",
+      "finalURL": "/master/iso-cedex?tab=location",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "04-iso-cedex-action-repair.png",
+      "requested": "/master/iso-cedex?tab=action-repair",
+      "finalURL": "/master/iso-cedex?tab=action-repair",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "05-referensi-pemeriksaan-checklist.png",
+      "requested": "/master/inspection-references?tab=checklist",
+      "finalURL": "/master/inspection-references?tab=checklist",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "06-customer-personel-pic.png",
+      "requested": "/master/customers/customer/4d388157-406a-47e6-9343-8ad39bbf6700?tab=personnel",
+      "finalURL": "/master/customers/customer/4d388157-406a-47e6-9343-8ad39bbf6700?tab=personnel",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "07-customer-location.png",
+      "requested": "/master/customers/customer/4d388157-406a-47e6-9343-8ad39bbf6700?tab=location",
+      "finalURL": "/master/customers/customer/4d388157-406a-47e6-9343-8ad39bbf6700?tab=location",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "08-pekerjaan-inspeksi.png",
+      "requested": "/jobs",
+      "finalURL": "/jobs",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "09-create-job.png",
+      "requested": "/jobs/create",
+      "finalURL": "/jobs/create",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "10-detail-job-assignment.png",
+      "requested": "/jobs/9cb28aad-c5f8-4a6e-93c6-7718905972fe?tab=assignment",
+      "finalURL": "/jobs/9cb28aad-c5f8-4a6e-93c6-7718905972fe?tab=assignment",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "13-user-hak-akses.png",
+      "requested": "/settings/users",
+      "finalURL": "/settings/users",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "14-focus-keyboard-filter.png",
+      "requested": "/review/history",
+      "finalURL": "/review/history",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "15-zoom-200.png",
+      "requested": "/master/iso-cedex?tab=location",
+      "finalURL": "/master/iso-cedex?tab=location",
+      "width": 1440,
+      "height": 900,
+      "scale": 2
+    },
+    {
+      "name": "11-review-supervisor.png",
+      "requested": "/review/pending",
+      "finalURL": "/review/pending",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "12-laporan-management.png",
+      "requested": "/reports",
+      "finalURL": "/reports",
+      "width": 1440,
+      "height": 900
+    }
+  ],
+  "routeChecks": [
+    {
+      "route": "/master/locations",
+      "finalURL": "/master/customers?tab=location&compat=locations",
+      "path": "/master/customers?tab=location&compat=locations",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 1273,
+      "h1Count": 1,
+      "h1": "Customer",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Customer"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/master/surveyors",
+      "finalURL": "/master/surveyors",
+      "path": "/master/surveyors",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 648,
+      "h1Count": 1,
+      "h1": "Surveyor GIFT",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Surveyor GIFT"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/master/container-types",
+      "finalURL": "/master/inspection-references?tab=container-type",
+      "path": "/master/inspection-references?tab=container-type",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 1939,
+      "h1Count": 1,
+      "h1": "Referensi Pemeriksaan",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Referensi Pemeriksaan"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/master/survey-types",
+      "finalURL": "/master/inspection-references?tab=survey-type",
+      "path": "/master/inspection-references?tab=survey-type",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 1897,
+      "h1Count": 1,
+      "h1": "Referensi Pemeriksaan",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Referensi Pemeriksaan"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/master/cedex/locations",
+      "finalURL": "/master/iso-cedex?tab=location",
+      "path": "/master/iso-cedex?tab=location",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 2061,
+      "h1Count": 1,
+      "h1": "Master ISO CEDEX",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "ISO CEDEX"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/master/cedex/components",
+      "finalURL": "/master/iso-cedex?tab=component",
+      "path": "/master/iso-cedex?tab=component",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 2006,
+      "h1Count": 1,
+      "h1": "Master ISO CEDEX",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "ISO CEDEX"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/master/cedex/damages",
+      "finalURL": "/master/iso-cedex?tab=damage",
+      "path": "/master/iso-cedex?tab=damage",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 1964,
+      "h1Count": 1,
+      "h1": "Master ISO CEDEX",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "ISO CEDEX"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/master/cedex/repairs",
+      "finalURL": "/master/iso-cedex?tab=action-repair",
+      "path": "/master/iso-cedex?tab=action-repair",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 2134,
+      "h1Count": 1,
+      "h1": "Master ISO CEDEX",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "ISO CEDEX"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/master/cedex/materials",
+      "finalURL": "/master/iso-cedex?tab=material",
+      "path": "/master/iso-cedex?tab=material",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 1992,
+      "h1Count": 1,
+      "h1": "Master ISO CEDEX",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "ISO CEDEX"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/master/responsibility-codes",
+      "finalURL": "/master/iso-cedex?tab=responsibility",
+      "path": "/master/iso-cedex?tab=responsibility",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 2062,
+      "h1Count": 1,
+      "h1": "Master ISO CEDEX",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "ISO CEDEX"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/master/iso-cedex",
+      "finalURL": "/master/iso-cedex",
+      "path": "/master/iso-cedex",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 2061,
+      "h1Count": 1,
+      "h1": "Master ISO CEDEX",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "ISO CEDEX"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/master/inspection-references",
+      "finalURL": "/master/inspection-references",
+      "path": "/master/inspection-references",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 1939,
+      "h1Count": 1,
+      "h1": "Referensi Pemeriksaan",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Referensi Pemeriksaan"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/master/customers",
+      "finalURL": "/master/customers",
+      "path": "/master/customers",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 1273,
+      "h1Count": 1,
+      "h1": "Customer",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Customer"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/jobs",
+      "finalURL": "/jobs",
+      "path": "/jobs",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 3229,
+      "h1Count": 1,
+      "h1": "Pekerjaan Inspeksi",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Semua Pekerjaan"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/jobs/create",
+      "finalURL": "/jobs/create",
+      "path": "/jobs/create",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 883,
+      "h1Count": 1,
+      "h1": "Buat Pekerjaan",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Buat Job/SPK"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/jobs/import",
+      "finalURL": "/jobs?view=unassigned&compat=import",
+      "path": "/jobs?view=unassigned&compat=import",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 995,
+      "h1Count": 1,
+      "h1": "Pekerjaan Inspeksi",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Semua Pekerjaan"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/jobs/assign",
+      "finalURL": "/jobs?view=unassigned&compat=assign",
+      "path": "/jobs?view=unassigned&compat=assign",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 999,
+      "h1Count": 1,
+      "h1": "Pekerjaan Inspeksi",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Semua Pekerjaan"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/surveys/monitoring",
+      "finalURL": "/jobs?view=in-progress&compat=monitoring",
+      "path": "/jobs?view=in-progress&compat=monitoring",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 2206,
+      "h1Count": 1,
+      "h1": "Pekerjaan Inspeksi",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Semua Pekerjaan"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/surveys/monitoring/in-progress",
+      "finalURL": "/jobs?view=in-progress&compat=monitoring",
+      "path": "/jobs?view=in-progress&compat=monitoring",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 2206,
+      "h1Count": 1,
+      "h1": "Pekerjaan Inspeksi",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Semua Pekerjaan"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/surveys/monitoring/submitted",
+      "finalURL": "/jobs?view=pending-review&compat=monitoring",
+      "path": "/jobs?view=pending-review&compat=monitoring",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 993,
+      "h1Count": 1,
+      "h1": "Pekerjaan Inspeksi",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Semua Pekerjaan"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/surveys/monitoring/need-revision",
+      "finalURL": "/jobs?view=need-revision&compat=monitoring",
+      "path": "/jobs?view=need-revision&compat=monitoring",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 1000,
+      "h1Count": 1,
+      "h1": "Pekerjaan Inspeksi",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Semua Pekerjaan"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/surveys/monitoring/approved",
+      "finalURL": "/jobs?view=approved&compat=monitoring",
+      "path": "/jobs?view=approved&compat=monitoring",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 1003,
+      "h1Count": 1,
+      "h1": "Pekerjaan Inspeksi",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Semua Pekerjaan"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/review/pending",
+      "finalURL": "/review/pending",
+      "path": "/review/pending",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 513,
+      "h1Count": 1,
+      "h1": "Menunggu Review",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Menunggu Review"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/review/history",
+      "finalURL": "/review/history",
+      "path": "/review/history",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 643,
+      "h1Count": 1,
+      "h1": "Riwayat Keputusan",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Riwayat Keputusan"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/reports",
+      "finalURL": "/reports",
+      "path": "/reports",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 1209,
+      "h1Count": 1,
+      "h1": "Dokumen & Laporan",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Laporan Pemeriksaan"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/reports?view=archive",
+      "finalURL": "/reports?view=archive",
+      "path": "/reports?view=archive",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 1209,
+      "h1Count": 1,
+      "h1": "Dokumen & Laporan",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Arsip Laporan"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/reports/versions",
+      "finalURL": "/reports?view=archive&compat=versions",
+      "path": "/reports?view=archive&compat=versions",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 1209,
+      "h1Count": 1,
+      "h1": "Dokumen & Laporan",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Arsip Laporan"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/reports/qr-validation",
+      "finalURL": "/reports/qr-validation",
+      "path": "/reports/qr-validation",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 492,
+      "h1Count": 1,
+      "h1": "QR Validation",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Laporan Pemeriksaan"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/settings/company-profile",
+      "finalURL": "/settings/company-profile",
+      "path": "/settings/company-profile",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 607,
+      "h1Count": 1,
+      "h1": "Company Profile",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Company Profile"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/settings/numbering",
+      "finalURL": "/settings/numbering",
+      "path": "/settings/numbering",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 611,
+      "h1Count": 1,
+      "h1": "Numbering Setting",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Penomoran"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/settings/audit-log",
+      "finalURL": "/settings/audit-log",
+      "path": "/settings/audit-log",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 595,
+      "h1Count": 1,
+      "h1": "Audit Log",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Audit Log"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/settings/users",
+      "finalURL": "/settings/users",
+      "path": "/settings/users",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 1355,
+      "h1Count": 1,
+      "h1": "User & Hak Akses",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "User & Hak Akses"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/settings/roles",
+      "finalURL": "/settings/users#role-permission",
+      "path": "/settings/users",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 1355,
+      "h1Count": 1,
+      "h1": "User & Hak Akses",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "User & Hak Akses"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/master/customers/customer/4d388157-406a-47e6-9343-8ad39bbf6700",
+      "finalURL": "/master/customers/customer/4d388157-406a-47e6-9343-8ad39bbf6700",
+      "path": "/master/customers/customer/4d388157-406a-47e6-9343-8ad39bbf6700",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 888,
+      "h1Count": 1,
+      "h1": "Detail Customer",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Customer"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    },
+    {
+      "route": "/jobs/9cb28aad-c5f8-4a6e-93c6-7718905972fe",
+      "finalURL": "/jobs/9cb28aad-c5f8-4a6e-93c6-7718905972fe",
+      "path": "/jobs/9cb28aad-c5f8-4a6e-93c6-7718905972fe",
+      "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+      "bodyLength": 866,
+      "h1Count": 1,
+      "h1": "Detail Pekerjaan",
+      "hasMain": true,
+      "bodyOverflow": false,
+      "duplicateIds": [],
+      "activeLabels": [
+        "Semua Pekerjaan"
+      ],
+      "unnamedControls": [],
+      "forbiddenCopy": false,
+      "newErrors": [],
+      "ok": true
+    }
+  ],
+  "viewportChecks": [
+    {
+      "width": 1920,
+      "height": 1080,
+      "path": "/master/iso-cedex?tab=location",
+      "bodyOverflow": false,
+      "h1Count": 1,
+      "duplicateIds": [],
+      "unnamedControls": []
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "path": "/master/iso-cedex?tab=location",
+      "bodyOverflow": false,
+      "h1Count": 1,
+      "duplicateIds": [],
+      "unnamedControls": []
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "path": "/master/iso-cedex?tab=location",
+      "bodyOverflow": false,
+      "h1Count": 1,
+      "duplicateIds": [],
+      "unnamedControls": []
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "path": "/master/iso-cedex?tab=location",
+      "bodyOverflow": false,
+      "h1Count": 1,
+      "duplicateIds": [],
+      "unnamedControls": []
+    },
+    {
+      "width": 1024,
+      "height": 768,
+      "path": "/master/iso-cedex?tab=location",
+      "bodyOverflow": false,
+      "h1Count": 1,
+      "duplicateIds": [],
+      "unnamedControls": []
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "path": "/master/iso-cedex?tab=location",
+      "bodyOverflow": false,
+      "h1Count": 1,
+      "duplicateIds": [],
+      "unnamedControls": []
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "path": "/master/iso-cedex?tab=location",
+      "bodyOverflow": false,
+      "h1Count": 1,
+      "duplicateIds": [],
+      "unnamedControls": []
+    }
+  ],
+  "roleChecks": [
+    {
+      "role": "Supervisor",
+      "landing": "/dashboard",
+      "route": "/review/pending",
+      "page": {
+        "path": "/review/pending",
+        "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+        "bodyLength": 476,
+        "h1Count": 1,
+        "h1": "Menunggu Review",
+        "hasMain": true,
+        "bodyOverflow": false,
+        "duplicateIds": [],
+        "activeLabels": [
+          "Menunggu Review"
+        ],
+        "unnamedControls": [],
+        "forbiddenCopy": false
+      },
+      "navigation": [
+        "Review & Keputusan",
+        "Menunggu Review",
+        "Riwayat Keputusan",
+        "Dokumen & Laporan"
+      ]
+    },
+    {
+      "role": "Management",
+      "landing": "/dashboard",
+      "route": "/reports",
+      "page": {
+        "path": "/reports",
+        "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+        "bodyLength": 1185,
+        "h1Count": 1,
+        "h1": "Dokumen & Laporan",
+        "hasMain": true,
+        "bodyOverflow": false,
+        "duplicateIds": [],
+        "activeLabels": [
+          "Laporan Pemeriksaan"
+        ],
+        "unnamedControls": [],
+        "forbiddenCopy": false
+      },
+      "newErrors": [],
+      "newNetworkFailures": [],
+      "navigation": [
+        "Dashboard",
+        "Dokumen & Laporan",
+        "Laporan Pemeriksaan",
+        "Arsip Laporan",
+        "Rekap Customer",
+        "Laporan Pemeriksaan",
+        "Arsip Laporan"
+      ]
+    },
+    {
+      "role": "Surveyor",
+      "landing": "/dashboard",
+      "route": "/surveyor/jobs",
+      "page": {
+        "path": "/surveyor/jobs",
+        "title": "Sistem Kelaikan Peti Kemas Terintegrasi",
+        "bodyLength": 1450,
+        "h1Count": 1,
+        "h1": "Job Saya",
+        "hasMain": true,
+        "bodyOverflow": false,
+        "duplicateIds": [],
+        "activeLabels": [
+          "Pekerjaan Saya"
+        ],
+        "unnamedControls": [
+          {
+            "tag": "input",
+            "type": "",
+            "className": ""
+          },
+          {
+            "tag": "select",
+            "type": "",
+            "className": ""
+          }
+        ],
+        "forbiddenCopy": false
+      },
+      "navigation": [
+        "Dashboard Surveyor",
+        "Pekerjaan Saya",
+        "Perlu Revisi",
+        "Riwayat Pemeriksaan"
+      ]
+    }
+  ],
+  "interactionChecks": [
+    {
+      "scenario": "keyboard focus filter",
+      "tag": "INPUT",
+      "ariaLabel": "",
+      "outlineStyle": "solid",
+      "outlineWidth": "2px",
+      "boxShadow": "none",
+      "visible": true
+    },
+    {
+      "scenario": "zoom 200%",
+      "bodyOverflow": false,
+      "h1Count": 1
+    },
+    {
+      "scenario": "ISO CEDEX back/forward/refresh",
+      "backPath": "/master/iso-cedex?tab=location",
+      "forwardPath": "/master/iso-cedex?tab=action-repair",
+      "refreshPath": "/master/iso-cedex?tab=action-repair",
+      "ok": true
+    },
+    {
+      "scenario": "favicon",
+      "status": 0,
+      "type": "opaqueredirect",
+      "location": null,
+      "ok": true
+    }
+  ],
+  "browserErrors": [],
+  "networkFailures": []
+}

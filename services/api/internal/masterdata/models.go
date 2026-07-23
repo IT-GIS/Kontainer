@@ -43,6 +43,7 @@ type Resource struct {
 	CodeField           string
 	DuplicateFields     []string
 	ScopedCode          bool
+	LegacyOnly          bool
 	SoftDelete          bool
 	StatusField         string
 	ActiveStatusValue   any

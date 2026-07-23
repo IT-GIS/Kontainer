@@ -34,6 +34,7 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 
 	v1.POST("/surveys/start", middleware.RequirePermission(authService, "surveys.start.assigned"), h.StartSurvey)
 	v1.GET("/surveys/:id", middleware.RequirePermission(authService, "surveys.view.assigned"), h.GetSurvey)
+	v1.GET("/surveys/:id/master-options", middleware.RequirePermission(authService, "surveys.view.assigned"), h.MasterOptions)
 	v1.PUT("/surveys/:id/general-info", middleware.RequirePermission(authService, "surveys.update.assigned"), h.UpdateGeneralInfo)
 	v1.GET("/surveys/:id/checklist", middleware.RequirePermission(authService, "surveys.view.assigned"), h.Checklist)
 	v1.PUT("/surveys/:id/checklist", middleware.RequirePermission(authService, "surveys.update.assigned"), h.UpdateChecklist)
@@ -127,6 +128,19 @@ func (h Handler) GetSurvey(c *gin.Context) {
 		return
 	}
 	apphttp.OK(c, "Survey berhasil diambil.", item)
+}
+
+func (h Handler) MasterOptions(c *gin.Context) {
+	id, ok := parseID(c)
+	if !ok {
+		return
+	}
+	item, err := h.service.MasterOptions(c.Request.Context(), id, actorFromContext(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Opsi Master Data Survey berhasil diambil.", item)
 }
 
 func (h Handler) UpdateGeneralInfo(c *gin.Context) {

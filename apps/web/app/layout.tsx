@@ -4,12 +4,16 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Sistem Kelaikan Peti Kemas Terintegrasi",
-  description: "Web MVP for container survey operations, review, reports, and finance."
+  description: "Sistem pengelolaan pemeriksaan dan dokumen Kelaikan peti kemas.",
+  icons: {
+    icon: "/images/gift-logo.png",
+    shortcut: "/favicon.ico"
+  }
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="id">
       <body>
         <Providers>
           <div className="page-shell">{children}</div>

@@ -46,7 +46,7 @@ func (s *Service) CreateJob(ctx context.Context, input JobInput, actor Actor) (m
 
 func (s *Service) AddContainer(ctx context.Context, jobID uuid.UUID, input ContainerInput, actor Actor) (map[string]any, error) {
 	if err := validateContainerInput(input); err != nil {
-		return nil, ErrInvalidInput
+		return nil, err
 	}
 	return s.repo.AddContainer(ctx, jobID, input, actor)
 }
@@ -85,6 +85,9 @@ func validateContainerInput(input ContainerInput) error {
 	if !validation.IsCheckDigitValid && strings.TrimSpace(input.CheckDigitOverrideReason) == "" {
 		return ErrInvalidInput
 	}
+	if (input.ContainerTypeID == nil || strings.TrimSpace(*input.ContainerTypeID) == "") && strings.TrimSpace(input.ContainerTypeCode) == "" {
+		return FieldValidationError{Fields: map[string]string{"container_type_id": "Container Type Customer wajib dipilih."}}
+	}
 	return nil
 }
 
@@ -114,7 +117,7 @@ func (s *Service) Reassign(ctx context.Context, containerID uuid.UUID, input Rea
 }
 
 func validateJobInput(input JobInput) error {
-	if strings.TrimSpace(input.JobDate) == "" || strings.TrimSpace(input.CustomerID) == "" || strings.TrimSpace(input.SurveyTypeID) == "" || strings.TrimSpace(input.LocationID) == "" {
+	if strings.TrimSpace(input.JobDate) == "" || strings.TrimSpace(input.CustomerID) == "" || strings.TrimSpace(input.SurveyTypeID) == "" || strings.TrimSpace(input.LocationID) == "" || strings.TrimSpace(input.PICCustomerPersonnelID) == "" {
 		return ErrInvalidInput
 	}
 	if input.Priority != "" && input.Priority != "normal" && input.Priority != "urgent" {

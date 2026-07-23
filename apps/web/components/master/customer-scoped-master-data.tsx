@@ -64,7 +64,7 @@ export function CustomerScopedMasterIndex({
   }
 
   return <div className="page-stack master-data-customer-picker">
-    <PageHeader title={config.label} description="Pilih Customer terlebih dahulu. Seluruh CRUD setelahnya disimpan melalui API customer-scoped." />
+    <PageHeader title={config.label} description="Pilih Customer terlebih dahulu. Data yang dikelola akan tersimpan untuk Customer tersebut." />
     {error ? <div className="alert alert-danger">{error}</div> : null}
     {loading ? <div className="workspace-panel" role="status">Memuat Customer...</div> : null}
     {!loading && customers.length === 0 ? <div className="workspace-panel"><p className="muted-text">Customer belum tersedia.</p></div> : null}
@@ -140,7 +140,7 @@ export function CustomerScopedMasterDetail({ category, customerId, routeFamily, 
     <div className="workspace-panel detail-grid">
       <div><span>Customer</span><strong>{customer.customer_name}</strong></div>
       <div><span>Kode</span><strong>{customer.customer_code}</strong></div>
-      <div><span>Scope API</span><strong>Customer terkunci</strong></div>
+      <div><span>Cakupan Data</span><strong>Khusus Customer ini</strong></div>
     </div>
     <MasterDataPage resourceId={mapping.resourceId} endpointOverride={endpoint} fixedValues={{ customer_id: customerId }} backHref={backHref} />
     {category === "survey-type" ? <SurveyTypeReferenceConfiguration customerId={customerId} /> : null}
@@ -210,7 +210,7 @@ function SurveyTypeReferenceConfiguration({ customerId }: { customerId: string }
   }
 
   return <section className="workspace-panel page-stack">
-    <div className="section-title-row"><div><h2>Mapping Referensi Survey Type</h2><p className="muted-text">Mapping ini menentukan opsi teknis yang boleh dipakai Surveyor.</p></div><button className="primary-button" disabled={saving || !options} onClick={() => void save()}>{saving ? "Menyimpan..." : "Simpan Mapping"}</button></div>
+    <div className="section-title-row"><div><h2>Mapping Referensi Survey Type</h2><p className="muted-text">Mapping ini menentukan pilihan yang tersedia bagi Surveyor GIFT.</p></div><button className="primary-button" disabled={saving || !options} onClick={() => void save()}>{saving ? "Menyimpan..." : "Simpan Mapping"}</button></div>
     <label className="field"><span>Survey Type</span><select value={surveyTypeId} onChange={(event) => setSurveyTypeId(event.target.value)}><option value="">Pilih Survey Type</option>{surveyTypes.map((item) => <option key={item.id} value={item.id}>{item.code} - {item.name}</option>)}</select></label>
     {message ? <div className="alert alert-warning">{message}</div> : null}
     {options ? <div className="detail-grid">

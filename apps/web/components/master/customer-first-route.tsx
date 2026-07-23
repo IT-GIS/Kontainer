@@ -26,7 +26,7 @@ export function ActualMasterDataIndex({ category, customerDetailTab }: { categor
     <ProtectedRoute>
       <AppShell
         title={config.label}
-        subtitle="Master Data per Customer pada API aktual."
+        subtitle="Master Data dikelola secara terpisah untuk setiap Customer."
         breadcrumbs={[{ label: "Master Data" }, { label: config.label }]}
       >
         <CustomerScopedMasterIndex category={category} routeFamily="actual" customerDetailTab={customerDetailTab} />
@@ -41,7 +41,7 @@ export function ActualMasterDataDetail({ category, customerId }: { category: Fit
     <ProtectedRoute>
       <AppShell
         title={config.label}
-        subtitle="Customer terkunci dari route; data global tidak digunakan sebagai fallback."
+        subtitle="Data pada halaman ini khusus untuk Customer yang dipilih."
         breadcrumbs={[
           { label: "Master Data" },
           { label: config.label, href: masterDataIndexHref(category, "actual") },

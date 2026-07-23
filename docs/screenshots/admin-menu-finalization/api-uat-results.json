@@ -1,0 +1,620 @@
+{
+  "runAt": "2026-07-23T06:52:38.847Z",
+  "baseURL": "http://127.0.0.1:8081/api/v1",
+  "suffix": "89557566",
+  "summary": {
+    "total": 79,
+    "pass": 77,
+    "fail": 0,
+    "blocked": 1,
+    "decisionRequired": 1
+  },
+  "created": {
+    "customer": "1e95fb79-ee0d-41aa-b26a-99f07e50976c",
+    "customer2": "4d388157-406a-47e6-9343-8ad39bbf6700",
+    "personnel": "78654527-4834-48d5-9339-48d3eb97d4f6",
+    "personnel2": "ca66d226-f8fd-4f8f-8e42-f87efbfa14b4",
+    "location": "34275f3a-6e39-4224-998f-4c06aa4869cc",
+    "location2": "79a8279e-1d29-4f2b-9d59-92b471e4e52e",
+    "containerType": "c3a0e586-8fda-40de-bd9c-4e5689ffe647",
+    "surveyType": "79589597-afe5-42ba-bd7d-e9d7df2f2c68",
+    "cedexLocation": "876c2246-4992-4fd2-a749-3d223f4c9e6f",
+    "cedexComponent": "72120964-15d2-493b-9794-b7f85560c39d",
+    "cedexDamage": "003fc685-001a-40c2-9455-d6f5c0df6c2d",
+    "cedexRepair": "dd311dc0-d26c-450f-bdac-22848504252f",
+    "cedexMaterial": "2e96b899-49a5-49d6-927a-1c7fe096e0e0",
+    "responsibility": "7bf864f9-91a4-4825-a3de-3c534c69e7e3",
+    "isolationCedexLocation": "6371a90e-1b0c-4e6a-854a-9a07a46f285f",
+    "severity": "903e0508-30db-405c-8f36-e6dfc8f0fb10",
+    "testParameter": "61b24416-1880-4d7f-a97a-e0429cc21ecf",
+    "photoCategory": "18bf2745-3dae-4b30-85a1-af359690d6af",
+    "checklistTemplate": "0b56a5b1-d55d-47bd-a00e-26654be2a956",
+    "checklistItem": "5665a85b-983b-4764-b230-d698bd4f3ae5",
+    "job": "9cb28aad-c5f8-4a6e-93c6-7718905972fe",
+    "directContainer": "d52f27a5-6060-41f6-aaad-a9d3deaa837b",
+    "importedContainer": "30956aa8-4a29-4628-b5a2-2d297cd4208e",
+    "surveyA": "b3b96ed8-8308-4a83-af84-e5d488d1260e",
+    "surveyB": "5905e03b-cc89-45cd-a99a-94f57871239c",
+    "deleteCandidate": "85d7a58e-5b30-41d8-bdc1-e141d2be7629"
+  },
+  "results": [
+    {
+      "area": "Authentication",
+      "scenario": "Login admin@gift.local",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Authentication",
+      "scenario": "Login supervisor@gift.local",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Authentication",
+      "scenario": "Login management@gift.local",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Authentication",
+      "scenario": "Login surveyor@gift.local",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Customer CRUD",
+      "scenario": "Create customer",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Customer isolation",
+      "scenario": "Create customer2",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Customer CRUD",
+      "scenario": "Update customer",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Customer CRUD",
+      "scenario": "Duplicate customer code rejected",
+      "expected": "409",
+      "actual": 409,
+      "status": "PASS"
+    },
+    {
+      "area": "Customer CRUD",
+      "scenario": "Create personnel",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Customer CRUD",
+      "scenario": "Update personnel inactive",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Customer CRUD",
+      "scenario": "Update personnel reactivate",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Customer isolation",
+      "scenario": "Create personnel2",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Customer CRUD",
+      "scenario": "Create location",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Customer isolation",
+      "scenario": "Create location2",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Inspection references",
+      "scenario": "Create containerType",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Inspection references",
+      "scenario": "Create surveyType",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "ISO CEDEX CRUD",
+      "scenario": "Create cedexLocation",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "ISO CEDEX CRUD",
+      "scenario": "Create cedexComponent",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "ISO CEDEX CRUD",
+      "scenario": "Create cedexDamage",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "ISO CEDEX CRUD",
+      "scenario": "Create cedexRepair",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "ISO CEDEX CRUD",
+      "scenario": "Update Action Repair inactive",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "ISO CEDEX CRUD",
+      "scenario": "Update Action Repair reactivate",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "ISO CEDEX CRUD",
+      "scenario": "Create cedexMaterial",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "ISO CEDEX CRUD",
+      "scenario": "Create responsibility",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "ISO CEDEX CRUD",
+      "scenario": "Duplicate within same Customer rejected",
+      "expected": "409",
+      "actual": 409,
+      "status": "PASS"
+    },
+    {
+      "area": "Customer isolation",
+      "scenario": "Create isolationCedexLocation",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Customer isolation",
+      "scenario": "List Customer A ISO CEDEX",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Customer isolation",
+      "scenario": "Customer B record absent from Customer A list",
+      "expected": "PASS",
+      "actual": "PASS",
+      "status": "PASS",
+      "detail": {
+        "customerA": "1e95fb79-ee0d-41aa-b26a-99f07e50976c",
+        "customerB": "4d388157-406a-47e6-9343-8ad39bbf6700"
+      }
+    },
+    {
+      "area": "Inspection references",
+      "scenario": "Create severity",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Inspection references",
+      "scenario": "Create testParameter",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Inspection references",
+      "scenario": "Create photoCategory",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Inspection references",
+      "scenario": "Map Survey Type references",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Inspection references",
+      "scenario": "Create checklistTemplate",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Inspection references",
+      "scenario": "Create checklistItem",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Inspection references",
+      "scenario": "Update checklistTemplate activate",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Create Job",
+      "scenario": "Cross-Customer references rejected",
+      "expected": "422",
+      "actual": 422,
+      "status": "PASS"
+    },
+    {
+      "area": "Create Job",
+      "scenario": "Create job",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Add Container",
+      "scenario": "POST container persists",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Add Container",
+      "scenario": "Read persisted container",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Add Container",
+      "scenario": "INSERT field alignment",
+      "expected": "PASS",
+      "actual": "PASS",
+      "status": "PASS",
+      "detail": {
+        "expectedOverride": "Nomor sintetis untuk UAT lokal",
+        "actualOverride": "Nomor sintetis untuk UAT lokal",
+        "expectedContainerType": "c3a0e586-8fda-40de-bd9c-4e5689ffe647",
+        "actualContainerType": "c3a0e586-8fda-40de-bd9c-4e5689ffe647",
+        "expectedISO": "22G1",
+        "actualISO": "22G1"
+      }
+    },
+    {
+      "area": "Import",
+      "scenario": "CSV preview",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Import",
+      "scenario": "Preview row valid",
+      "expected": "PASS",
+      "actual": "PASS",
+      "status": "PASS",
+      "detail": {
+        "validRows": 1,
+        "failedRows": 0
+      }
+    },
+    {
+      "area": "Import",
+      "scenario": "Confirm import",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Import",
+      "scenario": "Read imported container",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Assignment",
+      "scenario": "List Surveyor GIFT",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Assignment",
+      "scenario": "Assign only Surveyor GIFT",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Surveyor sanity",
+      "scenario": "Start survey TSTU9557566",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Surveyor sanity",
+      "scenario": "Start survey TSTU9557567",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Survey repository",
+      "scenario": "GET master-options on actual MySQL",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Survey repository",
+      "scenario": "GET checklist on actual MySQL",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Survey repository",
+      "scenario": "Actual type_name query and scoped options returned",
+      "expected": "PASS",
+      "actual": "PASS",
+      "status": "PASS",
+      "detail": {
+        "containerTypeName": "General Purpose UAT",
+        "checklistItems": 1
+      }
+    },
+    {
+      "area": "Damage Counter",
+      "scenario": "POST damage",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Damage Counter",
+      "scenario": "PUT damage",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Damage Counter",
+      "scenario": "DELETE damage",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Surveyor sanity",
+      "scenario": "Read checklist b3b96ed8-8308-4a83-af84-e5d488d1260e",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Surveyor sanity",
+      "scenario": "Complete checklist b3b96ed8-8308-4a83-af84-e5d488d1260e",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Surveyor sanity",
+      "scenario": "Complete general info b3b96ed8-8308-4a83-af84-e5d488d1260e",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Surveyor sanity",
+      "scenario": "Preview b3b96ed8-8308-4a83-af84-e5d488d1260e",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Review workflow",
+      "scenario": "Submit b3b96ed8-8308-4a83-af84-e5d488d1260e",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Review workflow",
+      "scenario": "Supervisor Need Revision",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Review workflow",
+      "scenario": "Surveyor resubmit",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Review workflow",
+      "scenario": "Supervisor Approve without generate_report",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Reports",
+      "scenario": "Approve generate_report=false still queues report metadata",
+      "expected": "DECISION_REQUIRED",
+      "actual": "DECISION_REQUIRED",
+      "status": "DECISION_REQUIRED",
+      "detail": {
+        "reportNo": "GIFT-RPT-2026-000002",
+        "generationStatus": "queued"
+      }
+    },
+    {
+      "area": "Surveyor sanity",
+      "scenario": "Read checklist 5905e03b-cc89-45cd-a99a-94f57871239c",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Surveyor sanity",
+      "scenario": "Complete checklist 5905e03b-cc89-45cd-a99a-94f57871239c",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Surveyor sanity",
+      "scenario": "Complete general info 5905e03b-cc89-45cd-a99a-94f57871239c",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Surveyor sanity",
+      "scenario": "Preview 5905e03b-cc89-45cd-a99a-94f57871239c",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Review workflow",
+      "scenario": "Submit 5905e03b-cc89-45cd-a99a-94f57871239c",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Review workflow",
+      "scenario": "Supervisor Reject",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Role and permission",
+      "scenario": "Supervisor reads review history",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Reports",
+      "scenario": "Management reads reports",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Reports",
+      "scenario": "Management reads report detail",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Reports",
+      "scenario": "Management reads report versions",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Role and permission",
+      "scenario": "Management mutation rejected",
+      "expected": "403",
+      "actual": 403,
+      "status": "PASS"
+    },
+    {
+      "area": "Master CRUD",
+      "scenario": "Create deleteCandidate",
+      "expected": "201",
+      "actual": 201,
+      "status": "PASS"
+    },
+    {
+      "area": "Master CRUD",
+      "scenario": "Delete/deactivate disposable record",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Customer CRUD",
+      "scenario": "Update customer final inactive",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Customer isolation",
+      "scenario": "Update customer2 final inactive",
+      "expected": "200",
+      "actual": 200,
+      "status": "PASS"
+    },
+    {
+      "area": "Object storage",
+      "scenario": "Photo upload",
+      "expected": "BLOCKED",
+      "actual": "BLOCKED",
+      "status": "BLOCKED",
+      "detail": "MinIO tidak diaktifkan pada scope finalisasi Admin; tidak diklaim lulus."
+    }
+  ]
+}

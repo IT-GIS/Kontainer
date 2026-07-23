@@ -2,6 +2,7 @@ package masterdata
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -38,6 +39,21 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	handler.resource(master, authService, "/cedex/materials", Resources["cedex_materials"])
 	handler.resource(master, authService, "/responsibility-codes", Resources["responsibility_codes"])
 
+	customerMaster := v1.Group("/customers/:id")
+	handler.resourceItems(customerMaster, authService, "/locations", customerScopedResource(Resources["locations"]), "customer_id")
+	handler.resourceItems(customerMaster, authService, "/personnel", Resources["customer_personnel"], "customer_id")
+	handler.resourceItems(customerMaster, authService, "/container-types", customerScopedResource(Resources["container_types"]), "customer_id")
+	handler.resourceItems(customerMaster, authService, "/survey-types", customerScopedResource(Resources["survey_types"]), "customer_id")
+	handler.resourceItems(customerMaster, authService, "/cedex/locations", customerScopedResource(Resources["cedex_locations"]), "customer_id")
+	handler.resourceItems(customerMaster, authService, "/cedex/components", customerScopedResource(Resources["cedex_components"]), "customer_id")
+	handler.resourceItems(customerMaster, authService, "/cedex/damages", customerScopedResource(Resources["cedex_damages"]), "customer_id")
+	handler.resourceItems(customerMaster, authService, "/cedex/repairs", customerScopedResource(Resources["cedex_repairs"]), "customer_id")
+	handler.resourceItems(customerMaster, authService, "/cedex/materials", customerScopedResource(Resources["cedex_materials"]), "customer_id")
+	handler.resourceItems(customerMaster, authService, "/responsibility-codes", customerScopedResource(Resources["responsibility_codes"]), "customer_id")
+	handler.resourceItems(customerMaster, authService, "/checklist-templates", customerScopedResource(Resources["fitness_checklist_templates"]), "customer_id")
+	customerMaster.GET("/survey-types/:item_id/reference-options", middleware.RequirePermission(authService, "survey_types.view.all"), handler.GetCustomerReferenceOptions)
+	customerMaster.PUT("/survey-types/:item_id/reference-options", middleware.RequirePermission(authService, "survey_types.update.all"), handler.SetCustomerReferenceOptions)
+
 	fitnessMaster := v1.Group("/fitness/master-data")
 	handler.resource(fitnessMaster, authService, "/owners", fitnessAdminResource(Resources["customers"]))
 	handler.resource(fitnessMaster, authService, "/manufacturers", fitnessAdminResource(Resources["container_manufacturers"]))
@@ -58,6 +74,45 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	handler.resource(fitnessMaster, authService, "/inspection-recommendations", fitnessAdminResource(Resources["inspection_recommendations"]))
 	handler.resource(fitnessMaster, authService, "/authorized-signers", fitnessAdminResource(Resources["authorized_signers"]))
 	handler.resource(fitnessMaster, authService, "/company-profile", fitnessAdminResource(Resources["company_profiles"]))
+}
+
+func (h Handler) GetCustomerReferenceOptions(c *gin.Context) {
+	customerID, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	surveyTypeID, ok := parseUUIDParam(c, "item_id")
+	if !ok {
+		return
+	}
+	item, err := h.service.GetCustomerReferenceOptions(c.Request.Context(), customerID, surveyTypeID)
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Konfigurasi referensi berhasil diambil.", item)
+}
+
+func (h Handler) SetCustomerReferenceOptions(c *gin.Context) {
+	customerID, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	surveyTypeID, ok := parseUUIDParam(c, "item_id")
+	if !ok {
+		return
+	}
+	var input CustomerReferenceOptionsInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		apphttp.Fail(c, http.StatusUnprocessableEntity, "Validasi gagal.", "VALIDATION_ERROR", []apphttp.ErrorDetail{{Message: "Request body JSON tidak valid."}})
+		return
+	}
+	item, err := h.service.SetCustomerReferenceOptions(c.Request.Context(), customerID, surveyTypeID, input, actorFromContext(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Konfigurasi referensi berhasil disimpan.", item)
 }
 
 func fitnessAdminResource(resource Resource) Resource {
@@ -305,6 +360,7 @@ func (h Handler) writeError(c *gin.Context, err error) {
 	case errors.Is(err, ErrInvalidInput):
 		apphttp.Fail(c, http.StatusUnprocessableEntity, "Validasi gagal.", "VALIDATION_ERROR", []apphttp.ErrorDetail{{Message: strings.TrimPrefix(err.Error(), ErrInvalidInput.Error()+": ")}})
 	default:
+		slog.Error("master data request failed", "error", err, "request_id", c.GetString("request_id"), "path", c.Request.URL.Path)
 		apphttp.Fail(c, http.StatusInternalServerError, "Terjadi kesalahan internal.", "INTERNAL_ERROR", nil)
 	}
 }

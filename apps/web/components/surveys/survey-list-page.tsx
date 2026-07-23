@@ -75,12 +75,16 @@ export function SurveyListPage({ title, description, endpoint, fixedStatus = "",
       <div className="toolbar">
         <label className="search-box">
           <Search size={17} />
+          <span className="sr-only">Cari survei</span>
           <input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Cari survey, job, container, customer, surveyor" />
         </label>
         {statusOptions.length > 0 ? (
-          <select value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }}>
-            {statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
+          <label>
+            <span className="sr-only">{endpoint === "/reviews" ? "Filter keputusan" : "Filter status survei"}</span>
+            <select value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }}>
+              {statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          </label>
         ) : null}
       </div>
       {endpoint === "/surveys/monitoring" ? (

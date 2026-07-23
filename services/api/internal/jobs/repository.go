@@ -88,6 +88,14 @@ func (r Repository) CreateJob(ctx context.Context, input JobInput, actor Actor) 
 	if err != nil {
 		return nil, ErrInvalidInput
 	}
+	personnelID, err := uuid.Parse(input.PICCustomerPersonnelID)
+	if err != nil {
+		return nil, ErrInvalidInput
+	}
+	personnel, err := r.validateJobOwnershipTx(ctx, tx, customerID, surveyTypeID, locationID, personnelID)
+	if err != nil {
+		return nil, err
+	}
 	deadline, err := parseOptionalTime(input.Deadline)
 	if err != nil {
 		return nil, ErrInvalidInput
@@ -95,13 +103,13 @@ func (r Repository) CreateJob(ctx context.Context, input JobInput, actor Actor) 
 	priority := normalizePriority(input.Priority)
 	row := tx.QueryRow(ctx, `
 		INSERT INTO job_orders (
-			job_order_no, job_date, customer_id, survey_type_id, location_id,
+			job_order_no, job_date, customer_id, survey_type_id, location_id, pic_customer_personnel_id,
 			pic_customer_name, pic_customer_phone, pic_customer_email, reference_no, booking_no,
 			do_no, bl_no, vessel, voyage, trucking_company, priority, deadline, instruction,
 			created_by, updated_by
-		) VALUES ($1,$2,$3,$4,$5,NULLIF($6,''),NULLIF($7,''),NULLIF($8,''),NULLIF($9,''),NULLIF($10,''),NULLIF($11,''),NULLIF($12,''),NULLIF($13,''),NULLIF($14,''),NULLIF($15,''),$16,$17,NULLIF($18,''),$19,$19)
+		) VALUES ($1,$2,$3,$4,$5,$6,NULLIF($7,''),NULLIF($8,''),NULLIF($9,''),NULLIF($10,''),NULLIF($11,''),NULLIF($12,''),NULLIF($13,''),NULLIF($14,''),NULLIF($15,''),NULLIF($16,''),$17,$18,NULLIF($19,''),$20,$20)
 		RETURNING id, job_order_no, status
-	`, jobNo, jobDate, customerID, surveyTypeID, locationID, input.PICCustomerName, input.PICCustomerPhone, input.PICCustomerEmail, input.ReferenceNo, input.BookingNo, input.DONo, input.BLNo, input.Vessel, input.Voyage, input.TruckingCompany, priority, deadline, input.Instruction, actor.UserID)
+	`, jobNo, jobDate, customerID, surveyTypeID, locationID, personnelID, personnel["name"], personnel["phone"], personnel["email"], input.ReferenceNo, input.BookingNo, input.DONo, input.BLNo, input.Vessel, input.Voyage, input.TruckingCompany, priority, deadline, input.Instruction, actor.UserID)
 	item, err := scanRow(row, []string{"id", "job_order_no", "status"})
 	if err != nil {
 		return nil, err
@@ -122,11 +130,12 @@ func (r Repository) CreateJob(ctx context.Context, input JobInput, actor Actor) 
 func (r Repository) GetJob(ctx context.Context, id uuid.UUID) (map[string]any, error) {
 	job, err := r.queryOne(ctx, `
 		SELECT jo.*, jo.id AS id_text, jo.customer_id AS customer_id_text, jo.survey_type_id AS survey_type_id_text, jo.location_id AS location_id_text,
-		       c.customer_name, st.name AS survey_type_name, l.location_name
+		       c.customer_name, st.name AS survey_type_name, l.location_name, cp.full_name AS pic_customer_personnel_name
 		FROM job_orders jo
 		JOIN customers c ON c.id = jo.customer_id
 		JOIN survey_types st ON st.id = jo.survey_type_id
 		JOIN locations l ON l.id = jo.location_id
+		LEFT JOIN customer_personnel cp ON cp.id = jo.pic_customer_personnel_id
 		WHERE jo.id = $1 AND jo.deleted_at IS NULL
 		LIMIT 1
 	`, id)
@@ -176,16 +185,33 @@ func (r Repository) UpdateJob(ctx context.Context, id uuid.UUID, input JobInput,
 	if err != nil {
 		return nil, ErrInvalidInput
 	}
+	personnelID, err := uuid.Parse(input.PICCustomerPersonnelID)
+	if err != nil {
+		return nil, ErrInvalidInput
+	}
+	personnel, err := r.validateJobOwnershipTx(ctx, tx, customerID, surveyTypeID, locationID, personnelID)
+	if err != nil {
+		return nil, err
+	}
+	if previousCustomer := jobUUID(oldValue["customer_id"]); previousCustomer != customerID {
+		var containerCount int
+		if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM job_containers WHERE job_order_id=$1 AND deleted_at IS NULL`, id).Scan(&containerCount); err != nil {
+			return nil, err
+		}
+		if containerCount > 0 {
+			return nil, FieldValidationError{Fields: map[string]string{"customer_id": "Customer Job tidak dapat diubah setelah peti kemas ditambahkan."}}
+		}
+	}
 	deadline, err := parseOptionalTime(input.Deadline)
 	if err != nil {
 		return nil, ErrInvalidInput
 	}
 	item, err := scanRow(tx.QueryRow(ctx, `
-		UPDATE job_orders SET job_date=$2, customer_id=$3, survey_type_id=$4, location_id=$5,
-		pic_customer_name=NULLIF($6,''), pic_customer_phone=NULLIF($7,''), pic_customer_email=NULLIF($8,''), reference_no=NULLIF($9,''), booking_no=NULLIF($10,''),
-		do_no=NULLIF($11,''), bl_no=NULLIF($12,''), vessel=NULLIF($13,''), voyage=NULLIF($14,''), trucking_company=NULLIF($15,''), priority=$16, deadline=$17, instruction=NULLIF($18,''), updated_by=$19, updated_at=now()
+		UPDATE job_orders SET job_date=$2, customer_id=$3, survey_type_id=$4, location_id=$5, pic_customer_personnel_id=$6,
+		pic_customer_name=NULLIF($7,''), pic_customer_phone=NULLIF($8,''), pic_customer_email=NULLIF($9,''), reference_no=NULLIF($10,''), booking_no=NULLIF($11,''),
+		do_no=NULLIF($12,''), bl_no=NULLIF($13,''), vessel=NULLIF($14,''), voyage=NULLIF($15,''), trucking_company=NULLIF($16,''), priority=$17, deadline=$18, instruction=NULLIF($19,''), updated_by=$20, updated_at=now()
 		WHERE id=$1 AND deleted_at IS NULL RETURNING id, job_order_no, status
-	`, id, jobDate, customerID, surveyTypeID, locationID, input.PICCustomerName, input.PICCustomerPhone, input.PICCustomerEmail, input.ReferenceNo, input.BookingNo, input.DONo, input.BLNo, input.Vessel, input.Voyage, input.TruckingCompany, normalizePriority(input.Priority), deadline, input.Instruction, actor.UserID), []string{"id", "job_order_no", "status"})
+	`, id, jobDate, customerID, surveyTypeID, locationID, personnelID, personnel["name"], personnel["phone"], personnel["email"], input.ReferenceNo, input.BookingNo, input.DONo, input.BLNo, input.Vessel, input.Voyage, input.TruckingCompany, normalizePriority(input.Priority), deadline, input.Instruction, actor.UserID), []string{"id", "job_order_no", "status"})
 	if err != nil {
 		return nil, err
 	}
@@ -281,10 +307,11 @@ func (r Repository) AddContainer(ctx context.Context, jobID uuid.UUID, input Con
 		return nil, err
 	}
 	defer tx.Rollback(ctx)
-	if _, err := r.getJobForUpdate(ctx, tx, jobID); err != nil {
+	job, err := r.getJobForUpdate(ctx, tx, jobID)
+	if err != nil {
 		return nil, err
 	}
-	item, err := r.addContainerTx(ctx, tx, jobID, input)
+	item, err := r.addContainerTx(ctx, tx, jobID, jobUUID(job["customer_id"]), input)
 	if err != nil {
 		return nil, err
 	}
@@ -308,11 +335,12 @@ func (r Repository) ImportContainers(ctx context.Context, jobID uuid.UUID, input
 		return result, err
 	}
 	defer tx.Rollback(ctx)
-	if _, err := r.getJobForUpdate(ctx, tx, jobID); err != nil {
+	job, err := r.getJobForUpdate(ctx, tx, jobID)
+	if err != nil {
 		return result, err
 	}
 	for index, input := range inputs {
-		item, err := r.addContainerTx(ctx, tx, jobID, input)
+		item, err := r.addContainerTx(ctx, tx, jobID, jobUUID(job["customer_id"]), input)
 		if err != nil {
 			result.Failed++
 			result.Errors = append(result.Errors, map[string]any{"row": index + 1, "field": "container_no", "message": err.Error()})
@@ -375,6 +403,13 @@ func (r Repository) Assign(ctx context.Context, jobID uuid.UUID, input AssignInp
 	if err != nil {
 		return nil, ErrInvalidInput
 	}
+	var surveyorActive int
+	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM surveyor_profiles WHERE id=$1 AND status='active' AND deleted_at IS NULL`, surveyorID).Scan(&surveyorActive); err != nil {
+		return nil, err
+	}
+	if surveyorActive != 1 {
+		return nil, FieldValidationError{Fields: map[string]string{"surveyor_id": "Surveyor GIFT tidak aktif atau tidak ditemukan."}}
+	}
 	containerIDs, err := parseUUIDs(input.ContainerIDs)
 	if err != nil || len(containerIDs) == 0 {
 		return nil, ErrInvalidInput
@@ -397,6 +432,10 @@ func (r Repository) Assign(ctx context.Context, jobID uuid.UUID, input AssignInp
 		return nil, err
 	}
 	for _, containerID := range containerIDs {
+		var lockedContainerID uuid.UUID
+		if err := tx.QueryRow(ctx, `SELECT id FROM job_containers WHERE id=$1 AND job_order_id=$2 AND status IN ('not_started','assigned') AND deleted_at IS NULL FOR UPDATE`, containerID, jobID).Scan(&lockedContainerID); err != nil {
+			return nil, FieldValidationError{Fields: map[string]string{"container_ids": "Satu atau lebih peti kemas tidak berasal dari Job atau tidak dapat ditugaskan."}}
+		}
 		if _, err := tx.Exec(ctx, `INSERT INTO assignment_containers (assignment_id,job_container_id) VALUES ($1,$2)`, assignmentID, containerID); err != nil {
 			return nil, ErrDuplicate
 		}
@@ -486,7 +525,17 @@ func (r Repository) Timeline(ctx context.Context, jobID uuid.UUID) ([]map[string
 	return rowsToMaps(rows)
 }
 
-func (r Repository) addContainerTx(ctx context.Context, tx database.Tx, jobID uuid.UUID, input ContainerInput) (map[string]any, error) {
+const jobContainerInsertQuery = `
+	INSERT INTO job_containers (
+		job_order_id,container_no,owner_code,serial_number,check_digit,check_digit_status,
+		check_digit_override_reason,container_type_id,iso_type_code,seal_no,cargo_status,
+		gross_weight,tare_weight,payload,manufacture_date,csc_plate_status,truck_no,driver_name,remark
+	)
+	VALUES ($1,$2,$3,$4,$5,$6,NULLIF($7,''),$8,NULLIF($9,''),NULLIF($10,''),$11,$12,$13,$14,$15,NULLIF($16,''),NULLIF($17,''),NULLIF($18,''),NULLIF($19,''))
+	RETURNING id, container_no, check_digit_status, status
+`
+
+func (r Repository) addContainerTx(ctx context.Context, tx database.Tx, jobID uuid.UUID, customerID uuid.UUID, input ContainerInput) (map[string]any, error) {
 	if err := validateContainerInput(input); err != nil {
 		return nil, err
 	}
@@ -498,7 +547,7 @@ func (r Repository) addContainerTx(ctx context.Context, tx database.Tx, jobID uu
 	if checkStatus == "invalid" && strings.TrimSpace(input.CheckDigitOverrideReason) != "" {
 		checkStatus = "override"
 	}
-	containerTypeID, err := r.resolveContainerType(ctx, tx, input)
+	containerType, err := r.resolveContainerType(ctx, tx, customerID, input)
 	if err != nil {
 		return nil, err
 	}
@@ -510,11 +559,8 @@ func (r Repository) addContainerTx(ctx context.Context, tx database.Tx, jobID uu
 	if cargoStatus == "" {
 		cargoStatus = "unknown"
 	}
-	item, err := scanRow(tx.QueryRow(ctx, `
-		INSERT INTO job_containers (job_order_id,container_no,owner_code,serial_number,check_digit,check_digit_status,check_digit_override_reason,container_type_id,iso_type_code,seal_no,cargo_status,gross_weight,tare_weight,payload,manufacture_date,csc_plate_status,truck_no,driver_name,remark)
-		VALUES ($1,$2,$3,$4,$5,$6,NULLIF($7,''),$8,NULLIF($9,''),NULLIF($10,''),$11,$12,$13,$14,$15,NULLIF($16,''),NULLIF($17,''),NULLIF($18,''),NULLIF($19,''))
-		RETURNING id, container_no, check_digit_status, status
-	`, jobID, validation.ContainerNo, validation.OwnerCode+validation.EquipmentIdentifier, validation.SerialNumber, validation.CheckDigit, checkStatus, input.CheckDigitOverrideReason, containerTypeID, input.ISOTypeCode, input.SealNo, cargoStatus, input.GrossWeight, input.TareWeight, input.Payload, manufactureDate, input.CSCPlateStatus, input.TruckNo, input.DriverName, input.Remark), []string{"id", "container_no", "check_digit_status", "status"})
+	args := jobContainerInsertArgs(jobID, validation, checkStatus, input, containerType, manufactureDate, cargoStatus)
+	item, err := scanRow(tx.QueryRow(ctx, jobContainerInsertQuery, args...), []string{"id", "container_no", "check_digit_status", "status"})
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "duplicate") {
 			return nil, ErrDuplicate
@@ -524,29 +570,62 @@ func (r Repository) addContainerTx(ctx context.Context, tx database.Tx, jobID uu
 	return item, nil
 }
 
-func (r Repository) resolveContainerType(ctx context.Context, tx database.Tx, input ContainerInput) (*uuid.UUID, error) {
+func jobContainerInsertArgs(jobID uuid.UUID, validation ContainerValidation, checkStatus string, input ContainerInput, containerType resolvedContainerType, manufactureDate *time.Time, cargoStatus string) []any {
+	return []any{
+		jobID,
+		validation.ContainerNo,
+		validation.OwnerCode + validation.EquipmentIdentifier,
+		validation.SerialNumber,
+		validation.CheckDigit,
+		checkStatus,
+		input.CheckDigitOverrideReason,
+		containerType.ID,
+		containerType.ISOCode,
+		input.SealNo,
+		cargoStatus,
+		input.GrossWeight,
+		input.TareWeight,
+		input.Payload,
+		manufactureDate,
+		input.CSCPlateStatus,
+		input.TruckNo,
+		input.DriverName,
+		input.Remark,
+	}
+}
+
+type resolvedContainerType struct {
+	ID      uuid.UUID
+	ISOCode any
+}
+
+func (r Repository) resolveContainerType(ctx context.Context, tx database.Tx, customerID uuid.UUID, input ContainerInput) (resolvedContainerType, error) {
+	var item resolvedContainerType
 	if input.ContainerTypeID != nil && strings.TrimSpace(*input.ContainerTypeID) != "" {
 		parsed, err := uuid.Parse(*input.ContainerTypeID)
 		if err != nil {
-			return nil, ErrInvalidInput
+			return item, ErrInvalidInput
 		}
-		return &parsed, nil
+		err = tx.QueryRow(ctx, `SELECT id, iso_code FROM container_types WHERE id=$1 AND customer_id=$2 AND status='active' LIMIT 1`, parsed, customerID).Scan(&item.ID, &item.ISOCode)
+		if err != nil {
+			return item, FieldValidationError{Fields: map[string]string{"container_type_id": "Container Type tidak aktif atau bukan milik Customer Job."}}
+		}
+		return item, nil
 	}
 	if strings.TrimSpace(input.ContainerTypeCode) == "" {
-		return nil, nil
+		return item, FieldValidationError{Fields: map[string]string{"container_type_id": "Container Type Customer wajib dipilih."}}
 	}
-	var id uuid.UUID
-	if err := tx.QueryRow(ctx, `SELECT id FROM container_types WHERE LOWER(code)=LOWER($1) LIMIT 1`, input.ContainerTypeCode).Scan(&id); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT id, iso_code FROM container_types WHERE customer_id=$1 AND LOWER(code)=LOWER($2) AND status='active' LIMIT 1`, customerID, input.ContainerTypeCode).Scan(&item.ID, &item.ISOCode); err != nil {
 		if errors.Is(err, database.ErrNoRows) {
-			return nil, ErrInvalidInput
+			return item, FieldValidationError{Fields: map[string]string{"container_type_code": "Kode Container Type tidak aktif atau bukan milik Customer Job."}}
 		}
-		return nil, err
+		return item, err
 	}
-	return &id, nil
+	return item, nil
 }
 
 func (r Repository) getJobForUpdate(ctx context.Context, tx database.Tx, id uuid.UUID) (map[string]any, error) {
-	item, err := scanRow(tx.QueryRow(ctx, `SELECT id, job_order_no, status FROM job_orders WHERE id=$1 AND deleted_at IS NULL FOR UPDATE`, id), []string{"id", "job_order_no", "status"})
+	item, err := scanRow(tx.QueryRow(ctx, `SELECT id, job_order_no, customer_id, status FROM job_orders WHERE id=$1 AND deleted_at IS NULL FOR UPDATE`, id), []string{"id", "job_order_no", "customer_id", "status"})
 	if err != nil {
 		if errors.Is(err, database.ErrNoRows) {
 			return nil, ErrNotFound
@@ -554,6 +633,53 @@ func (r Repository) getJobForUpdate(ctx context.Context, tx database.Tx, id uuid
 		return nil, err
 	}
 	return item, nil
+}
+
+func (r Repository) validateJobOwnershipTx(ctx context.Context, tx database.Tx, customerID, surveyTypeID, locationID, personnelID uuid.UUID) (map[string]any, error) {
+	var customerCount int
+	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM customers WHERE id=$1 AND status='active' AND deleted_at IS NULL`, customerID).Scan(&customerCount); err != nil {
+		return nil, err
+	}
+	if customerCount != 1 {
+		return nil, FieldValidationError{Fields: map[string]string{"customer_id": "Customer tidak aktif atau tidak ditemukan."}}
+	}
+
+	checks := []struct {
+		table string
+		id    uuid.UUID
+		field string
+		label string
+	}{
+		{"locations", locationID, "location_id", "Location"},
+		{"survey_types", surveyTypeID, "survey_type_id", "Survey Type"},
+	}
+	for _, check := range checks {
+		var count int
+		query := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE id=$1 AND customer_id=$2 AND status='active'", check.table)
+		if err := tx.QueryRow(ctx, query, check.id, customerID).Scan(&count); err != nil {
+			return nil, err
+		}
+		if count != 1 {
+			return nil, FieldValidationError{Fields: map[string]string{check.field: check.label + " tidak aktif atau bukan milik Customer terpilih."}}
+		}
+	}
+
+	personnel, err := scanRow(tx.QueryRow(ctx, `
+		SELECT id, full_name, phone, email FROM customer_personnel
+		WHERE id=$1 AND customer_id=$2 AND status='active' AND deleted_at IS NULL LIMIT 1
+	`, personnelID, customerID), []string{"id", "name", "phone", "email"})
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return nil, FieldValidationError{Fields: map[string]string{"pic_customer_personnel_id": "Personel/PIC tidak aktif atau bukan milik Customer terpilih."}}
+		}
+		return nil, err
+	}
+	return personnel, nil
+}
+
+func jobUUID(value any) uuid.UUID {
+	parsed, _ := uuid.Parse(fmt.Sprint(value))
+	return parsed
 }
 
 func (r Repository) insertJobEvent(ctx context.Context, tx database.Tx, jobID uuid.UUID, eventType, title, description string, actorID uuid.UUID, metadata any) error {

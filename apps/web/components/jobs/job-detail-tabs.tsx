@@ -46,7 +46,7 @@ export function JobContainersTab({
   onAdd: () => void;
 }) {
   return <section className="workspace-panel job-tab-stack">
-    <div className="section-title-row"><div><h2>Peti Kemas</h2><p className="muted-text">Data awal peti kemas. Edit dan hapus tidak ditampilkan karena endpoint existing belum tersedia.</p></div><div className="job-actions">
+    <div className="section-title-row"><div><h2>Peti Kemas</h2><p className="muted-text">Kelola peti kemas yang tercatat pada pekerjaan inspeksi ini.</p></div><div className="job-actions">
       {canAdd ? <button className="secondary-button" onClick={onAdd} type="button"><PackagePlus size={17} /><span>Tambah Peti Kemas</span></button> : null}
       {canImport ? <Link className="primary-button" href={`/jobs/${jobID}/containers/import`}><Upload size={17} /><span>Import Peti Kemas</span></Link> : null}
     </div></div>
@@ -93,7 +93,7 @@ export function JobAssignmentTab({
       { key: "containers", header: "Peti Kemas", render: (row) => row.total_containers },
       { key: "status", header: "Status", render: (row) => <StatusBadge tone="success">{humanize(row.status)}</StatusBadge> }
     ]} />
-    <p className="muted-text">Pembatalan assignment tidak tersedia karena belum ada endpoint existing. Perubahan penugasan yang dilakukan melalui reassign tercatat pada tab Riwayat.</p>
+    <p className="muted-text">Perubahan penugasan Surveyor GIFT tercatat pada tab Riwayat.</p>
   </section>;
 }
 

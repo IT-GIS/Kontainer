@@ -81,31 +81,49 @@ type ChecklistInput struct {
 }
 
 type ChecklistItemInput struct {
-	ItemKey string `json:"item_key"`
-	Value   string `json:"value"`
-	Note    string `json:"note"`
+	ItemKey          string   `json:"item_key"`
+	Value            string   `json:"value"`
+	NumericValue     *float64 `json:"numeric_value"`
+	Note             string   `json:"note"`
+	AttachmentFileID string   `json:"attachment_file_id"`
 }
 
 type DamageInput struct {
-	Face                string   `json:"face"`
-	InternalLocation    string   `json:"internal_location"`
-	CEDEXLocationID     string   `json:"cedex_location_id"`
-	CEDEXLocationCode   string   `json:"cedex_location_code"`
-	ComponentID         string   `json:"component_code_id"`
-	DamageID            string   `json:"damage_code_id"`
-	RepairID            string   `json:"repair_code_id"`
-	MaterialID          string   `json:"material_code_id"`
-	ResponsibilityID    string   `json:"responsibility_code_id"`
-	Severity            string   `json:"severity"`
-	Quantity            *int     `json:"quantity"`
-	Length              *float64 `json:"length"`
-	Width               *float64 `json:"width"`
-	Depth               *float64 `json:"depth"`
-	Unit                string   `json:"unit"`
-	IsRepairRequired    bool     `json:"is_repair_required"`
-	IsCargoWorthyImpact bool     `json:"is_cargo_worthy_impact"`
-	IsPhotoOnly         bool     `json:"is_photo_only"`
-	Remark              string   `json:"remark"`
+	Face                 string   `json:"face"`
+	InternalLocation     string   `json:"internal_location"`
+	CEDEXLocationID      string   `json:"cedex_location_id"`
+	CEDEXLocationCode    string   `json:"cedex_location_code"`
+	ManualLocationReason string   `json:"manual_location_reason"`
+	ComponentID          string   `json:"component_code_id"`
+	DamageID             string   `json:"damage_code_id"`
+	RepairID             string   `json:"repair_code_id"`
+	MaterialID           string   `json:"material_code_id"`
+	ResponsibilityID     string   `json:"responsibility_code_id"`
+	Severity             string   `json:"severity"`
+	Quantity             *int     `json:"quantity"`
+	Length               *float64 `json:"length"`
+	Width                *float64 `json:"width"`
+	Depth                *float64 `json:"depth"`
+	Unit                 string   `json:"unit"`
+	IsRepairRequired     bool     `json:"is_repair_required"`
+	IsCargoWorthyImpact  bool     `json:"is_cargo_worthy_impact"`
+	IsPhotoOnly          bool     `json:"is_photo_only"`
+	Remark               string   `json:"remark"`
+}
+
+type SurveyMasterOptions struct {
+	Customer            map[string]any   `json:"customer"`
+	SurveyType          map[string]any   `json:"survey_type"`
+	ContainerType       map[string]any   `json:"container_type"`
+	CEDEXLocations      []map[string]any `json:"cedex_locations"`
+	CEDEXComponents     []map[string]any `json:"cedex_components"`
+	CEDEXDamages        []map[string]any `json:"cedex_damages"`
+	CEDEXRepairs        []map[string]any `json:"cedex_repairs"`
+	CEDEXMaterials      []map[string]any `json:"cedex_materials"`
+	ResponsibilityCodes []map[string]any `json:"responsibility_codes"`
+	FindingSeverities   []map[string]any `json:"finding_severities"`
+	TestParameters      []map[string]any `json:"test_parameters"`
+	PhotoCategories     []map[string]any `json:"photo_categories"`
 }
 
 type SubmitInput struct {

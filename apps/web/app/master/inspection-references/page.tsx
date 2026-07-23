@@ -42,11 +42,11 @@ export default async function InspectionReferencesPage({ searchParams }: { searc
     <ProtectedRoute>
       <AppShell
         title="Referensi Pemeriksaan"
-        subtitle="Kelola referensi pemeriksaan existing tanpa membuat nilai ambang, metode uji, atau standar baru."
+        subtitle="Kelola referensi yang digunakan dalam pelaksanaan pemeriksaan peti kemas."
         breadcrumbs={[{ label: "Master Data" }, { label: "Referensi Pemeriksaan" }]}
       >
         <div className="page-stack">
-          <PageHeader title="Referensi Pemeriksaan" description="Container Type, Survey Type, Checklist, dan referensi teknis disatukan dalam enam tab." />
+          <PageHeader title="Referensi Pemeriksaan" description="Kelola Container Type, Survey Type, Checklist, Test Parameter, Photo Category, dan Finding Severity." />
           <WorkspaceTabs
             activeID={active.id}
             label="Jenis Referensi Pemeriksaan"

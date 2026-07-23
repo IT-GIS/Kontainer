@@ -56,13 +56,13 @@ function UsersContent() {
   }, [load]);
 
   return <div className="page-stack">
-    <PageHeader title="User & Hak Akses" description="Daftar akun dan referensi Role & Permission existing dalam satu halaman Pengaturan." />
+    <PageHeader title="User & Hak Akses" description="Kelola daftar akun serta tinjau Role dan Permission pengguna." />
     <div className="toolbar">
-      <label className="search-box"><Search size={17} /><input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Cari nama, email, username" /></label>
-      <select value={role} onChange={(event) => { setPage(1); setRole(event.target.value); }}><option value="">Semua Role</option>{["super_admin", "admin", "surveyor", "supervisor", "finance", "management"].map((item) => <option value={item} key={item}>{item.replaceAll("_", " ")}</option>)}</select>
-      <select value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }}><option value="">Semua Status</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="locked">Locked</option></select>
+      <label className="search-box"><Search size={17} /><span className="sr-only">Cari user</span><input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Cari nama, email, username" /></label>
+      <label><span className="sr-only">Filter role user</span><select value={role} onChange={(event) => { setPage(1); setRole(event.target.value); }}><option value="">Semua Role</option>{["super_admin", "admin", "surveyor", "supervisor", "finance", "management"].map((item) => <option value={item} key={item}>{item.replaceAll("_", " ")}</option>)}</select></label>
+      <label><span className="sr-only">Filter status user</span><select value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }}><option value="">Semua Status</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="locked">Locked</option></select></label>
     </div>
-    {error ? <div className="alert alert-danger">{error}</div> : null}
+    {error ? <div className="alert alert-danger" role="alert">{error}</div> : null}
     <DataTable rows={rows} isLoading={isLoading} page={page} totalPages={totalPages} onPageChange={setPage} emptyText="User tidak ditemukan." columns={[
       { key: "name", header: "Name", render: (row) => row.name },
       { key: "email", header: "Email", render: (row) => row.email },
@@ -74,9 +74,9 @@ function UsersContent() {
     <section className="workspace-panel page-stack" id="role-permission" aria-labelledby="role-permission-heading">
       <div>
         <h2 id="role-permission-heading">Role & Permission</h2>
-        <p className="muted-text">Permission backend existing tetap menjadi sumber hak akses. Tahap ini hanya menggabungkan presentation navigasi.</p>
+        <p className="muted-text">Role dan Permission menentukan akses setiap pengguna di dalam aplikasi.</p>
       </div>
-      <div className="alert alert-warning">Pengelolaan Role & Permission tetap mengikuti kemampuan dan permission existing; tidak ada action backend baru.</div>
+      <div className="alert alert-warning">Pastikan setiap pengguna hanya memperoleh akses yang sesuai dengan tanggung jawabnya.</div>
     </section>
   </div>;
 }

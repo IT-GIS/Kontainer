@@ -102,6 +102,9 @@ func (r Repository) List(ctx context.Context, resource Resource, params ListPara
 
 func (r Repository) Get(ctx context.Context, resource Resource, id uuid.UUID) (map[string]any, error) {
 	where := "WHERE id = $1"
+	if resource.LegacyOnly {
+		where += " AND customer_id IS NULL"
+	}
 	if resource.SoftDelete {
 		where += " AND deleted_at IS NULL"
 	}
@@ -176,6 +179,9 @@ func (r Repository) Update(ctx context.Context, resource Resource, id uuid.UUID,
 	sets = append(sets, "updated_at = now()")
 
 	where := fmt.Sprintf("WHERE id = $%d", len(args))
+	if resource.LegacyOnly {
+		where += " AND customer_id IS NULL"
+	}
 	if resource.SoftDelete {
 		where += " AND deleted_at IS NULL"
 	}
@@ -195,9 +201,17 @@ func (r Repository) Delete(ctx context.Context, resource Resource, id uuid.UUID)
 
 	var query string
 	if resource.SoftDelete {
-		query = fmt.Sprintf("UPDATE %s SET %s = $1, deleted_at = now(), updated_at = now() WHERE id = $2 AND deleted_at IS NULL RETURNING %s", resource.Table, statusField, resource.selectColumns())
+		legacyWhere := ""
+		if resource.LegacyOnly {
+			legacyWhere = " AND customer_id IS NULL"
+		}
+		query = fmt.Sprintf("UPDATE %s SET %s = $1, deleted_at = now(), updated_at = now() WHERE id = $2%s AND deleted_at IS NULL RETURNING %s", resource.Table, statusField, legacyWhere, resource.selectColumns())
 	} else {
-		query = fmt.Sprintf("UPDATE %s SET %s = $1, updated_at = now() WHERE id = $2 RETURNING %s", resource.Table, statusField, resource.selectColumns())
+		legacyWhere := ""
+		if resource.LegacyOnly {
+			legacyWhere = " AND customer_id IS NULL"
+		}
+		query = fmt.Sprintf("UPDATE %s SET %s = $1, updated_at = now() WHERE id = $2%s RETURNING %s", resource.Table, statusField, legacyWhere, resource.selectColumns())
 	}
 	return r.queryOne(ctx, query, resource.inactiveStatusValue(), id)
 }
@@ -236,6 +250,9 @@ func (r Repository) DuplicateExists(ctx context.Context, resource Resource, payl
 	if resource.SoftDelete {
 		where += " AND deleted_at IS NULL"
 	}
+	if resource.LegacyOnly {
+		where += " AND customer_id IS NULL"
+	}
 	if excludeID != nil {
 		args = append(args, *excludeID)
 		where += fmt.Sprintf(" AND id <> $%d", len(args))
@@ -253,9 +270,53 @@ func (r Repository) InsertAudit(ctx context.Context, entry AuditEntry) error {
 		INSERT INTO audit_logs (
 			user_id, active_role, action, entity_type, entity_id, old_value, new_value,
 			request_id, ip_address, user_agent
-		) VALUES ($1, $2, $3, $4, $5, NULLIF($6, 'null'), NULLIF($7, 'null'), NULLIF($8, ''), NULLIF($9, ''), NULLIF($10, ''))
+		) VALUES ($1, $2, $3, $4, $5, NULLIF(NULLIF($6, ''), 'null'), NULLIF(NULLIF($7, ''), 'null'), NULLIF($8, ''), NULLIF($9, ''), NULLIF($10, ''))
 	`, entry.UserID, entry.ActiveRole, entry.Action, entry.EntityType, entry.EntityID, string(entry.OldValue), string(entry.NewValue), entry.RequestID, entry.IPAddress, entry.UserAgent)
 	return err
+}
+
+func (r Repository) ValidateDomainMutation(ctx context.Context, resource Resource, payload map[string]any, id *uuid.UUID) error {
+	if resource.Name != "fitness_checklist_templates" || resource.LegacyOnly {
+		return nil
+	}
+	customerID, err := uuid.Parse(stringValue(payload["customer_id"]))
+	if err != nil {
+		return fmt.Errorf("%w: customer_id wajib diisi", ErrInvalidInput)
+	}
+	surveyTypeID, err := uuid.Parse(stringValue(payload["survey_type_id"]))
+	if err != nil {
+		return fmt.Errorf("%w: survey_type_id wajib diisi", ErrInvalidInput)
+	}
+	containerTypeID, err := uuid.Parse(stringValue(payload["container_type_id"]))
+	if err != nil {
+		return fmt.Errorf("%w: container_type_id wajib diisi", ErrInvalidInput)
+	}
+	var customerCount, surveyTypeCount, containerTypeCount int
+	if err := r.runner().QueryRow(ctx, `SELECT COUNT(*) FROM customers WHERE id=$1 AND status='active' AND deleted_at IS NULL`, customerID).Scan(&customerCount); err != nil {
+		return err
+	}
+	if err := r.runner().QueryRow(ctx, `SELECT COUNT(*) FROM survey_types WHERE id=$1 AND customer_id=$2 AND status='active'`, surveyTypeID, customerID).Scan(&surveyTypeCount); err != nil {
+		return err
+	}
+	if err := r.runner().QueryRow(ctx, `SELECT COUNT(*) FROM container_types WHERE id=$1 AND customer_id=$2 AND status='active'`, containerTypeID, customerID).Scan(&containerTypeCount); err != nil {
+		return err
+	}
+	if customerCount != 1 || surveyTypeCount != 1 || containerTypeCount != 1 {
+		return fmt.Errorf("%w: Customer, Survey Type, dan Container Type harus aktif dan berasal dari Customer yang sama", ErrInvalidInput)
+	}
+	if stringValue(payload["status"]) == "active" {
+		if id == nil {
+			return fmt.Errorf("%w: Template harus disimpan sebagai draft sebelum item aktif ditambahkan", ErrInvalidInput)
+		}
+		var activeItems int
+		if err := r.runner().QueryRow(ctx, `SELECT COUNT(*) FROM fitness_checklist_template_items WHERE template_id=$1 AND status='active'`, *id).Scan(&activeItems); err != nil {
+			return err
+		}
+		if activeItems == 0 {
+			return fmt.Errorf("%w: Template aktif wajib mempunyai minimal satu item aktif", ErrInvalidInput)
+		}
+	}
+	return nil
 }
 
 func (r Repository) count(ctx context.Context, resource Resource, where string, args []any) (int, error) {
@@ -286,6 +347,9 @@ func (r Repository) queryOne(ctx context.Context, query string, args ...any) (ma
 func buildWhere(resource Resource, params ListParams) (string, []any) {
 	clauses := []string{}
 	args := []any{}
+	if resource.LegacyOnly {
+		clauses = append(clauses, "customer_id IS NULL")
+	}
 	if resource.SoftDelete {
 		clauses = append(clauses, "deleted_at IS NULL")
 	}
