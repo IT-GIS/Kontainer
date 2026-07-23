@@ -11,6 +11,7 @@ import { WorkspaceTabs } from "@/components/ui/workspace-tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { apiData } from "@/lib/api-client";
 import { loadAllPages } from "@/lib/inspection-work";
+import { can } from "@/lib/permissions";
 import type { ReportSummary, ReviewDetail } from "@/types/reviews";
 import type { SurveyListItem } from "@/types/surveys";
 
@@ -35,7 +36,8 @@ const emptyFilters: ReportFilters = { search: "", customer: "", location: "", su
 export function DocumentReportWorkspace() {
   const requestedView = useSearchParams().get("view");
   const view = requestedView === "recap" ? "recap" : requestedView === "archive" ? "archive" : "reports";
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
+  const canViewSurveyMonitoring = can(user, "surveys.view.all");
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [recaps, setRecaps] = useState<RecapRow[]>([]);
   const [filters, setFilters] = useState<ReportFilters>(emptyFilters);
@@ -47,10 +49,10 @@ export function DocumentReportWorkspace() {
     setIsLoading(true);
     setError(null);
     try {
-      const [reports, surveys] = await Promise.all([
-        loadAllPages<ReportSummary>("/reports", accessToken),
-        loadAllPages<SurveyListItem>("/surveys/monitoring", accessToken)
-      ]);
+      const reports = await loadAllPages<ReportSummary>("/reports", accessToken);
+      const surveys = canViewSurveyMonitoring
+        ? await loadAllPages<SurveyListItem>("/surveys/monitoring", accessToken)
+        : [];
       const reviews = (await mapConcurrent(surveys, 6, (survey) => apiData<ReviewDetail>(`/reviews/${survey.survey_id}`, { accessToken }).catch(() => null)))
         .filter((item): item is ReviewDetail => item !== null);
       const reviewBySurvey = new Map(reviews.map((review) => [review.survey_no, review]));
@@ -61,7 +63,7 @@ export function DocumentReportWorkspace() {
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken]);
+  }, [accessToken, canViewSurveyMonitoring]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadData(), 0);

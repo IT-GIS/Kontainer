@@ -1,0 +1,35 @@
+{
+  "timestamp": "2026-07-23T04:32:36.600Z",
+  "state": {
+    "finalURL": "/reports",
+    "title": "Dokumen & Laporan",
+    "activeNavCount": 1,
+    "alerts": [],
+    "reportLinks": [
+      "GIFT-RPT-2026-000001",
+      "Lihat Metadata",
+      "GIFT-RPT-2026-000001",
+      "Lihat Metadata"
+    ],
+    "horizontalOverflow": false
+  },
+  "errors": [],
+  "responses": [
+    {
+      "status": 204,
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    }
+  ]
+}

@@ -1,0 +1,154 @@
+{
+  "timestamp": "2026-07-23T04:47:19.075Z",
+  "pass": 12,
+  "total": 12,
+  "checks": [
+    {
+      "route": "/master/iso-cedex?tab=location",
+      "expectedTab": "Location Code",
+      "finalURL": "/master/iso-cedex?tab=location",
+      "title": "Master ISO CEDEX",
+      "activeWorkspaceTab": "Location Code",
+      "activeWorkspaceTabCount": 1,
+      "activeSidebarCount": 1,
+      "alerts": [],
+      "horizontalOverflow": false,
+      "pass": true
+    },
+    {
+      "route": "/master/iso-cedex?tab=component",
+      "expectedTab": "Component Code",
+      "finalURL": "/master/iso-cedex?tab=component",
+      "title": "Master ISO CEDEX",
+      "activeWorkspaceTab": "Component Code",
+      "activeWorkspaceTabCount": 1,
+      "activeSidebarCount": 1,
+      "alerts": [],
+      "horizontalOverflow": false,
+      "pass": true
+    },
+    {
+      "route": "/master/iso-cedex?tab=damage",
+      "expectedTab": "Damage Code",
+      "finalURL": "/master/iso-cedex?tab=damage",
+      "title": "Master ISO CEDEX",
+      "activeWorkspaceTab": "Damage Code",
+      "activeWorkspaceTabCount": 1,
+      "activeSidebarCount": 1,
+      "alerts": [],
+      "horizontalOverflow": false,
+      "pass": true
+    },
+    {
+      "route": "/master/iso-cedex?tab=action-repair",
+      "expectedTab": "Action Repair Code",
+      "finalURL": "/master/iso-cedex?tab=action-repair",
+      "title": "Master ISO CEDEX",
+      "activeWorkspaceTab": "Action Repair Code",
+      "activeWorkspaceTabCount": 1,
+      "activeSidebarCount": 1,
+      "alerts": [],
+      "horizontalOverflow": false,
+      "pass": true
+    },
+    {
+      "route": "/master/iso-cedex?tab=material",
+      "expectedTab": "Material Code",
+      "finalURL": "/master/iso-cedex?tab=material",
+      "title": "Master ISO CEDEX",
+      "activeWorkspaceTab": "Material Code",
+      "activeWorkspaceTabCount": 1,
+      "activeSidebarCount": 1,
+      "alerts": [],
+      "horizontalOverflow": false,
+      "pass": true
+    },
+    {
+      "route": "/master/iso-cedex?tab=responsibility",
+      "expectedTab": "Responsibility Code",
+      "finalURL": "/master/iso-cedex?tab=responsibility",
+      "title": "Master ISO CEDEX",
+      "activeWorkspaceTab": "Responsibility Code",
+      "activeWorkspaceTabCount": 1,
+      "activeSidebarCount": 1,
+      "alerts": [],
+      "horizontalOverflow": false,
+      "pass": true
+    },
+    {
+      "route": "/master/inspection-references?tab=container-type",
+      "expectedTab": "Container Type",
+      "finalURL": "/master/inspection-references?tab=container-type",
+      "title": "Referensi Pemeriksaan",
+      "activeWorkspaceTab": "Container Type",
+      "activeWorkspaceTabCount": 1,
+      "activeSidebarCount": 1,
+      "alerts": [],
+      "horizontalOverflow": false,
+      "pass": true
+    },
+    {
+      "route": "/master/inspection-references?tab=survey-type",
+      "expectedTab": "Survey Type",
+      "finalURL": "/master/inspection-references?tab=survey-type",
+      "title": "Referensi Pemeriksaan",
+      "activeWorkspaceTab": "Survey Type",
+      "activeWorkspaceTabCount": 1,
+      "activeSidebarCount": 1,
+      "alerts": [],
+      "horizontalOverflow": false,
+      "pass": true
+    },
+    {
+      "route": "/master/inspection-references?tab=checklist",
+      "expectedTab": "Checklist",
+      "finalURL": "/master/inspection-references?tab=checklist",
+      "title": "Referensi Pemeriksaan",
+      "activeWorkspaceTab": "Checklist",
+      "activeWorkspaceTabCount": 1,
+      "activeSidebarCount": 1,
+      "alerts": [],
+      "horizontalOverflow": false,
+      "pass": true
+    },
+    {
+      "route": "/master/inspection-references?tab=test-parameter",
+      "expectedTab": "Test Parameter",
+      "finalURL": "/master/inspection-references?tab=test-parameter",
+      "title": "Referensi Pemeriksaan",
+      "activeWorkspaceTab": "Test Parameter",
+      "activeWorkspaceTabCount": 1,
+      "activeSidebarCount": 1,
+      "alerts": [],
+      "horizontalOverflow": false,
+      "pass": true
+    },
+    {
+      "route": "/master/inspection-references?tab=photo-category",
+      "expectedTab": "Photo Category",
+      "finalURL": "/master/inspection-references?tab=photo-category",
+      "title": "Referensi Pemeriksaan",
+      "activeWorkspaceTab": "Photo Category",
+      "activeWorkspaceTabCount": 1,
+      "activeSidebarCount": 1,
+      "alerts": [],
+      "horizontalOverflow": false,
+      "pass": true
+    },
+    {
+      "route": "/master/inspection-references?tab=finding-severity",
+      "expectedTab": "Finding Severity",
+      "finalURL": "/master/inspection-references?tab=finding-severity",
+      "title": "Referensi Pemeriksaan",
+      "activeWorkspaceTab": "Finding Severity",
+      "activeWorkspaceTabCount": 1,
+      "activeSidebarCount": 1,
+      "alerts": [],
+      "horizontalOverflow": false,
+      "pass": true
+    }
+  ],
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+}

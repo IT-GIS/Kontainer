@@ -1,0 +1,2769 @@
+{
+  "timestamp": "2026-07-23T04:29:54.262Z",
+  "browser": "Microsoft Edge headless melalui Chrome DevTools Protocol",
+  "adminLanding": "/dashboard",
+  "supervisorLanding": "/dashboard",
+  "managementLanding": "/dashboard",
+  "surveyorLanding": "/dashboard",
+  "screenshotCount": 20,
+  "screenshots": [
+    {
+      "name": "01-admin-dashboard-1366",
+      "path": "/dashboard",
+      "finalURL": "/dashboard",
+      "width": 1366,
+      "height": 768,
+      "title": "Dashboard",
+      "bodyLength": 644,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "Dashboard"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 0,
+      "unlabeledInputCount": 0,
+      "runtimeAlert": []
+    },
+    {
+      "name": "02-iso-location-1920",
+      "path": "/master/iso-cedex?tab=location",
+      "finalURL": "/master/iso-cedex?tab=location",
+      "width": 1920,
+      "height": 1080,
+      "title": "Master ISO CEDEX",
+      "bodyLength": 1385,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "ISO CEDEX"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 0,
+      "unlabeledInputCount": 0,
+      "runtimeAlert": []
+    },
+    {
+      "name": "03-iso-component-1366",
+      "path": "/master/iso-cedex?tab=component",
+      "finalURL": "/master/iso-cedex?tab=component",
+      "width": 1366,
+      "height": 768,
+      "title": "Master ISO CEDEX",
+      "bodyLength": 1316,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "ISO CEDEX"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 0,
+      "unlabeledInputCount": 0,
+      "runtimeAlert": []
+    },
+    {
+      "name": "04-iso-action-repair-1024",
+      "path": "/master/iso-cedex?tab=action-repair",
+      "finalURL": "/master/iso-cedex?tab=action-repair",
+      "width": 1024,
+      "height": 768,
+      "title": "Master ISO CEDEX",
+      "bodyLength": 1458,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "ISO CEDEX"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 0,
+      "unlabeledInputCount": 0,
+      "runtimeAlert": []
+    },
+    {
+      "name": "05-reference-container-type-1366",
+      "path": "/master/inspection-references?tab=container-type",
+      "finalURL": "/master/inspection-references?tab=container-type",
+      "width": 1366,
+      "height": 768,
+      "title": "Referensi Pemeriksaan",
+      "bodyLength": 1152,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "Referensi Pemeriksaan"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 0,
+      "unlabeledInputCount": 0,
+      "runtimeAlert": []
+    },
+    {
+      "name": "06-reference-checklist-1024",
+      "path": "/master/inspection-references?tab=checklist",
+      "finalURL": "/master/inspection-references?tab=checklist",
+      "width": 1024,
+      "height": 768,
+      "title": "Referensi Pemeriksaan",
+      "bodyLength": 988,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "Referensi Pemeriksaan"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 0,
+      "unlabeledInputCount": 0,
+      "runtimeAlert": []
+    },
+    {
+      "name": "07-customer-profile-1366",
+      "path": "/master/customers/customer/32aa190f-d0de-448d-b533-421da6e87ce9?tab=profile",
+      "finalURL": "/master/customers/customer/32aa190f-d0de-448d-b533-421da6e87ce9?tab=profile",
+      "width": 1366,
+      "height": 768,
+      "title": "Detail Customer",
+      "bodyLength": 857,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "Customer"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 0,
+      "unlabeledInputCount": 0,
+      "runtimeAlert": []
+    },
+    {
+      "name": "08-customer-personnel-1024",
+      "path": "/master/customers/customer/32aa190f-d0de-448d-b533-421da6e87ce9?tab=personnel",
+      "finalURL": "/master/customers/customer/32aa190f-d0de-448d-b533-421da6e87ce9?tab=personnel",
+      "width": 1024,
+      "height": 768,
+      "title": "Detail Customer",
+      "bodyLength": 747,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "Customer"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 2,
+      "unlabeledInputCount": 1,
+      "runtimeAlert": []
+    },
+    {
+      "name": "09-customer-location-768",
+      "path": "/master/customers/customer/32aa190f-d0de-448d-b533-421da6e87ce9?tab=location",
+      "finalURL": "/master/customers/customer/32aa190f-d0de-448d-b533-421da6e87ce9?tab=location",
+      "width": 768,
+      "height": 1024,
+      "title": "Detail Customer",
+      "bodyLength": 721,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "Customer"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 2,
+      "unlabeledInputCount": 1,
+      "runtimeAlert": []
+    },
+    {
+      "name": "10-customer-history-1366",
+      "path": "/master/customers/customer/32aa190f-d0de-448d-b533-421da6e87ce9?tab=history",
+      "finalURL": "/master/customers/customer/32aa190f-d0de-448d-b533-421da6e87ce9?tab=history",
+      "width": 1366,
+      "height": 768,
+      "title": "Detail Customer",
+      "bodyLength": 854,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "Customer"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 0,
+      "unlabeledInputCount": 0,
+      "runtimeAlert": []
+    },
+    {
+      "name": "11-jobs-list-1920",
+      "path": "/jobs",
+      "finalURL": "/jobs",
+      "width": 1920,
+      "height": 1080,
+      "title": "Pekerjaan Inspeksi",
+      "bodyLength": 1957,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "Semua Pekerjaan"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 11,
+      "unlabeledInputCount": 0,
+      "runtimeAlert": []
+    },
+    {
+      "name": "12-job-create-1366",
+      "path": "/jobs/create",
+      "finalURL": "/jobs/create",
+      "width": 1366,
+      "height": 768,
+      "title": "Buat Pekerjaan",
+      "bodyLength": 883,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "Buat Job/SPK"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 17,
+      "unlabeledInputCount": 0,
+      "runtimeAlert": []
+    },
+    {
+      "name": "13-job-detail-summary-1366",
+      "path": "/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9?tab=ringkasan",
+      "finalURL": "/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9?tab=ringkasan",
+      "width": 1366,
+      "height": 768,
+      "title": "Detail Pekerjaan",
+      "bodyLength": 858,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "Semua Pekerjaan"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 0,
+      "unlabeledInputCount": 0,
+      "runtimeAlert": []
+    },
+    {
+      "name": "14-job-detail-assignment-1024",
+      "path": "/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9?tab=penugasan",
+      "finalURL": "/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9?tab=penugasan",
+      "width": 1024,
+      "height": 768,
+      "title": "Detail Pekerjaan",
+      "bodyLength": 897,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "Semua Pekerjaan"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 0,
+      "unlabeledInputCount": 0,
+      "runtimeAlert": []
+    },
+    {
+      "name": "15-survey-monitoring-admin-1366",
+      "path": "/surveys/monitoring",
+      "finalURL": "/jobs?view=in-progress&compat=monitoring",
+      "width": 1366,
+      "height": 768,
+      "title": "Pekerjaan Inspeksi",
+      "bodyLength": 1016,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "Semua Pekerjaan"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 11,
+      "unlabeledInputCount": 0,
+      "runtimeAlert": []
+    },
+    {
+      "name": "19-users-access-admin-768",
+      "path": "/settings/users#role-permission",
+      "finalURL": "/settings/users#role-permission",
+      "width": 768,
+      "height": 1024,
+      "title": "User & Hak Akses",
+      "bodyLength": 1370,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "User & Hak Akses"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 3,
+      "unlabeledInputCount": 2,
+      "runtimeAlert": []
+    },
+    {
+      "name": "16-review-pending-supervisor-1024",
+      "path": "/review/pending",
+      "finalURL": "/review/pending",
+      "width": 1024,
+      "height": 768,
+      "title": "Menunggu Review",
+      "bodyLength": 438,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "Menunggu Review"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 1,
+      "unlabeledInputCount": 0,
+      "runtimeAlert": []
+    },
+    {
+      "name": "17-review-history-supervisor-1366",
+      "path": "/review/history",
+      "finalURL": "/review/history",
+      "width": 1366,
+      "height": 768,
+      "title": "Riwayat Keputusan",
+      "bodyLength": 577,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "Riwayat Keputusan"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 2,
+      "unlabeledInputCount": 1,
+      "runtimeAlert": []
+    },
+    {
+      "name": "18-reports-management-1366",
+      "path": "/reports",
+      "finalURL": "/reports",
+      "width": 1366,
+      "height": 768,
+      "title": "Dokumen & Laporan",
+      "bodyLength": 648,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "Laporan Pemeriksaan"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 9,
+      "unlabeledInputCount": 0,
+      "runtimeAlert": [
+        "User tidak memiliki permission."
+      ]
+    },
+    {
+      "name": "20-surveyor-menu-mobile-390",
+      "path": "/surveyor/jobs",
+      "finalURL": "/surveyor/jobs",
+      "width": 390,
+      "height": 844,
+      "title": "Job Saya",
+      "bodyLength": 698,
+      "hasMain": true,
+      "headingCount": 1,
+      "activeNavCount": 1,
+      "activeNavText": [
+        "Pekerjaan Saya"
+      ],
+      "horizontalOverflow": false,
+      "duplicateIDCount": 0,
+      "inputCount": 2,
+      "unlabeledInputCount": 1,
+      "runtimeAlert": []
+    }
+  ],
+  "compatibilityChecks": [
+    {
+      "route": "/master/locations",
+      "expected": "/master/customers?tab=location&compat=locations",
+      "finalURL": "/master/customers?tab=location&compat=locations",
+      "pass": true,
+      "title": "Customer",
+      "activeNavCount": 1
+    },
+    {
+      "route": "/master/container-types",
+      "expected": "/master/inspection-references?tab=container-type",
+      "finalURL": "/master/inspection-references?tab=container-type",
+      "pass": true,
+      "title": "Referensi Pemeriksaan",
+      "activeNavCount": 1
+    },
+    {
+      "route": "/master/survey-types",
+      "expected": "/master/inspection-references?tab=survey-type",
+      "finalURL": "/master/inspection-references?tab=survey-type",
+      "pass": true,
+      "title": "Referensi Pemeriksaan",
+      "activeNavCount": 1
+    },
+    {
+      "route": "/master/cedex/locations",
+      "expected": "/master/iso-cedex?tab=location",
+      "finalURL": "/master/iso-cedex?tab=location",
+      "pass": true,
+      "title": "Master ISO CEDEX",
+      "activeNavCount": 1
+    },
+    {
+      "route": "/master/cedex/components",
+      "expected": "/master/iso-cedex?tab=component",
+      "finalURL": "/master/iso-cedex?tab=component",
+      "pass": true,
+      "title": "Master ISO CEDEX",
+      "activeNavCount": 1
+    },
+    {
+      "route": "/master/cedex/damages",
+      "expected": "/master/iso-cedex?tab=damage",
+      "finalURL": "/master/iso-cedex?tab=damage",
+      "pass": true,
+      "title": "Master ISO CEDEX",
+      "activeNavCount": 1
+    },
+    {
+      "route": "/master/cedex/repairs",
+      "expected": "/master/iso-cedex?tab=action-repair",
+      "finalURL": "/master/iso-cedex?tab=action-repair",
+      "pass": true,
+      "title": "Master ISO CEDEX",
+      "activeNavCount": 1
+    },
+    {
+      "route": "/master/cedex/materials",
+      "expected": "/master/iso-cedex?tab=material",
+      "finalURL": "/master/iso-cedex?tab=material",
+      "pass": true,
+      "title": "Master ISO CEDEX",
+      "activeNavCount": 1
+    },
+    {
+      "route": "/master/responsibility-codes",
+      "expected": "/master/iso-cedex?tab=responsibility",
+      "finalURL": "/master/iso-cedex?tab=responsibility",
+      "pass": true,
+      "title": "Master ISO CEDEX",
+      "activeNavCount": 1
+    },
+    {
+      "route": "/jobs/assign",
+      "expected": "/jobs?view=unassigned&compat=assign",
+      "finalURL": "/jobs?view=unassigned&compat=assign",
+      "pass": true,
+      "title": "Pekerjaan Inspeksi",
+      "activeNavCount": 1
+    },
+    {
+      "route": "/jobs/import",
+      "expected": "/jobs?view=unassigned&compat=import",
+      "finalURL": "/jobs?view=unassigned&compat=import",
+      "pass": true,
+      "title": "Pekerjaan Inspeksi",
+      "activeNavCount": 1
+    },
+    {
+      "route": "/surveys/monitoring",
+      "expected": "/jobs?view=in-progress&compat=monitoring",
+      "finalURL": "/jobs?view=in-progress&compat=monitoring",
+      "pass": true,
+      "title": "Pekerjaan Inspeksi",
+      "activeNavCount": 1
+    },
+    {
+      "route": "/surveys/monitoring/in-progress",
+      "expected": "/jobs?view=in-progress&compat=monitoring",
+      "finalURL": "/jobs?view=in-progress&compat=monitoring",
+      "pass": true,
+      "title": "Pekerjaan Inspeksi",
+      "activeNavCount": 1
+    },
+    {
+      "route": "/surveys/monitoring/submitted",
+      "expected": "/jobs?view=pending-review&compat=monitoring",
+      "finalURL": "/jobs?view=pending-review&compat=monitoring",
+      "pass": true,
+      "title": "Pekerjaan Inspeksi",
+      "activeNavCount": 1
+    },
+    {
+      "route": "/surveys/monitoring/need-revision",
+      "expected": "/jobs?view=need-revision&compat=monitoring",
+      "finalURL": "/jobs?view=need-revision&compat=monitoring",
+      "pass": true,
+      "title": "Pekerjaan Inspeksi",
+      "activeNavCount": 1
+    },
+    {
+      "route": "/surveys/monitoring/approved",
+      "expected": "/jobs?view=approved&compat=monitoring",
+      "finalURL": "/jobs?view=approved&compat=monitoring",
+      "pass": true,
+      "title": "Pekerjaan Inspeksi",
+      "activeNavCount": 1
+    },
+    {
+      "route": "/reports/versions",
+      "expected": "/reports?view=archive&compat=versions",
+      "finalURL": "/reports?view=archive&compat=versions",
+      "pass": true,
+      "title": "Dokumen & Laporan",
+      "activeNavCount": 1
+    },
+    {
+      "route": "/settings/roles",
+      "expected": "/settings/users#role-permission",
+      "finalURL": "/settings/users#role-permission",
+      "pass": true,
+      "title": "User & Hak Akses",
+      "activeNavCount": 1
+    }
+  ],
+  "historyNavigation": {
+    "backPath": "/master/iso-cedex?tab=component",
+    "forwardPath": "/master/inspection-references?tab=survey-type",
+    "refreshPath": "/master/inspection-references?tab=survey-type"
+  },
+  "keyboardFocus": {
+    "tag": "BUTTON",
+    "text": "",
+    "outlineStyle": "solid",
+    "outlineWidth": "2px"
+  },
+  "zoom200": {
+    "title": "Master ISO CEDEX",
+    "bodyLength": 1357,
+    "hasMain": true,
+    "headingCount": 1,
+    "activeNavCount": 1,
+    "activeNavText": [
+      "ISO CEDEX"
+    ],
+    "horizontalOverflow": false,
+    "duplicateIDCount": 0,
+    "inputCount": 0,
+    "unlabeledInputCount": 0,
+    "runtimeAlert": []
+  },
+  "viewportCoverage": [
+    {
+      "width": 390,
+      "height": 844
+    },
+    {
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "width": 1024,
+      "height": 768
+    },
+    {
+      "width": 1366,
+      "height": 768
+    },
+    {
+      "width": 1920,
+      "height": 1080
+    }
+  ],
+  "roleNavigation": [
+    {
+      "email": "supervisor@gift.local",
+      "landing": "/dashboard",
+      "navigation": [
+        "Review & Keputusan",
+        "Dokumen & Laporan"
+      ]
+    },
+    {
+      "email": "management@gift.local",
+      "landing": "/dashboard",
+      "navigation": [
+        "Dashboard",
+        "Dokumen & Laporan",
+        "Rekap Customer"
+      ]
+    },
+    {
+      "email": "surveyor@gift.local",
+      "landing": "/dashboard",
+      "navigation": [
+        "Dashboard Surveyor",
+        "Pekerjaan Saya",
+        "Perlu Revisi",
+        "Riwayat Pemeriksaan"
+      ]
+    }
+  ],
+  "responseStatuses": [
+    {
+      "status": 404,
+      "type": "Other",
+      "url": "http://localhost:3000/favicon.ico"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/auth/login"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/auth/login"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/dashboard/admin"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/dashboard/admin"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/dashboard/admin"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/dashboard/admin"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/dashboard/admin"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/dashboard/admin"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/dashboard/admin"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/dashboard/admin"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers/32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100&customer_id=32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers/32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100&customer_id=32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers/32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers/32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100&customer_id=32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100&customer_id=32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers/32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100&customer_id=32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers/32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100&customer_id=32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers/32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100&customer_id=32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers/32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100&customer_id=32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/customers/32aa190f-d0de-448d-b533-421da6e87ce9/personnel?page=1&per_page=10"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/customers/32aa190f-d0de-448d-b533-421da6e87ce9/personnel?page=1&per_page=10"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100&customer_id=32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers/32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100&customer_id=32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers/32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100&customer_id=32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100&customer_id=32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers/32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers/32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/customers/32aa190f-d0de-448d-b533-421da6e87ce9/locations?page=1&per_page=10"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/customers/32aa190f-d0de-448d-b533-421da6e87ce9/locations?page=1&per_page=10"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers/32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100&customer_id=32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers/32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100&customer_id=32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers/32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100&customer_id=32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100&customer_id=32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers/32aa190f-d0de-448d-b533-421da6e87ce9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/cda39d6b-da4f-4c29-b08b-3f8409ccfa99"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/ba973397-9eee-4cf9-b987-9a2e4e727195"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/cda39d6b-da4f-4c29-b08b-3f8409ccfa99"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/ba973397-9eee-4cf9-b987-9a2e4e727195"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100&status=active"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100&status=active"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100&status=active"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100&status=active"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/surveyors?page=1&per_page=100&status=active"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/surveyors?page=1&per_page=100&status=active"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/surveyors?page=1&per_page=100&status=active"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100&search=GIFT-JO-2026-000003"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/surveyors?page=1&per_page=100&status=active"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/customers/32aa190f-d0de-448d-b533-421da6e87ce9/container-types?page=1&per_page=100&status=active"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100&search=GIFT-JO-2026-000003"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/customers/32aa190f-d0de-448d-b533-421da6e87ce9/container-types?page=1&per_page=100&status=active"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100&job_order_id=1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100&job_order_id=1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/surveyors?page=1&per_page=100&status=active"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/surveyors?page=1&per_page=100&status=active"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/surveyors?page=1&per_page=100&status=active"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100&search=GIFT-JO-2026-000003"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/surveyors?page=1&per_page=100&status=active"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/customers/32aa190f-d0de-448d-b533-421da6e87ce9/container-types?page=1&per_page=100&status=active"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100&search=GIFT-JO-2026-000003"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/customers/32aa190f-d0de-448d-b533-421da6e87ce9/container-types?page=1&per_page=100&status=active"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100&job_order_id=1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100&job_order_id=1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/ba973397-9eee-4cf9-b987-9a2e4e727195"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/cda39d6b-da4f-4c29-b08b-3f8409ccfa99"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/ba973397-9eee-4cf9-b987-9a2e4e727195"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/cda39d6b-da4f-4c29-b08b-3f8409ccfa99"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/users?page=1&per_page=10"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/users?page=1&per_page=10"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=10"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=10"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/cda39d6b-da4f-4c29-b08b-3f8409ccfa99"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/ba973397-9eee-4cf9-b987-9a2e4e727195"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/cda39d6b-da4f-4c29-b08b-3f8409ccfa99"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/ba973397-9eee-4cf9-b987-9a2e4e727195"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/cda39d6b-da4f-4c29-b08b-3f8409ccfa99"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/ba973397-9eee-4cf9-b987-9a2e4e727195"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/cda39d6b-da4f-4c29-b08b-3f8409ccfa99"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/ba973397-9eee-4cf9-b987-9a2e4e727195"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/cda39d6b-da4f-4c29-b08b-3f8409ccfa99"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/ba973397-9eee-4cf9-b987-9a2e4e727195"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/ba973397-9eee-4cf9-b987-9a2e4e727195"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/cda39d6b-da4f-4c29-b08b-3f8409ccfa99"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/ba973397-9eee-4cf9-b987-9a2e4e727195"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/cda39d6b-da4f-4c29-b08b-3f8409ccfa99"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/cda39d6b-da4f-4c29-b08b-3f8409ccfa99"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/ba973397-9eee-4cf9-b987-9a2e4e727195"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/ba973397-9eee-4cf9-b987-9a2e4e727195"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/cda39d6b-da4f-4c29-b08b-3f8409ccfa99"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/ba973397-9eee-4cf9-b987-9a2e4e727195"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/cda39d6b-da4f-4c29-b08b-3f8409ccfa99"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/cda39d6b-da4f-4c29-b08b-3f8409ccfa99"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/ba973397-9eee-4cf9-b987-9a2e4e727195"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/ba973397-9eee-4cf9-b987-9a2e4e727195"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/cda39d6b-da4f-4c29-b08b-3f8409ccfa99"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/cda39d6b-da4f-4c29-b08b-3f8409ccfa99"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/ba973397-9eee-4cf9-b987-9a2e4e727195"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/ba973397-9eee-4cf9-b987-9a2e4e727195"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/cda39d6b-da4f-4c29-b08b-3f8409ccfa99"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/jobs/1b39e6d9-c766-41ae-bdfb-24b53e76eaa9"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/724d3aea-49fb-41de-82ce-05d35a394925"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/293e4859-83eb-4e36-9ab5-48fbe2f33bbf"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/users?page=1&per_page=10"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/users?page=1&per_page=10"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 404,
+      "type": "Other",
+      "url": "http://localhost:3000/favicon.ico"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/master/customers?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/auth/login"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/auth/login"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews/pending?page=1&per_page=10"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews/pending?page=1&per_page=10"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reviews?page=1&per_page=10&status=need_revision"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reviews?page=1&per_page=10&status=need_revision"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/auth/login"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/auth/login"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 403,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/surveys/monitoring?page=1&per_page=100"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/reports?page=1&per_page=100"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/auth/login"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/auth/login"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/me"
+    },
+    {
+      "status": 204,
+      "type": "Preflight",
+      "url": "http://localhost:8080/api/v1/surveyor/jobs?page=1&per_page=10"
+    },
+    {
+      "status": 200,
+      "type": "Fetch",
+      "url": "http://localhost:8080/api/v1/surveyor/jobs?page=1&per_page=10"
+    }
+  ],
+  "networkFailures": [
+    {
+      "url": "3F60E4A8E96D6017EB045AC09AF6619C",
+      "reason": "net::ERR_ABORTED",
+      "canceled": true
+    }
+  ],
+  "browserErrors": [
+    "log: Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "log: Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  ]
+}
