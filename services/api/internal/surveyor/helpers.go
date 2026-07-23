@@ -144,7 +144,11 @@ func (r Repository) nextDamageNo(ctx context.Context, tx database.Tx, surveyID u
 		return "", err
 	}
 	var next int
-	err = tx.QueryRow(ctx, `UPDATE survey_damage_counters SET last_number=last_number+1, updated_at=now() WHERE survey_id=$1 RETURNING last_number`, surveyID).Scan(&next)
+	_, err = tx.Exec(ctx, `UPDATE survey_damage_counters SET last_number=last_number+1, updated_at=now() WHERE survey_id=$1`, surveyID)
+	if err != nil {
+		return "", err
+	}
+	err = tx.QueryRow(ctx, `SELECT last_number FROM survey_damage_counters WHERE survey_id=$1`, surveyID).Scan(&next)
 	if err != nil {
 		return "", err
 	}
