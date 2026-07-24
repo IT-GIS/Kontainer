@@ -1,5 +1,7 @@
-import { NavigationPlaceholderPage } from "@/components/navigation/navigation-placeholder-page";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { AppShell } from "@/components/layout/app-shell";
+import { NumberingSettings } from "@/components/settings/admin-settings";
 
 export default function NumberingSettingsPage() {
-  return <NavigationPlaceholderPage title="Numbering Setting" backHref="/dashboard" backLabel="Kembali ke Dashboard" />;
+  return <ProtectedRoute><AppShell title="Penomoran"><NumberingSettings /></AppShell></ProtectedRoute>;
 }

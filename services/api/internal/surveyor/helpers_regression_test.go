@@ -27,6 +27,17 @@ func TestSurveyBaseQueryUsesActualMySQLColumns(t *testing.T) {
 	}
 }
 
+func TestSurveyMutationRoleRejectsNonSurveyor(t *testing.T) {
+	for _, role := range []string{"", "admin", "supervisor", "super_admin", "management", "finance"} {
+		if err := requireSurveyorMutationRole(Actor{ActiveRole: role}); !errors.Is(err, ErrForbidden) {
+			t.Fatalf("role %q error = %v, want ErrForbidden", role, err)
+		}
+	}
+	if err := requireSurveyorMutationRole(Actor{ActiveRole: "surveyor"}); err != nil {
+		t.Fatalf("surveyor role error = %v, want nil", err)
+	}
+}
+
 func TestNextDamageNoUsesMySQLCounterSequenceWithoutIDColumn(t *testing.T) {
 	tx := &damageCounterTx{next: 7}
 	number, err := (Repository{}).nextDamageNo(context.Background(), tx, uuid.New())

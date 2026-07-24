@@ -52,6 +52,9 @@ func (s *Service) ListContainers(ctx context.Context, jobID uuid.UUID, actor Act
 }
 
 func (s *Service) StartSurvey(ctx context.Context, input StartSurveyInput, actor Actor) (map[string]any, error) {
+	if err := requireSurveyorMutationRole(actor); err != nil {
+		return nil, err
+	}
 	if strings.TrimSpace(input.JobContainerID) == "" {
 		return nil, ErrInvalidInput
 	}
@@ -67,6 +70,9 @@ func (s *Service) MasterOptions(ctx context.Context, id uuid.UUID, actor Actor) 
 }
 
 func (s *Service) UpdateGeneralInfo(ctx context.Context, id uuid.UUID, input GeneralInfoInput, actor Actor) (map[string]any, error) {
+	if err := requireSurveyorMutationRole(actor); err != nil {
+		return nil, err
+	}
 	return s.repo.UpdateGeneralInfo(ctx, id, input, actor)
 }
 
@@ -75,6 +81,9 @@ func (s *Service) Checklist(ctx context.Context, id uuid.UUID, actor Actor) ([]m
 }
 
 func (s *Service) UpdateChecklist(ctx context.Context, id uuid.UUID, input ChecklistInput, actor Actor) (map[string]any, error) {
+	if err := requireSurveyorMutationRole(actor); err != nil {
+		return nil, err
+	}
 	return s.repo.UpdateChecklist(ctx, id, input, actor)
 }
 
@@ -87,18 +96,30 @@ func (s *Service) Damages(ctx context.Context, id uuid.UUID, actor Actor) ([]map
 }
 
 func (s *Service) CreateDamage(ctx context.Context, surveyID uuid.UUID, input DamageInput, actor Actor) (map[string]any, error) {
+	if err := requireSurveyorMutationRole(actor); err != nil {
+		return nil, err
+	}
 	return s.repo.CreateDamage(ctx, surveyID, input, actor)
 }
 
 func (s *Service) UpdateDamage(ctx context.Context, damageID uuid.UUID, input DamageInput, actor Actor) (map[string]any, error) {
+	if err := requireSurveyorMutationRole(actor); err != nil {
+		return nil, err
+	}
 	return s.repo.UpdateDamage(ctx, damageID, input, actor)
 }
 
 func (s *Service) DeleteDamage(ctx context.Context, damageID uuid.UUID, actor Actor) (map[string]any, error) {
+	if err := requireSurveyorMutationRole(actor); err != nil {
+		return nil, err
+	}
 	return s.repo.DeleteDamage(ctx, damageID, actor)
 }
 
 func (s *Service) UploadPhoto(ctx context.Context, damageID uuid.UUID, input PhotoInput, actor Actor) (map[string]any, error) {
+	if err := requireSurveyorMutationRole(actor); err != nil {
+		return nil, err
+	}
 	if s.store == nil || strings.TrimSpace(s.bucket) == "" || input.Reader == nil || input.Size <= 0 || input.Size > s.maxUploadBytes {
 		return nil, ErrInvalidInput
 	}
@@ -126,5 +147,15 @@ func (s *Service) Preview(ctx context.Context, surveyID uuid.UUID, actor Actor) 
 }
 
 func (s *Service) Submit(ctx context.Context, surveyID uuid.UUID, input SubmitInput, actor Actor) (map[string]any, error) {
+	if err := requireSurveyorMutationRole(actor); err != nil {
+		return nil, err
+	}
 	return s.repo.Submit(ctx, surveyID, input, actor)
+}
+
+func requireSurveyorMutationRole(actor Actor) error {
+	if actor.ActiveRole != "surveyor" {
+		return ErrForbidden
+	}
+	return nil
 }

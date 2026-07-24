@@ -6,6 +6,7 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "lint": "eslint .",
+    "test:navigation": "node scripts/check-admin-navigation.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

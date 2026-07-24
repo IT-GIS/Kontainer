@@ -1,4 +1,5 @@
 import { Gauge } from "lucide-react";
+import { redirect } from "next/navigation";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { FitnessMasterCompatibilityNotice, type CompatibilityNoticeProps } from "@/components/fitness/client-master-data/client-pages";
 import { FitnessPlaceholderPage } from "@/components/fitness/fitness-placeholder-page";
@@ -45,6 +46,17 @@ export const fitnessMasterDataCompatibility: Record<string, CompatibilityNoticeP
   "/fitness/master-data/company-profile": { ...notice("Profil Badan Usaha lama", "Profil badan usaha merupakan data internal GIFT.", "Buka Profil Badan Usaha", "/settings/company-profile"), internalGift: true }
 };
 
+const canonicalWorkflowRoutes: Record<string, string> = {
+  "/fitness/containers": "/jobs",
+  "/fitness/assignments": "/jobs?view=assigned",
+  "/fitness/inspections": "/jobs?view=in-progress",
+  "/fitness/reviews": "/review/pending",
+  "/fitness/approvals": "/review/history",
+  "/fitness/documents": "/reports",
+  "/fitness/reports": "/reports",
+  "/fitness/legacy-archive": "/reports?view=archive"
+};
+
 export default async function FitnessRoutePage({ params, searchParams }: FitnessRouteProps) {
   const [resolvedParams, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const slug = resolvedParams.slug ?? ["dashboard"];
@@ -52,12 +64,14 @@ export default async function FitnessRoutePage({ params, searchParams }: Fitness
   const activeHref = buildActiveHref(path, resolvedSearchParams);
   const compatibilityItem = fitnessMasterDataCompatibility[path] ?? (path.startsWith("/fitness/master-data/checklist-templates/") ? fitnessMasterDataCompatibility["/fitness/master-data/checklist-templates"] : undefined);
 
+  if (canonicalWorkflowRoutes[path]) redirect(canonicalWorkflowRoutes[path]);
+
   if (compatibilityItem) {
     return (
       <ProtectedRoute>
         <AppShell
           title={compatibilityItem.title}
-          subtitle="Compatibility route Admin Kelaikan"
+          subtitle="Arah menu lama ke workflow Admin yang aktif"
           breadcrumbs={[{ label: "Admin Kelaikan", href: "/fitness/dashboard" }, { label: "Klien & Master Data", href: "/fitness/clients" }, { label: compatibilityItem.title }]}
         >
           <FitnessMasterCompatibilityNotice {...compatibilityItem} />

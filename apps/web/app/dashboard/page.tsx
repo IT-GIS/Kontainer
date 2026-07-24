@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { AlertTriangle, CheckCircle2, ClipboardList, FileCheck2, PackageOpen, ReceiptText, RotateCcw, Send, Timer } from "lucide-react";
+import { CheckCircle2, ClipboardList, PackageOpen, RotateCcw, Send, Timer, UsersRound } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AppShell } from "@/components/layout/app-shell";
@@ -8,22 +9,32 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiData } from "@/lib/api-client";
 
 type AdminMetrics = {
-  total_jobs: number; draft_jobs: number; assigned_jobs: number; survey_in_progress: number;
-  submitted_surveys: number; need_revision_surveys: number; approved_surveys: number;
-  report_generated: number; ready_to_invoice: number; overdue_jobs: number;
+  new_jobs: number;
+  unassigned_jobs: number;
+  survey_in_progress: number;
+  submitted_surveys: number;
+  need_revision_surveys: number;
+  approved_surveys: number;
+  incomplete_customer_master: number;
+  recent_activities: Array<{
+    id: string;
+    job_order_id: string;
+    event: string;
+    title: string;
+    description: string;
+    actor: string;
+    created_at: string;
+  }>;
 };
 
 const metricDefinitions = [
-  { key: "total_jobs", label: "Total Job", icon: ClipboardList, tone: "teal" },
-  { key: "draft_jobs", label: "Draft Job", icon: ClipboardList, tone: "teal" },
-  { key: "assigned_jobs", label: "Assigned Job", icon: PackageOpen, tone: "cyan" },
-  { key: "survey_in_progress", label: "Survey In Progress", icon: Timer, tone: "cyan" },
-  { key: "submitted_surveys", label: "Submitted Survey", icon: Send, tone: "gold" },
-  { key: "need_revision_surveys", label: "Need Revision", icon: RotateCcw, tone: "gold" },
-  { key: "approved_surveys", label: "Approved Survey", icon: CheckCircle2, tone: "blue" },
-  { key: "report_generated", label: "Report Generated", icon: FileCheck2, tone: "blue" },
-  { key: "ready_to_invoice", label: "Ready to Invoice", icon: ReceiptText, tone: "violet" },
-  { key: "overdue_jobs", label: "Overdue Job", icon: AlertTriangle, tone: "violet" }
+  { key: "new_jobs", label: "Pekerjaan Baru", icon: ClipboardList, tone: "teal" },
+  { key: "unassigned_jobs", label: "Belum Ditugaskan", icon: PackageOpen, tone: "cyan" },
+  { key: "survey_in_progress", label: "Pemeriksaan Berlangsung", icon: Timer, tone: "cyan" },
+  { key: "submitted_surveys", label: "Menunggu Review", icon: Send, tone: "gold" },
+  { key: "need_revision_surveys", label: "Perlu Revisi", icon: RotateCcw, tone: "gold" },
+  { key: "approved_surveys", label: "Disetujui", icon: CheckCircle2, tone: "blue" },
+  { key: "incomplete_customer_master", label: "Master Customer Belum Lengkap", icon: UsersRound, tone: "violet" }
 ] as const;
 
 export default function DashboardPage() {
@@ -62,13 +73,12 @@ function DashboardContent() {
   return (
     <div className="page-stack source-dashboard-stack">
       <div className="source-dashboard-intro">
-        <h2>Ringkasan Aktivitas</h2>
-        <p>Ringkasan aktivitas inspeksi &amp; sertifikasi kontainer.</p>
+        <h2>Ringkasan Operasional</h2>
+        <p>Perjalanan pekerjaan inspeksi peti kemas dari persiapan sampai keputusan.</p>
       </div>
 
       {isAdmin && isLoading ? <div className="workspace-panel">Memuat metric dashboard...</div> : null}
-      {isAdmin && error ? <div className="alert alert-danger">{error}</div> : null}
-      {isAdmin && metrics && Object.values(metrics).every((value) => value === 0) ? <div className="workspace-panel muted-text">Belum ada aktivitas operasional untuk ditampilkan.</div> : null}
+      {isAdmin && error ? <div className="alert alert-danger" role="alert">{error}</div> : null}
       {isAdmin && metrics ? <section className="metric-grid source-metric-grid">
         {metricDefinitions.map((metric) => {
           const Icon = metric.icon;
@@ -84,6 +94,21 @@ function DashboardContent() {
         })}
       </section> : null}
 
+      {isAdmin && metrics ? <section className="workspace-panel page-stack" aria-labelledby="recent-activity-title">
+        <div className="section-title-row"><div><h2 id="recent-activity-title">Aktivitas Terbaru</h2><p className="muted-text">Jejak aktivitas pekerjaan dari event operasional terbaru.</p></div></div>
+        {metrics.recent_activities.length === 0 ? <p className="muted-text">Belum ada aktivitas pekerjaan.</p> : (
+          <div className="job-tab-stack">
+            {metrics.recent_activities.map((activity) => <article className="detail-grid" key={activity.id}>
+              <div><span>Aktivitas</span><strong>{activity.title}</strong></div>
+              <div><span>Pelaksana</span><strong>{activity.actor}</strong></div>
+              <div><span>Waktu</span><strong>{formatDateTime(activity.created_at)}</strong></div>
+              <div><span>Konteks</span><strong><Link className="text-link" href={`/jobs/${activity.job_order_id}`}>Buka Pekerjaan</Link></strong></div>
+              {activity.description ? <div className="form-span-2"><span>Ringkasan</span><strong>{activity.description}</strong></div> : null}
+            </article>)}
+          </div>
+        )}
+      </section> : null}
+
       <section className="workspace-panel source-dashboard-note">
         <div className="source-note-head">
           <h2>{dashboardTitle(roles)}</h2>
@@ -95,12 +120,12 @@ function DashboardContent() {
 }
 
 function dashboardTitle(roles: string[]) {
-  if (roles.includes("super_admin")) return "System Control Overview";
-  if (roles.length > 1) return "Multi-workspace Overview";
+  if (roles.includes("super_admin")) return "Ringkasan Kendali Sistem";
+  if (roles.length > 1) return "Ringkasan Multi-workspace";
   const titles: Record<string, string> = {
-    admin: "Operational Dashboard",
+    admin: "Dashboard Operasional",
     surveyor: "Dashboard Surveyor",
-    supervisor: "Dashboard Review",
+    supervisor: "Dashboard Review & Keputusan",
     finance: "Dashboard Finance",
     management: "Dashboard Management"
   };
@@ -110,18 +135,23 @@ function dashboardTitle(roles: string[]) {
 
 function dashboardCopy(roles: string[]) {
   if (roles.includes("super_admin")) {
-    return "User, permission, master data, and system configuration workspace.";
+    return "Pemantauan pengguna, hak akses, Master Data, dan konfigurasi sistem.";
   }
   if (roles.length > 1) {
-    return `Workspace aktif: ${roles.map((role) => role.replaceAll("_", " ")).join(", ")}.`;
+    return `Workspace tersedia: ${roles.map((role) => role.replaceAll("_", " ")).join(", ")}.`;
   }
   const copies: Record<string, string> = {
-    admin: "Job order, assignment, master data, and operational monitoring workspace.",
-    surveyor: "Assigned job and survey progress workspace for the web MVP flow.",
-    supervisor: "Pending review, approval, revision, and report readiness workspace.",
-    finance: "Ready-to-invoice, price list, invoice, payment, and outstanding workspace.",
-    management: "Read-only recap, dashboard, report archive, and finance summary workspace."
+    admin: "Persiapan pekerjaan, penugasan Surveyor GIFT, Master Data, dan pemantauan operasional.",
+    surveyor: "Pekerjaan yang ditugaskan dan progres pemeriksaan Surveyor GIFT.",
+    supervisor: "Antrean review, revisi, persetujuan, dan penolakan hasil pemeriksaan.",
+    finance: "Workspace Finance terpisah dari menu Admin Kelaikan.",
+    management: "Ringkasan dan arsip laporan dalam mode baca-saja."
   };
   const role = roles.find((item) => copies[item]);
   return role ? copies[role] : "Role-based dashboard workspace.";
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }

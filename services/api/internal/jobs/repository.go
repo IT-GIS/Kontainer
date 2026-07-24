@@ -100,16 +100,24 @@ func (r Repository) CreateJob(ctx context.Context, input JobInput, actor Actor) 
 	if err != nil {
 		return nil, ErrInvalidInput
 	}
+	spkDate, err := parseOptionalDate(input.SPKDate)
+	if err != nil {
+		return nil, ErrInvalidInput
+	}
+	spkFileID, err := parseOptionalUUID(input.SPKFileID)
+	if err != nil {
+		return nil, ErrInvalidInput
+	}
 	priority := normalizePriority(input.Priority)
 	row := tx.QueryRow(ctx, `
 		INSERT INTO job_orders (
 			job_order_no, job_date, customer_id, survey_type_id, location_id, pic_customer_personnel_id,
-			pic_customer_name, pic_customer_phone, pic_customer_email, reference_no, booking_no,
+			pic_customer_name, pic_customer_phone, pic_customer_email, reference_no, spk_no, spk_date, spk_file_id, spk_notes, booking_no,
 			do_no, bl_no, vessel, voyage, trucking_company, priority, deadline, instruction,
 			created_by, updated_by
-		) VALUES ($1,$2,$3,$4,$5,$6,NULLIF($7,''),NULLIF($8,''),NULLIF($9,''),NULLIF($10,''),NULLIF($11,''),NULLIF($12,''),NULLIF($13,''),NULLIF($14,''),NULLIF($15,''),NULLIF($16,''),$17,$18,NULLIF($19,''),$20,$20)
+		) VALUES ($1,$2,$3,$4,$5,$6,NULLIF($7,''),NULLIF($8,''),NULLIF($9,''),NULLIF($10,''),NULLIF($11,''),$12,$13,NULLIF($14,''),NULLIF($15,''),NULLIF($16,''),NULLIF($17,''),NULLIF($18,''),NULLIF($19,''),NULLIF($20,''),$21,$22,NULLIF($23,''),$24,$24)
 		RETURNING id, job_order_no, status
-	`, jobNo, jobDate, customerID, surveyTypeID, locationID, personnelID, personnel["name"], personnel["phone"], personnel["email"], input.ReferenceNo, input.BookingNo, input.DONo, input.BLNo, input.Vessel, input.Voyage, input.TruckingCompany, priority, deadline, input.Instruction, actor.UserID)
+	`, jobNo, jobDate, customerID, surveyTypeID, locationID, personnelID, personnel["name"], personnel["phone"], personnel["email"], input.ReferenceNo, input.SPKNo, spkDate, spkFileID, input.SPKNotes, input.BookingNo, input.DONo, input.BLNo, input.Vessel, input.Voyage, input.TruckingCompany, priority, deadline, input.Instruction, actor.UserID)
 	item, err := scanRow(row, []string{"id", "job_order_no", "status"})
 	if err != nil {
 		return nil, err
@@ -206,12 +214,21 @@ func (r Repository) UpdateJob(ctx context.Context, id uuid.UUID, input JobInput,
 	if err != nil {
 		return nil, ErrInvalidInput
 	}
+	spkDate, err := parseOptionalDate(input.SPKDate)
+	if err != nil {
+		return nil, ErrInvalidInput
+	}
+	spkFileID, err := parseOptionalUUID(input.SPKFileID)
+	if err != nil {
+		return nil, ErrInvalidInput
+	}
 	item, err := scanRow(tx.QueryRow(ctx, `
 		UPDATE job_orders SET job_date=$2, customer_id=$3, survey_type_id=$4, location_id=$5, pic_customer_personnel_id=$6,
-		pic_customer_name=NULLIF($7,''), pic_customer_phone=NULLIF($8,''), pic_customer_email=NULLIF($9,''), reference_no=NULLIF($10,''), booking_no=NULLIF($11,''),
-		do_no=NULLIF($12,''), bl_no=NULLIF($13,''), vessel=NULLIF($14,''), voyage=NULLIF($15,''), trucking_company=NULLIF($16,''), priority=$17, deadline=$18, instruction=NULLIF($19,''), updated_by=$20, updated_at=now()
+		pic_customer_name=NULLIF($7,''), pic_customer_phone=NULLIF($8,''), pic_customer_email=NULLIF($9,''), reference_no=NULLIF($10,''),
+		spk_no=NULLIF($11,''), spk_date=$12, spk_file_id=$13, spk_notes=NULLIF($14,''), booking_no=NULLIF($15,''),
+		do_no=NULLIF($16,''), bl_no=NULLIF($17,''), vessel=NULLIF($18,''), voyage=NULLIF($19,''), trucking_company=NULLIF($20,''), priority=$21, deadline=$22, instruction=NULLIF($23,''), updated_by=$24, updated_at=now()
 		WHERE id=$1 AND deleted_at IS NULL RETURNING id, job_order_no, status
-	`, id, jobDate, customerID, surveyTypeID, locationID, personnelID, personnel["name"], personnel["phone"], personnel["email"], input.ReferenceNo, input.BookingNo, input.DONo, input.BLNo, input.Vessel, input.Voyage, input.TruckingCompany, normalizePriority(input.Priority), deadline, input.Instruction, actor.UserID), []string{"id", "job_order_no", "status"})
+	`, id, jobDate, customerID, surveyTypeID, locationID, personnelID, personnel["name"], personnel["phone"], personnel["email"], input.ReferenceNo, input.SPKNo, spkDate, spkFileID, input.SPKNotes, input.BookingNo, input.DONo, input.BLNo, input.Vessel, input.Voyage, input.TruckingCompany, normalizePriority(input.Priority), deadline, input.Instruction, actor.UserID), []string{"id", "job_order_no", "status"})
 	if err != nil {
 		return nil, err
 	}
@@ -477,6 +494,13 @@ func (r Repository) Reassign(ctx context.Context, containerID uuid.UUID, input R
 	if err != nil {
 		return nil, ErrInvalidInput
 	}
+	var surveyorActive int
+	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM surveyor_profiles WHERE id=$1 AND status='active' AND deleted_at IS NULL`, toSurveyorID).Scan(&surveyorActive); err != nil {
+		return nil, err
+	}
+	if surveyorActive != 1 {
+		return nil, FieldValidationError{Fields: map[string]string{"to_surveyor_id": "Surveyor GIFT baru tidak aktif atau tidak ditemukan."}}
+	}
 	_, _ = tx.Exec(ctx, `UPDATE assignment_containers SET unassigned_at=now(), unassigned_reason=$2 WHERE job_container_id=$1 AND unassigned_at IS NULL`, containerID, input.Reason)
 	assignmentNo, err := numbering.Next(ctx, tx, "assignment")
 	if err != nil {
@@ -665,12 +689,14 @@ func (r Repository) validateJobOwnershipTx(ctx context.Context, tx database.Tx, 
 	}
 
 	personnel, err := scanRow(tx.QueryRow(ctx, `
-		SELECT id, full_name, phone, email FROM customer_personnel
-		WHERE id=$1 AND customer_id=$2 AND status='active' AND deleted_at IS NULL LIMIT 1
-	`, personnelID, customerID), []string{"id", "name", "phone", "email"})
+		SELECT personnel.id, personnel.full_name, personnel.phone, personnel.email
+		FROM customer_personnel personnel
+		JOIN customer_personnel_locations mapping ON mapping.customer_personnel_id=personnel.id AND mapping.location_id=$3
+		WHERE personnel.id=$1 AND personnel.customer_id=$2 AND personnel.status='active' AND personnel.deleted_at IS NULL LIMIT 1
+	`, personnelID, customerID, locationID), []string{"id", "name", "phone", "email"})
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			return nil, FieldValidationError{Fields: map[string]string{"pic_customer_personnel_id": "Personel/PIC tidak aktif atau bukan milik Customer terpilih."}}
+			return nil, FieldValidationError{Fields: map[string]string{"pic_customer_personnel_id": "Personel/PIC tidak aktif, bukan milik Customer, atau belum dipetakan ke Location terpilih."}}
 		}
 		return nil, err
 	}
@@ -836,6 +862,16 @@ func parseOptionalTime(value *string) (*time.Time, error) {
 		}
 	}
 	return nil, ErrInvalidInput
+}
+func parseOptionalUUID(value *string) (*uuid.UUID, error) {
+	if value == nil || strings.TrimSpace(*value) == "" {
+		return nil, nil
+	}
+	parsed, err := uuid.Parse(strings.TrimSpace(*value))
+	if err != nil {
+		return nil, err
+	}
+	return &parsed, nil
 }
 func normalizePriority(value string) string {
 	if value == "urgent" {

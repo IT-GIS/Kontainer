@@ -27,6 +27,10 @@ export type JobDetail = JobSummary & {
   pic_customer_phone?: string | null;
   pic_customer_email?: string | null;
   reference_no?: string | null;
+  spk_no?: string | null;
+  spk_date?: string | null;
+  spk_file_id?: string | null;
+  spk_notes?: string | null;
   booking_no?: string | null;
   do_no?: string | null;
   bl_no?: string | null;

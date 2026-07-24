@@ -65,6 +65,10 @@ type JobInput struct {
 	PICCustomerPhone       string  `json:"pic_customer_phone"`
 	PICCustomerEmail       string  `json:"pic_customer_email"`
 	ReferenceNo            string  `json:"reference_no"`
+	SPKNo                  string  `json:"spk_no"`
+	SPKDate                *string `json:"spk_date"`
+	SPKFileID              *string `json:"spk_file_id"`
+	SPKNotes               string  `json:"spk_notes"`
 	BookingNo              string  `json:"booking_no"`
 	DONo                   string  `json:"do_no"`
 	BLNo                   string  `json:"bl_no"`

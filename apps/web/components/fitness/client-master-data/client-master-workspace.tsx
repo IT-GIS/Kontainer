@@ -276,7 +276,7 @@ function CustomerSurveyorTab({ client, initialRows, locations, readOnly }: { cli
   function save() {
     if (!valid || readOnly || !drawer.startSubmit()) return;
     const locationNames = clientLocations.filter((location) => draft.locationIds.includes(location.id)).map((location) => location.name);
-    const record: FitnessClientSurveyor = { ...draft, locationNames, id: editing?.id ?? client.id + "-surveyor-local-" + Date.now(), clientId: client.id, updatedAt: "State lokal" };
+    const record: FitnessClientSurveyor = { ...draft, locationNames, id: editing?.id ?? `${client.id}-surveyor-local-${rows.length + 1}`, clientId: client.id, updatedAt: "State lokal" };
     setRows((current) => editing ? current.map((row) => row.id === editing.id ? record : row) : [...current, record]);
     setEditing(null);
     setDraft({ ...emptyCustomerSurveyor, locationIds: [] });

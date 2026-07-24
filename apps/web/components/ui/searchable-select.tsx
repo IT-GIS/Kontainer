@@ -83,8 +83,11 @@ export function SearchableSelect({
 
   useEffect(() => {
     if (!open) return;
-    const firstEnabledIndex = visibleOptions.findIndex((option) => !option.disabled);
-    setActiveIndex(firstEnabledIndex >= 0 ? firstEnabledIndex : 0);
+    const timer = window.setTimeout(() => {
+      const firstEnabledIndex = visibleOptions.findIndex((option) => !option.disabled);
+      setActiveIndex(firstEnabledIndex >= 0 ? firstEnabledIndex : 0);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [open, visibleOptions]);
 
   const updateSearch = (nextValue: string) => {

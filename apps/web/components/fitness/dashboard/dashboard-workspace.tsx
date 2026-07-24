@@ -26,18 +26,20 @@ export function FitnessDashboardWorkspace({ initialSnapshot, clients }: { initia
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setError(null);
-    getFitnessDashboardSnapshot({
-      clientId: filters.clientId || undefined,
-      period: filters.period as "7-days" | "30-days" | "quarter"
-    }).then((state) => {
-      if (!active) return;
-      if (state.status === "success") setSnapshot(state.data);
-      else if (state.status === "error") setError(state.error);
-      setLoading(false);
-    });
-    return () => { active = false; };
+    const timer = window.setTimeout(() => {
+      setLoading(true);
+      setError(null);
+      getFitnessDashboardSnapshot({
+        clientId: filters.clientId || undefined,
+        period: filters.period as "7-days" | "30-days" | "quarter"
+      }).then((state) => {
+        if (!active) return;
+        if (state.status === "success") setSnapshot(state.data);
+        else if (state.status === "error") setError(state.error);
+        setLoading(false);
+      });
+    }, 0);
+    return () => { active = false; window.clearTimeout(timer); };
   }, [filters.clientId, filters.period]);
 
   const fields: FilterBarField[] = [

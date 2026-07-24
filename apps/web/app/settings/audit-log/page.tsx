@@ -1,5 +1,7 @@
-import { NavigationPlaceholderPage } from "@/components/navigation/navigation-placeholder-page";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { AppShell } from "@/components/layout/app-shell";
+import { AuditLogSettings } from "@/components/settings/admin-settings";
 
 export default function AuditLogPage() {
-  return <NavigationPlaceholderPage title="Audit Log" backHref="/dashboard" backLabel="Kembali ke Dashboard" />;
+  return <ProtectedRoute><AppShell title="Audit Log"><AuditLogSettings /></AppShell></ProtectedRoute>;
 }

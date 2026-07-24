@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { MasterDataPage } from "@/components/master/master-data-page";
+import { CustomerReadinessPanel } from "@/components/master/customer-readiness";
+import { PersonnelLocationMapping } from "@/components/master/personnel-location-mapping";
 import { DataTable } from "@/components/ui/data-table";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -11,7 +13,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiData, apiPaginated } from "@/lib/api-client";
 import type { JobSummary } from "@/types/jobs";
 
-export type CustomerDetailTab = "profile" | "personnel" | "location" | "history";
+export type CustomerDetailTab = "profile" | "personnel" | "location" | "history" | "readiness";
 
 type CustomerRecord = {
   id: string;
@@ -31,7 +33,8 @@ const tabLabels: Array<{ id: CustomerDetailTab; label: string }> = [
   { id: "profile", label: "Profil Customer" },
   { id: "personnel", label: "Personel/PIC" },
   { id: "location", label: "Location Pemeriksaan" },
-  { id: "history", label: "Riwayat Pekerjaan" }
+  { id: "history", label: "Riwayat Pekerjaan" },
+  { id: "readiness", label: "Kelengkapan Master Data" }
 ];
 
 export function CustomerDetailWorkspace({ customerId, activeTab }: { customerId: string; activeTab: CustomerDetailTab }) {
@@ -42,18 +45,21 @@ export function CustomerDetailWorkspace({ customerId, activeTab }: { customerId:
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!accessToken) return;
-    setLoading(true);
-    Promise.all([
-      apiData<CustomerRecord>("/master/customers/" + customerId, { accessToken }),
-      apiPaginated<JobSummary>("/jobs?page=1&per_page=100&customer_id=" + customerId, { accessToken })
-    ])
-      .then(([customerResult, jobResult]) => {
-        setCustomer(customerResult);
-        setJobs(jobResult.rows.filter((job) => job.customer_id === customerId));
-      })
-      .catch((cause) => setError(cause instanceof Error ? cause.message : "Detail Customer gagal dimuat."))
-      .finally(() => setLoading(false));
+    const timer = window.setTimeout(() => {
+      if (!accessToken) return;
+      setLoading(true);
+      Promise.all([
+        apiData<CustomerRecord>("/master/customers/" + customerId, { accessToken }),
+        apiPaginated<JobSummary>("/jobs?page=1&per_page=100&customer_id=" + customerId, { accessToken })
+      ])
+        .then(([customerResult, jobResult]) => {
+          setCustomer(customerResult);
+          setJobs(jobResult.rows.filter((job) => job.customer_id === customerId));
+        })
+        .catch((cause) => setError(cause instanceof Error ? cause.message : "Detail Customer gagal dimuat."))
+        .finally(() => setLoading(false));
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [accessToken, customerId]);
 
   const lastJob = useMemo(
@@ -76,12 +82,14 @@ export function CustomerDetailWorkspace({ customerId, activeTab }: { customerId:
       />
       {activeTab === "profile" ? <CustomerProfile customer={customer} /> : null}
       {activeTab === "personnel" ? (
-        <MasterDataPage
+        <div className="page-stack"><MasterDataPage
           backHref="/master/customers"
           endpointOverride={"/customers/" + customerId + "/personnel"}
           fixedValues={{ customer_id: customerId }}
           resourceId="customer-personnel"
-        />
+          readOnly={customer.status !== "active"}
+          readOnlyMessage="Customer tidak aktif. Personel/PIC hanya dapat dilihat."
+        /><PersonnelLocationMapping customerId={customerId} readOnly={customer.status !== "active"} /></div>
       ) : null}
       {activeTab === "location" ? (
         <MasterDataPage
@@ -89,9 +97,12 @@ export function CustomerDetailWorkspace({ customerId, activeTab }: { customerId:
           endpointOverride={"/customers/" + customerId + "/locations"}
           fixedValues={{ customer_id: customerId }}
           resourceId="locations"
+          readOnly={customer.status !== "active"}
+          readOnlyMessage="Customer tidak aktif. Location Pemeriksaan hanya dapat dilihat."
         />
       ) : null}
       {activeTab === "history" ? <CustomerJobHistory jobs={jobs} lastJob={lastJob} /> : null}
+      {activeTab === "readiness" ? <CustomerReadinessPanel customerId={customerId} /> : null}
     </div>
   );
 }

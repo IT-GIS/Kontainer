@@ -15,7 +15,7 @@ import { apiData } from "@/lib/api-client";
 import { can, hasRole } from "@/lib/permissions";
 import type { ReviewDetail } from "@/types/reviews";
 
-const tabs = ["Summary", "General Info", "Checklist", "Damage", "Photos", "Log"] as const;
+const tabs = ["Ringkasan", "Informasi Umum", "Checklist", "Daftar Kerusakan", "Foto", "Riwayat"] as const;
 type Tab = (typeof tabs)[number];
 
 export default function ReviewDetailPage() {
@@ -27,7 +27,7 @@ function ReviewDetailContent() {
   const router = useRouter();
   const { accessToken, user } = useAuth();
   const [review, setReview] = useState<ReviewDetail | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>("Summary");
+  const [activeTab, setActiveTab] = useState<Tab>("Ringkasan");
   const [dialog, setDialog] = useState<"revision" | "approve" | "reject" | null>(null);
   const [note, setNote] = useState("");
   const [finalResult, setFinalResult] = useState("damage");
@@ -59,13 +59,13 @@ function ReviewDetailContent() {
     setIsSubmitting(true);
     setError(null);
     const endpoint = dialog === "revision" ? "need-revision" : dialog;
-    const body = dialog === "revision" ? { revision_note: note } : dialog === "approve" ? { final_result: finalResult, approval_note: note, generate_report: true } : { rejection_reason: note };
+    const body = dialog === "revision" ? { revision_note: note } : dialog === "approve" ? { final_result: finalResult, approval_note: note, generate_report: false } : { rejection_reason: note };
     try {
       await apiData(`/reviews/${params.id}/${endpoint}`, { method: "POST", accessToken, body: JSON.stringify(body) });
       setDialog(null);
       setNote("");
       if (dialog === "approve") {
-        router.push("/reports");
+        router.push("/review/history");
         return;
       }
       await loadReview();
@@ -85,23 +85,23 @@ function ReviewDetailContent() {
       <PageHeader title={`Review & Keputusan: ${review.survey_no}`} description={`Peti kemas: ${review.container_no} - ${review.customer_name}`} />
       {!canManageReview ? <div className="alert alert-warning">Mode read-only. Keputusan teknis hanya tersedia bagi Supervisor/Super Admin yang juga memiliki permission <code>reviews.manage.all</code>.</div> : null}
       {canManageReview ? <div className="job-actions">
-        <button className="secondary-button" disabled={!canDecide} onClick={() => setDialog("revision")}><RotateCcw size={17} /><span>Need Revision</span></button>
-        <button className="secondary-button" disabled={!canDecide} onClick={() => setDialog("reject")}><X size={17} /><span>Reject</span></button>
-        <button className="primary-button" disabled={!canDecide} onClick={() => setDialog("approve")}><Check size={17} /><span>Approve</span></button>
+        <button className="secondary-button" disabled={!canDecide} onClick={() => setDialog("revision")}><RotateCcw size={17} /><span>Perlu Revisi</span></button>
+        <button className="secondary-button" disabled={!canDecide} onClick={() => setDialog("reject")}><X size={17} /><span>Tolak</span></button>
+        <button className="primary-button" disabled={!canDecide} onClick={() => setDialog("approve")}><Check size={17} /><span>Setujui</span></button>
       </div> : null}
-      {error ? <div className="alert alert-danger">{error}</div> : null}
+      {error ? <div className="alert alert-danger" role="alert">{error}</div> : null}
       <div className="tab-list">{tabs.map((tab) => <button className={activeTab === tab ? "tab-active" : ""} key={tab} onClick={() => setActiveTab(tab)}>{tab}</button>)}</div>
-      {activeTab === "Summary" ? <Summary review={review} /> : null}
-      {activeTab === "General Info" ? <ObjectPanel data={review.general_info ?? {}} /> : null}
+      {activeTab === "Ringkasan" ? <Summary review={review} /> : null}
+      {activeTab === "Informasi Umum" ? <ObjectPanel data={review.general_info ?? {}} /> : null}
       {activeTab === "Checklist" ? <Checklist rows={review.checklist ?? []} /> : null}
-      {activeTab === "Damage" ? <Damage rows={review.damages ?? []} /> : null}
-      {activeTab === "Photos" ? <Photos rows={review.photos ?? []} /> : null}
-      {activeTab === "Log" ? <Log rows={review.approval_history ?? []} /> : null}
+      {activeTab === "Daftar Kerusakan" ? <Damage rows={review.damages ?? []} /> : null}
+      {activeTab === "Foto" ? <Photos rows={review.photos ?? []} /> : null}
+      {activeTab === "Riwayat" ? <Log rows={review.approval_history ?? []} /> : null}
 
       <FormDialog title={dialogTitle(dialog)} open={canManageReview && dialog !== null} onClose={() => setDialog(null)} onSubmit={submitAction} isSubmitting={isSubmitting} submitLabel={dialog === "approve" ? "Approve" : "Submit"}>
         <div className="form-grid">
-          {dialog === "approve" ? <label className="field"><span>Final Result</span><select value={finalResult} onChange={(event) => setFinalResult(event.target.value)}><option value="sound">Sound</option><option value="damage">Damage</option><option value="cargo_worthy">Cargo Worthy</option><option value="not_cargo_worthy">Not Cargo Worthy</option></select></label> : null}
-          <label className="field form-span-2"><span>{dialog === "revision" ? "Revision Note" : dialog === "reject" ? "Rejection Reason" : "Approval Note"}</span><textarea rows={4} value={note} onChange={(event) => setNote(event.target.value)} /></label>
+          {dialog === "approve" ? <label className="field"><span>Hasil Akhir</span><select value={finalResult} onChange={(event) => setFinalResult(event.target.value)}><option value="sound">Baik</option><option value="damage">Rusak</option><option value="cargo_worthy">Layak Muat</option><option value="not_cargo_worthy">Tidak Layak Muat</option></select></label> : null}
+          <label className="field form-span-2"><span>{dialog === "revision" ? "Catatan Revisi" : dialog === "reject" ? "Alasan Penolakan" : "Catatan Persetujuan"}</span><textarea rows={4} value={note} onChange={(event) => setNote(event.target.value)} /></label>
         </div>
       </FormDialog>
     </div>
@@ -143,8 +143,8 @@ function Log({ rows }: { rows: Array<Record<string, unknown>> }) {
 }
 
 function dialogTitle(dialog: "revision" | "approve" | "reject" | null) {
-  if (dialog === "revision") return "Need Revision";
-  if (dialog === "approve") return "Approve Survey";
-  if (dialog === "reject") return "Reject Survey";
+  if (dialog === "revision") return "Perlu Revisi";
+  if (dialog === "approve") return "Setujui Pemeriksaan";
+  if (dialog === "reject") return "Tolak Pemeriksaan";
   return "";
 }

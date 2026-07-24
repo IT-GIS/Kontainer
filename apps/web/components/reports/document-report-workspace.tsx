@@ -70,7 +70,10 @@ export function DocumentReportWorkspace() {
     return () => window.clearTimeout(timer);
   }, [loadData]);
 
-  useEffect(() => setFilters(emptyFilters), [view]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setFilters(emptyFilters), 0);
+    return () => window.clearTimeout(timer);
+  }, [view]);
 
   const rows = useMemo(() => view === "recap"
     ? recaps.filter((row) => matchesRecap(row, filters))

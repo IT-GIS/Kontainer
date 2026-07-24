@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { CheckCircle2, ChevronLeft, ChevronRight, Plus, Save, Send, Trash2 } from "lucide-react";
 import { AttachmentPreview } from "@/components/ui/attachment-preview";
 import { AttachmentUploaderPlaceholder } from "@/components/ui/attachment-uploader-placeholder";
@@ -41,7 +41,6 @@ const referenceSections: FitnessInspectionReferenceSection[] = [
 ];
 
 export function FitnessApplicationCreateWorkspace({ clients, initialDraft }: { clients: FitnessClientSummary[]; initialDraft: FitnessApplicationDraft }) {
-  const loadSequence = useRef(0);
   const [draft, setDraft] = useState(initialDraft);
   const [options, setOptions] = useState<ClientOptions>(emptyOptions);
   const [currentStep, setCurrentStep] = useState(0);
@@ -67,7 +66,6 @@ export function FitnessApplicationCreateWorkspace({ clients, initialDraft }: { c
   }
 
   async function selectClient(clientId: string) {
-    const sequence = ++loadSequence.current;
     setOptions(emptyOptions);
     setOptionError(null);
     setLoadingOptions(Boolean(clientId));
@@ -95,7 +93,6 @@ export function FitnessApplicationCreateWorkspace({ clients, initialDraft }: { c
       getFitnessClientContainerTypes(clientId),
       ...referenceSections.map((section) => getFitnessClientInspectionReferences(clientId, section))
     ]);
-    if (sequence !== loadSequence.current) return;
     const ready = clientState.status === "success" && locationState.status === "success"
       && personnelState.status === "success" && typeState.status === "success"
       && referenceStates.every((state) => state.status === "success");
@@ -136,7 +133,7 @@ export function FitnessApplicationCreateWorkspace({ clients, initialDraft }: { c
 
   function addContainer() {
     update("containers", [...draft.containers, {
-      id: "local-container-" + Date.now(),
+      id: `local-container-${draft.containers.length + 1}`,
       containerNumber: "",
       containerTypeId: "",
       numberValid: false,
@@ -156,7 +153,7 @@ export function FitnessApplicationCreateWorkspace({ clients, initialDraft }: { c
   function addAttachment(category: FitnessApplicationAttachment["category"]) {
     if (draft.attachments.some((item) => item.category === category)) return;
     update("attachments", [...draft.attachments, {
-      id: "local-attachment-" + Date.now(),
+      id: `local-attachment-${category}`,
       category,
       name: category.replace("/", "-") + "-contoh.pdf",
       sizeLabel: "State lokal"

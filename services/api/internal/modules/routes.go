@@ -6,18 +6,23 @@ import (
 	"github.com/gin-gonic/gin"
 
 	apphttp "container-survey/services/api/internal/apphttp"
+	"container-survey/services/api/internal/auth"
+	"container-survey/services/api/internal/database"
+	"container-survey/services/api/internal/middleware"
 )
 
-func Register(v1 *gin.RouterGroup) {
+func Register(v1 *gin.RouterGroup, authService *auth.Service, pool *database.Pool) {
 	registerModule(v1.Group("/roles"), "roles")
 	registerModule(v1.Group("/permissions"), "permissions")
 	registerModule(v1.Group("/settings/company-profile"), "company_profile")
-	registerModule(v1.Group("/settings/numbering"), "numbering")
 	registerModule(v1.Group("/master/checklist-templates"), "checklist_templates")
 	registerModule(v1.Group("/eirs"), "eirs")
-	registerModule(v1.Group("/audit-logs"), "audit_logs")
 	registerModule(v1.Group("/notifications"), "notifications")
 	registerModule(v1.Group("/files"), "files")
+
+	settings := adminSettingsHandler{pool: pool}
+	v1.GET("/settings/numbering", middleware.RequirePermission(authService, "numbering_settings.view.all"), settings.listNumbering)
+	v1.GET("/audit-logs", middleware.RequirePermission(authService, "audit.view.all"), settings.listAuditLogs)
 
 	v1.GET("/dashboard/supervisor", notImplemented("dashboard_supervisor"))
 	v1.GET("/dashboard/management", notImplemented("dashboard_management"))

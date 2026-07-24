@@ -11,6 +11,7 @@ var (
 	ErrInvalidInput  = errors.New("invalid review input")
 	ErrInvalidStatus = errors.New("invalid review status")
 	ErrDuplicate     = errors.New("duplicate review resource")
+	ErrForbidden     = errors.New("review action forbidden")
 )
 
 type Actor struct {

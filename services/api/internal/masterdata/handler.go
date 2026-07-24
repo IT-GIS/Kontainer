@@ -38,8 +38,10 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	handler.resource(master, authService, "/cedex/repairs", Resources["cedex_repairs"])
 	handler.resource(master, authService, "/cedex/materials", Resources["cedex_materials"])
 	handler.resource(master, authService, "/responsibility-codes", Resources["responsibility_codes"])
+	v1.GET("/customers/readiness", middleware.RequirePermission(authService, "customers.view.all"), handler.ListCustomerReadiness)
 
 	customerMaster := v1.Group("/customers/:id")
+	customerMaster.GET("/readiness", middleware.RequirePermission(authService, "customers.view.all"), handler.GetCustomerReadiness)
 	handler.resourceItems(customerMaster, authService, "/locations", customerScopedResource(Resources["locations"]), "customer_id")
 	handler.resourceItems(customerMaster, authService, "/personnel", Resources["customer_personnel"], "customer_id")
 	handler.resourceItems(customerMaster, authService, "/container-types", customerScopedResource(Resources["container_types"]), "customer_id")
@@ -51,6 +53,9 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	handler.resourceItems(customerMaster, authService, "/cedex/materials", customerScopedResource(Resources["cedex_materials"]), "customer_id")
 	handler.resourceItems(customerMaster, authService, "/responsibility-codes", customerScopedResource(Resources["responsibility_codes"]), "customer_id")
 	handler.resourceItems(customerMaster, authService, "/checklist-templates", customerScopedResource(Resources["fitness_checklist_templates"]), "customer_id")
+	customerMaster.GET("/personnel/:item_id/locations", middleware.RequirePermission(authService, "customers.view.all"), handler.GetPersonnelLocations)
+	customerMaster.PUT("/personnel/:item_id/locations", middleware.RequirePermission(authService, "customers.update.all"), handler.SetPersonnelLocations)
+	customerMaster.GET("/locations/:item_id/personnel", middleware.RequirePermission(authService, "customers.view.all"), handler.GetLocationPersonnel)
 	customerMaster.GET("/survey-types/:item_id/reference-options", middleware.RequirePermission(authService, "survey_types.view.all"), handler.GetCustomerReferenceOptions)
 	customerMaster.PUT("/survey-types/:item_id/reference-options", middleware.RequirePermission(authService, "survey_types.update.all"), handler.SetCustomerReferenceOptions)
 
@@ -98,6 +103,10 @@ func (h Handler) SetCustomerReferenceOptions(c *gin.Context) {
 	if !ok {
 		return
 	}
+	if err := h.service.EnsureActiveCustomer(c.Request.Context(), customerID); err != nil {
+		h.writeError(c, err)
+		return
+	}
 	surveyTypeID, ok := parseUUIDParam(c, "item_id")
 	if !ok {
 		return
@@ -115,6 +124,84 @@ func (h Handler) SetCustomerReferenceOptions(c *gin.Context) {
 	apphttp.OK(c, "Konfigurasi referensi berhasil disimpan.", item)
 }
 
+func (h Handler) ListCustomerReadiness(c *gin.Context) {
+	items, err := h.service.ListCustomerReadiness(c.Request.Context())
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Kelengkapan Master Data Customer berhasil diambil.", items)
+}
+
+func (h Handler) GetCustomerReadiness(c *gin.Context) {
+	customerID, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	item, err := h.service.CustomerReadiness(c.Request.Context(), customerID)
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Kelengkapan Master Data Customer berhasil diambil.", item)
+}
+
+func (h Handler) GetPersonnelLocations(c *gin.Context) {
+	customerID, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	personnelID, ok := parseUUIDParam(c, "item_id")
+	if !ok {
+		return
+	}
+	item, err := h.service.PersonnelLocations(c.Request.Context(), customerID, personnelID)
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Mapping Location Personel/PIC berhasil diambil.", item)
+}
+
+func (h Handler) SetPersonnelLocations(c *gin.Context) {
+	customerID, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	personnelID, ok := parseUUIDParam(c, "item_id")
+	if !ok {
+		return
+	}
+	var input PersonnelLocationInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		apphttp.Fail(c, http.StatusUnprocessableEntity, "Validasi gagal.", "VALIDATION_ERROR", []apphttp.ErrorDetail{{Message: "Daftar Location tidak valid."}})
+		return
+	}
+	item, err := h.service.SetPersonnelLocations(c.Request.Context(), customerID, personnelID, input, actorFromContext(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Mapping Location Personel/PIC berhasil disimpan.", item)
+}
+
+func (h Handler) GetLocationPersonnel(c *gin.Context) {
+	customerID, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	locationID, ok := parseUUIDParam(c, "item_id")
+	if !ok {
+		return
+	}
+	items, err := h.service.LocationPersonnel(c.Request.Context(), customerID, locationID)
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Personel/PIC Location berhasil diambil.", items)
+}
+
 func fitnessAdminResource(resource Resource) Resource {
 	resource.SoftDelete = false
 	return resource
@@ -127,8 +214,11 @@ func (h Handler) resource(group *gin.RouterGroup, authService *auth.Service, pat
 	deletePermission := middleware.RequirePermission(authService, module+".delete.all")
 
 	group.GET(path, view, h.List(resource))
-	group.POST(path, create, h.Create(resource))
 	group.GET(path+"/:id", view, h.Get(resource))
+	if resource.LegacyOnly {
+		return
+	}
+	group.POST(path, create, h.Create(resource))
 	group.PUT(path+"/:id", update, h.Update(resource))
 	group.DELETE(path+"/:id", deletePermission, h.Delete(resource))
 }
@@ -274,6 +364,12 @@ func (h Handler) CreateForParent(resource Resource, parentField string) gin.Hand
 		if !ok {
 			return
 		}
+		if parentField == "customer_id" {
+			if err := h.service.EnsureActiveCustomer(c.Request.Context(), parentID); err != nil {
+				h.writeError(c, err)
+				return
+			}
+		}
 		payload, ok := parsePayload(c)
 		if !ok {
 			return
@@ -293,6 +389,12 @@ func (h Handler) UpdateForParent(resource Resource, parentField string) gin.Hand
 		parentID, ok := parseUUIDParam(c, "id")
 		if !ok {
 			return
+		}
+		if parentField == "customer_id" {
+			if err := h.service.EnsureActiveCustomer(c.Request.Context(), parentID); err != nil {
+				h.writeError(c, err)
+				return
+			}
 		}
 		id, ok := parseUUIDParam(c, "item_id")
 		if !ok {
@@ -326,6 +428,12 @@ func (h Handler) DeleteForParent(resource Resource, parentField string) gin.Hand
 		parentID, ok := parseUUIDParam(c, "id")
 		if !ok {
 			return
+		}
+		if parentField == "customer_id" {
+			if err := h.service.EnsureActiveCustomer(c.Request.Context(), parentID); err != nil {
+				h.writeError(c, err)
+				return
+			}
 		}
 		id, ok := parseUUIDParam(c, "item_id")
 		if !ok {

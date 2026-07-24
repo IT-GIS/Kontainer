@@ -3,7 +3,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { CustomerDetailWorkspace, type CustomerDetailTab } from "@/components/master/customer-detail-workspace";
 
 type Query = Promise<Record<string, string | string[] | undefined>>;
-const tabs: CustomerDetailTab[] = ["profile", "personnel", "location", "history"];
+const tabs: CustomerDetailTab[] = ["profile", "personnel", "location", "history", "readiness"];
 
 export default async function CustomerDetailPage({
   params,
@@ -21,7 +21,7 @@ export default async function CustomerDetailPage({
     <ProtectedRoute>
       <AppShell
         title="Detail Customer"
-        subtitle="Profil, Personel/PIC, Location Pemeriksaan, dan riwayat pekerjaan Customer."
+        subtitle="Profil, Personel/PIC, Location Pemeriksaan, riwayat pekerjaan, dan kelengkapan Master Data Customer."
         breadcrumbs={[{ label: "Master Data" }, { label: "Customer", href: "/master/customers" }, { label: "Detail Customer" }]}
       >
         <CustomerDetailWorkspace activeTab={activeTab} customerId={customerId} />

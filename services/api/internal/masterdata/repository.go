@@ -276,6 +276,22 @@ func (r Repository) InsertAudit(ctx context.Context, entry AuditEntry) error {
 }
 
 func (r Repository) ValidateDomainMutation(ctx context.Context, resource Resource, payload map[string]any, id *uuid.UUID) error {
+	if resource.Name == "company_profiles" {
+		args := []any{}
+		where := ""
+		if id != nil {
+			args = append(args, *id)
+			where = " WHERE id<>$1"
+		}
+		var otherProfiles int
+		if err := r.runner().QueryRow(ctx, "SELECT COUNT(*) FROM company_profiles"+where, args...).Scan(&otherProfiles); err != nil {
+			return err
+		}
+		if otherProfiles > 0 {
+			return fmt.Errorf("%w: Company Profile hanya boleh menggunakan satu record", ErrInvalidInput)
+		}
+		return nil
+	}
 	if resource.Name != "fitness_checklist_templates" || resource.LegacyOnly {
 		return nil
 	}

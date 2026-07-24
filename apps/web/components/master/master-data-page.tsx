@@ -26,6 +26,9 @@ type MasterDataPageProps = {
   detailQuery?: string;
   relationEndpointOverrides?: Record<string, string>;
   checklistItemsBaseHref?: string;
+  readOnly?: boolean;
+  readOnlyMessage?: string;
+  startInCreateMode?: boolean;
 };
 
 const defaultStatusOptions = [
@@ -33,7 +36,7 @@ const defaultStatusOptions = [
   { label: "Tidak Aktif", value: "inactive" }
 ];
 
-export function MasterDataPage({ resourceId, endpointOverride, fixedValues, backHref, detailBaseHref, detailQuery, relationEndpointOverrides, checklistItemsBaseHref }: MasterDataPageProps) {
+export function MasterDataPage({ resourceId, endpointOverride, fixedValues, backHref, detailBaseHref, detailQuery, relationEndpointOverrides, checklistItemsBaseHref, readOnly = false, readOnlyMessage, startInCreateMode = false }: MasterDataPageProps) {
   const resource = masterResources[resourceId];
   const accessibilityID = useId();
   const formErrorID = `${accessibilityID}-form-error`;
@@ -59,11 +62,12 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
   const [relationSearch, setRelationSearch] = useState<Record<string, string>>({});
   const listRequestSeq = useRef(0);
   const relationRequestSeq = useRef(0);
+  const createOpenedRef = useRef(false);
 
   const statusOptions = resource.statusOptions ?? defaultStatusOptions;
-  const canCreate = can(user, `${resource.permissionModule}.create.all`);
-  const canUpdate = can(user, `${resource.permissionModule}.update.all`);
-  const canDelete = can(user, `${resource.permissionModule}.delete.all`);
+  const canCreate = !readOnly && can(user, `${resource.permissionModule}.create.all`);
+  const canUpdate = !readOnly && can(user, `${resource.permissionModule}.update.all`);
+  const canDelete = !readOnly && can(user, `${resource.permissionModule}.delete.all`);
   const relationFields = useMemo(() => resource.fields.filter((field) => field.relation), [resource.fields]);
   const selectedRelationValuesKey = relationFields.map((field) => String(formData[field.name] ?? selected?.[field.name] ?? "")).join("|");
 
@@ -123,6 +127,16 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
   }, [fixedPayload, resource, resourceEndpoint]);
 
   useEffect(() => {
+    if (!startInCreateMode || readOnly || createOpenedRef.current) return;
+    createOpenedRef.current = true;
+    setSelected(null);
+    setFormData({ ...defaultFormData(resource), ...fixedPayload });
+    setDialogMode("create");
+    setError(null);
+    setFormError(null);
+  }, [fixedPayload, readOnly, resource, startInCreateMode]);
+
+  useEffect(() => {
     if (!accessToken || !dialogMode || relationFields.length === 0) return;
     const requestID = ++relationRequestSeq.current;
 
@@ -134,11 +148,12 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
         }
         return next;
       });
-      void Promise.all(relationFields.map(async (field) => {
+      const selectedValues = selectedRelationValuesKey.split("|");
+      void Promise.all(relationFields.map(async (field, fieldIndex) => {
         const relation = field.relation;
         if (!relation) return [field.name, { options: [], isLoading: false, error: null }] as const;
         try {
-          const currentValue = String(formData[field.name] ?? selected?.[field.name] ?? "");
+          const currentValue = selectedValues[fieldIndex] ?? "";
           const query: Record<string, string | number> = { page: 1, per_page: 20, ...(relation.query ?? {}), search: relationSearch[field.name] ?? "" };
           if (!relation.query?.status) query.status = "active";
           const relationEndpoint = relationEndpointOverrides?.[field.name] ?? relation.endpoint;
@@ -311,6 +326,8 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
         action={canCreate ? { label: "Tambah", icon: Plus, onClick: openCreate } : undefined}
       />
 
+      {readOnly ? <div className="alert alert-warning">{readOnlyMessage ?? "Data ditampilkan dalam mode baca-saja."}</div> : null}
+
       <div className="toolbar">
         <label className="search-box">
           <Search size={17} />
@@ -328,7 +345,7 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
       </div>
 
       {success ? <div className="alert alert-success">{success}</div> : null}
-      {error ? <div className="alert alert-danger">{error}</div> : null}
+      {error ? <div className="alert alert-danger" role="alert">{error}</div> : null}
 
       <DataTable columns={columns} rows={rows} isLoading={isLoading} page={page} totalPages={totalPages} onPageChange={setPage} emptyText="Data belum tersedia." />
 

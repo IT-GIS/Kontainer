@@ -2,7 +2,6 @@ package reviews
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -161,44 +160,15 @@ func (h Handler) ReportVersions(c *gin.Context) {
 }
 
 func (h Handler) DownloadReport(c *gin.Context) {
-	id, ok := parseID(c)
-	if !ok {
-		return
-	}
-	item, err := h.service.ReportDetail(c.Request.Context(), id)
-	if err != nil {
-		h.writeError(c, err)
-		return
-	}
-	content := fmt.Sprintf("Report %s is queued for PDF generation.\n", item["report_no"])
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s.pdf", item["report_no"]))
-	c.Data(http.StatusOK, "application/pdf", []byte(content))
+	apphttp.Fail(c, http.StatusConflict, "PDF final belum aktif pada tahap ini.", "FEATURE_NOT_ACTIVE", nil)
 }
 
 func (h Handler) GenerateReport(c *gin.Context) {
-	id, ok := parseID(c)
-	if !ok {
-		return
-	}
-	var input GenerateReportInput
-	if !bindJSON(c, &input) {
-		return
-	}
-	item, err := h.service.GenerateReport(c.Request.Context(), id, input, actorFromContext(c))
-	if err != nil {
-		h.writeError(c, err)
-		return
-	}
-	apphttp.Accepted(c, "Generate report masuk antrean.", item)
+	apphttp.Fail(c, http.StatusConflict, "Pembentukan PDF final belum aktif pada tahap ini.", "FEATURE_NOT_ACTIVE", nil)
 }
 
 func (h Handler) ValidateQR(c *gin.Context) {
-	item, err := h.service.ValidateQR(c.Request.Context(), c.Param("qr_token"))
-	if err != nil {
-		h.writeError(c, err)
-		return
-	}
-	apphttp.OK(c, "Report valid.", item)
+	apphttp.Fail(c, http.StatusConflict, "QR dan verifikasi publik belum aktif pada tahap ini.", "FEATURE_NOT_ACTIVE", nil)
 }
 
 func (h Handler) writeError(c *gin.Context, err error) {
@@ -211,6 +181,8 @@ func (h Handler) writeError(c *gin.Context, err error) {
 		apphttp.Fail(c, http.StatusUnprocessableEntity, "Validasi gagal.", "VALIDATION_ERROR", nil)
 	case errors.Is(err, ErrDuplicate):
 		apphttp.Fail(c, http.StatusConflict, "Data duplikat.", "DUPLICATE_RESOURCE", nil)
+	case errors.Is(err, ErrForbidden):
+		apphttp.Fail(c, http.StatusForbidden, "Keputusan teknis hanya dapat dilakukan Supervisor/Reviewer.", "FORBIDDEN", nil)
 	default:
 		apphttp.Fail(c, http.StatusInternalServerError, "Terjadi kesalahan internal.", "INTERNAL_ERROR", nil)
 	}

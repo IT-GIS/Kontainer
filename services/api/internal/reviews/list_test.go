@@ -1,9 +1,13 @@
 package reviews
 
 import (
+	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func TestSurveyWhereNormalizesInProgress(t *testing.T) {
@@ -107,6 +111,33 @@ func TestValidateQRQueryIsMySQLCompatible(t *testing.T) {
 	for _, fragment := range []string{"date(s.approved_at)", "select sa.reviewer_id", "order by sa.reviewed_at desc, sa.id desc"} {
 		if !strings.Contains(lower, fragment) {
 			t.Fatalf("expected %q in QR query: %s", fragment, validateQRQuery)
+		}
+	}
+}
+
+func TestReviewerMutationRejectsNonReviewerRolesBeforeRepository(t *testing.T) {
+	service := NewService(Repository{})
+	actor := Actor{ActiveRole: "admin"}
+	if _, err := service.Approve(context.Background(), uuid.New(), ApproveInput{FinalResult: "approved"}, actor); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("Approve admin error = %v, want ErrForbidden", err)
+	}
+	if _, err := service.NeedRevision(context.Background(), uuid.New(), NeedRevisionInput{RevisionNote: "Perbaiki hasil."}, actor); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("NeedRevision admin error = %v, want ErrForbidden", err)
+	}
+	if _, err := service.Reject(context.Background(), uuid.New(), RejectInput{RejectionReason: "Tidak memenuhi."}, actor); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("Reject admin error = %v, want ErrForbidden", err)
+	}
+}
+
+func TestReviewerRoleAllowsOnlySupervisorAndSuperAdmin(t *testing.T) {
+	for _, role := range []string{"supervisor", "super_admin"} {
+		if !reviewerRole(role) {
+			t.Fatalf("role %q should be a reviewer", role)
+		}
+	}
+	for _, role := range []string{"", "admin", "surveyor", "management", "finance"} {
+		if reviewerRole(role) {
+			t.Fatalf("role %q must not be a reviewer", role)
 		}
 	}
 }

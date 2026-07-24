@@ -80,7 +80,7 @@ func NewRouter(cfg config.Config, logger *slog.Logger, pool *database.Pool) *gin
 	dashboardService := dashboard.NewService(dashboardRepo)
 	dashboard.Register(protected, authService, dashboardService)
 	users.Register(protected, authService, pool)
-	modules.Register(protected)
+	modules.Register(protected, authService, pool)
 
 	return router
 }

@@ -13,25 +13,31 @@ import { loadInspectionWorkDataset, matchesInspectionView } from "@/lib/inspecti
 import { can } from "@/lib/permissions";
 import type { InspectionWorkRow, InspectionWorkStage, InspectionWorkView } from "@/types/inspection-work";
 
-const validViews: InspectionWorkView[] = ["all", "unassigned", "in-progress", "pending-review", "need-revision", "approved", "completed"];
+const validViews: InspectionWorkView[] = ["all", "draft", "unassigned", "assigned", "in-progress", "submitted", "need-revision", "approved", "rejected", "completed"];
 const viewCopy: Record<InspectionWorkView, { title: string; description: string }> = {
   all: { title: "Semua Pekerjaan", description: "Pusat perjalanan pekerjaan inspeksi dari dibuat sampai selesai." },
+  draft: { title: "Draf / Baru", description: "Pekerjaan baru yang belum mempunyai peti kemas atau belum siap ditugaskan." },
   unassigned: { title: "Belum Ditugaskan", description: "Pekerjaan yang siap dilengkapi dan belum memiliki Surveyor GIFT aktif." },
-  "in-progress": { title: "Sedang Berjalan", description: "Monitoring penugasan dan pemeriksaan aktif tanpa mengubah hasil teknis Surveyor." },
-  "pending-review": { title: "Menunggu Review", description: "Monitoring hasil Surveyor yang sudah disubmit ke antrean review." },
+  assigned: { title: "Ditugaskan", description: "Pekerjaan yang sudah mempunyai Surveyor GIFT tetapi pemeriksaan belum dimulai." },
+  "in-progress": { title: "Dalam Pemeriksaan", description: "Monitoring pemeriksaan aktif tanpa mengubah hasil teknis Surveyor." },
+  submitted: { title: "Sudah Dikirim", description: "Hasil Surveyor sudah dikirim dan menunggu keputusan Reviewer." },
   "need-revision": { title: "Perlu Revisi", description: "Monitoring pekerjaan yang dikembalikan Reviewer untuk diperbaiki Surveyor." },
-  approved: { title: "Disetujui", description: "Pekerjaan yang sudah disetujui tetapi belum melengkapi seluruh metadata dokumen." },
-  completed: { title: "Selesai", description: "Pekerjaan dengan pemeriksaan, keputusan, dan metadata dokumen yang lengkap." }
+  approved: { title: "Disetujui", description: "Hasil pemeriksaan telah disetujui; penerbitan dokumen tetap mengikuti keputusan fitur terpisah." },
+  rejected: { title: "Ditolak", description: "Hasil pemeriksaan dengan keputusan ditolak oleh Reviewer." },
+  completed: { title: "Selesai / Arsip", description: "Pekerjaan yang telah ditutup atau memiliki metadata laporan yang lengkap." }
 };
 
 const workTabs = [
   { id: "all", label: "Semua" },
+  { id: "draft", label: "Draf / Baru" },
   { id: "unassigned", label: "Belum Ditugaskan" },
-  { id: "in-progress", label: "Sedang Diperiksa" },
-  { id: "pending-review", label: "Menunggu Review" },
+  { id: "assigned", label: "Ditugaskan" },
+  { id: "in-progress", label: "Dalam Pemeriksaan" },
+  { id: "submitted", label: "Sudah Dikirim" },
   { id: "need-revision", label: "Perlu Revisi" },
   { id: "approved", label: "Disetujui" },
-  { id: "completed", label: "Selesai" }
+  { id: "rejected", label: "Ditolak" },
+  { id: "completed", label: "Selesai / Arsip" }
 ] as const;
 
 type Filters = {
@@ -55,7 +61,7 @@ const emptyFilters: Filters = {
 
 export function InspectionWorkList() {
   const searchParams = useSearchParams();
-  const requestedView = searchParams.get("view") ?? "all";
+  const requestedView = searchParams.get("view") === "pending-review" ? "submitted" : searchParams.get("view") ?? "all";
   const view: InspectionWorkView = validViews.includes(requestedView as InspectionWorkView) ? requestedView as InspectionWorkView : "all";
   const compat = searchParams.get("compat");
   const { accessToken, user } = useAuth();
@@ -87,7 +93,10 @@ export function InspectionWorkList() {
     return () => window.clearTimeout(timer);
   }, [loadRows]);
 
-  useEffect(() => setFilters(emptyFilters), [view]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setFilters(emptyFilters), 0);
+    return () => window.clearTimeout(timer);
+  }, [view]);
 
   const viewRows = useMemo(() => rows.filter((row) => matchesInspectionView(row, view)), [rows, view]);
   const filteredRows = useMemo(() => viewRows.filter((row) => matchesFilters(row, filters)), [filters, viewRows]);
@@ -121,7 +130,7 @@ export function InspectionWorkList() {
         <Metric label="Pekerjaan" value={filteredRows.length} />
         <Metric label="Peti Kemas" value={totalContainers} />
         <Metric label="Terlambat" value={filteredRows.filter((row) => row.isOverdue).length} />
-        <Metric label="Menunggu Review" value={filteredRows.filter((row) => row.reviewStatus === "Menunggu review").length} />
+        <Metric label="Sudah Dikirim" value={filteredRows.filter((row) => row.reviewStatus === "Sudah dikirim").length} />
       </section>
 
       <InspectionWorkFilter filters={filters} onChange={setFilters} onReset={() => setFilters(emptyFilters)} options={options} />
@@ -161,7 +170,7 @@ function InspectionWorkFilter({
       <FilterSelect label="Survey Type" value={filters.surveyType} options={options.surveyTypes} onChange={(value) => set("surveyType", value)} />
       <FilterSelect label="Surveyor GIFT" value={filters.surveyor} options={options.surveyors} onChange={(value) => set("surveyor", value)} />
       <FilterSelect label="Status Pekerjaan" value={filters.status} options={options.statuses} onChange={(value) => set("status", value)} />
-      <FilterSelect label="Tahap Proses" value={filters.stage} options={["draft", "unassigned", "in-progress", "pending-review", "need-revision", "completed"]} onChange={(value) => set("stage", value)} />
+      <FilterSelect label="Tahap Proses" value={filters.stage} options={["draft", "unassigned", "assigned", "in-progress", "submitted", "need-revision", "approved", "rejected", "completed"]} onChange={(value) => set("stage", value)} />
       <DateFilter label="Periode dari" value={filters.dateFrom} max={filters.dateTo || undefined} onChange={(value) => set("dateFrom", value)} />
       <DateFilter label="Periode sampai" value={filters.dateTo} min={filters.dateFrom || undefined} onChange={(value) => set("dateTo", value)} />
       <DateFilter label="Deadline sampai" value={filters.deadlineTo} onChange={(value) => set("deadlineTo", value)} />
@@ -189,7 +198,7 @@ function workColumns(view: InspectionWorkView): ResponsiveColumn<InspectionWorkR
   if (view === "unassigned") {
     columns.splice(7, 0, { key: "readiness", header: "Readiness", render: (row) => <ReadinessChecklist row={row} /> });
   }
-  if (view === "pending-review") {
+  if (view === "submitted") {
     columns.splice(9, 0,
       { key: "reviewer", header: "Reviewer / Supervisor", render: () => "Belum ditetapkan" },
       { key: "queue", header: "Antrean Review", render: (row) => `Disubmit ${formatDateTime(row.surveys.find((item) => item.status === "submitted")?.submitted_at)}` }
@@ -261,7 +270,7 @@ function matchesFilters(row: InspectionWorkRow, filters: Filters): boolean {
 function reviewTone(status: string): "success" | "warning" | "danger" | "neutral" {
   if (status === "Disetujui") return "success";
   if (status === "Perlu revisi" || status === "Ditolak") return "danger";
-  if (status === "Menunggu review") return "warning";
+  if (status === "Sudah dikirim") return "warning";
   return "neutral";
 }
 

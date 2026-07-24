@@ -56,7 +56,7 @@ export async function loadInspectionWorkDataset(accessToken: string): Promise<In
 
 export function matchesInspectionView(row: InspectionWorkRow, view: string): boolean {
   if (view === "all") return true;
-  if (view === "approved") return row.reviewStatus === "Disetujui" && row.stage !== "completed";
+  if (view === "pending-review") return row.stage === "submitted";
   return row.stage === view;
 }
 
@@ -85,11 +85,12 @@ function buildInspectionRow(
   const completedContainers = containers.filter((item) => completedContainerStatuses.has(item.status)).length;
   const revisionOpen = surveys.some((item) => item.status === "need_revision");
   const allContainersCompleted = containers.length > 0 && completedContainers === containers.length;
-  const stage = deriveStage(job, surveys, documents.length > 0, allContainersCompleted, revisionOpen);
+  const approvalHistory = surveyDetails.flatMap((item) => item.approval_history ?? []);
+  const rejected = surveys.some((item) => item.status === "rejected") || approvalHistory.some((item) => String(item.decision) === "rejected");
+  const stage = deriveStage(job, surveys, documents.length > 0, allContainersCompleted, revisionOpen, rejected);
   const deadline = job.deadline ? new Date(job.deadline).getTime() : Number.NaN;
   const isOverdue = Number.isFinite(deadline) && deadline < Date.now() && stage !== "completed";
   const progressPercent = calculateProgress(containers.map((item) => item.status));
-  const approvalHistory = surveyDetails.flatMap((item) => item.approval_history ?? []);
   const updatedCandidates = [
     job.updated_at,
     job.created_at,
@@ -110,12 +111,12 @@ function buildInspectionRow(
     completedContainers,
     findingCount: surveyDetails.reduce((total, item) => total + (item.damages?.length ?? 0), 0),
     photoCount: surveyDetails.reduce((total, item) => total + (item.photos?.length ?? 0), 0),
-    reviewStatus: revisionOpen
-      ? "Perlu revisi"
-      : surveys.some((item) => item.status === "submitted")
-        ? "Menunggu review"
-        : approvalHistory.some((item) => String(item.decision) === "rejected")
-          ? "Ditolak"
+    reviewStatus: rejected
+      ? "Ditolak"
+      : revisionOpen
+        ? "Perlu revisi"
+        : surveys.some((item) => item.status === "submitted")
+          ? "Sudah dikirim"
           : surveys.length > 0 && surveys.every((item) => item.status === "approved")
             ? "Disetujui"
             : "Belum direview",
@@ -140,15 +141,21 @@ function deriveStage(
   surveys: SurveyListItem[],
   hasDocument: boolean,
   allContainersCompleted: boolean,
-  revisionOpen: boolean
+  revisionOpen: boolean,
+  rejected: boolean
 ): InspectionWorkStage {
+  if (rejected) return "rejected";
   if (revisionOpen) return "need-revision";
-  if (surveys.some((item) => item.status === "submitted")) return "pending-review";
-  if (allContainersCompleted && hasDocument && job.status !== "cancelled") return "completed";
-  if (job.status === "assigned" || job.status === "in_progress" || surveys.some((item) => item.status === "in_progress")) {
+  if (surveys.some((item) => item.status === "submitted")) return "submitted";
+  if (surveys.length > 0 && surveys.every((item) => item.status === "approved")) {
+    return allContainersCompleted && hasDocument && job.status !== "cancelled" ? "completed" : "approved";
+  }
+  if (job.status === "closed" && hasDocument) return "completed";
+  if (job.status === "in_progress" || surveys.some((item) => item.status === "draft" || item.status === "in_progress")) {
     return "in-progress";
   }
-  if (job.status === "draft" && (job.containers?.length ?? 0) > 0 && (job.assignments?.length ?? 0) === 0) {
+  if ((job.assignments?.length ?? 0) > 0 || job.status === "assigned") return "assigned";
+  if ((job.containers?.length ?? 0) > 0 && (job.assignments?.length ?? 0) === 0) {
     return "unassigned";
   }
   return "draft";
@@ -163,7 +170,7 @@ function calculateProgress(statuses: string[]): number {
     in_progress: 50,
     need_revision: 60,
     submitted: 75,
-    rejected: 80,
+    rejected: 75,
     approved: 90,
     reported: 100,
     report_generated: 100

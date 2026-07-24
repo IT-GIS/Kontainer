@@ -75,6 +75,9 @@ func (s *Service) Detail(ctx context.Context, surveyID uuid.UUID) (map[string]an
 }
 
 func (s *Service) NeedRevision(ctx context.Context, surveyID uuid.UUID, input NeedRevisionInput, actor Actor) (map[string]any, error) {
+	if !reviewerRole(actor.ActiveRole) {
+		return nil, ErrForbidden
+	}
 	if strings.TrimSpace(input.RevisionNote) == "" {
 		return nil, ErrInvalidInput
 	}
@@ -82,6 +85,9 @@ func (s *Service) NeedRevision(ctx context.Context, surveyID uuid.UUID, input Ne
 }
 
 func (s *Service) Approve(ctx context.Context, surveyID uuid.UUID, input ApproveInput, actor Actor) (map[string]any, error) {
+	if !reviewerRole(actor.ActiveRole) {
+		return nil, ErrForbidden
+	}
 	if strings.TrimSpace(input.FinalResult) == "" {
 		return nil, ErrInvalidInput
 	}
@@ -89,10 +95,17 @@ func (s *Service) Approve(ctx context.Context, surveyID uuid.UUID, input Approve
 }
 
 func (s *Service) Reject(ctx context.Context, surveyID uuid.UUID, input RejectInput, actor Actor) (map[string]any, error) {
+	if !reviewerRole(actor.ActiveRole) {
+		return nil, ErrForbidden
+	}
 	if strings.TrimSpace(input.RejectionReason) == "" {
 		return nil, ErrInvalidInput
 	}
 	return s.repo.Reject(ctx, surveyID, input, actor)
+}
+
+func reviewerRole(role string) bool {
+	return role == "supervisor" || role == "super_admin"
 }
 
 func (s *Service) ListReports(ctx context.Context, params ListParams) (ListResult, error) {

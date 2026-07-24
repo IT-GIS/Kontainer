@@ -7,7 +7,7 @@ import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/ui/page-header";
 import { useAuth } from "@/hooks/use-auth";
-import { apiData, apiPaginated } from "@/lib/api-client";
+import { apiData } from "@/lib/api-client";
 import { loadOptions } from "@/lib/options";
 import type { OptionItem } from "@/types/jobs";
 
@@ -27,7 +27,7 @@ type CustomerPersonnel = {
 
 const initialForm: JobForm = {
   job_date: new Date().toISOString().slice(0, 10), customer_id: "", survey_type_id: "", location_id: "",
-  pic_customer_personnel_id: "", pic_customer_name: "", pic_customer_phone: "", pic_customer_email: "", reference_no: "", booking_no: "", do_no: "", bl_no: "",
+  pic_customer_personnel_id: "", pic_customer_name: "", pic_customer_phone: "", pic_customer_email: "", reference_no: "", spk_no: "", spk_date: "", spk_notes: "", booking_no: "", do_no: "", bl_no: "",
   vessel: "", voyage: "", trucking_company: "", priority: "normal", deadline: "", instruction: ""
 };
 
@@ -48,6 +48,7 @@ function CreateJobContent() {
   const [dependencyNotice, setDependencyNotice] = useState<string | null>(null);
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(true);
   const [isLoadingDependencies, setIsLoadingDependencies] = useState(false);
+  const [isLoadingPersonnel, setIsLoadingPersonnel] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isDirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(initialForm), [form]);
 
@@ -67,17 +68,15 @@ function CreateJobContent() {
       Promise.all([
         apiData<CustomerRecord>(`/master/customers/${form.customer_id}`, { accessToken }),
         loadOptions(accessToken, `/customers/${form.customer_id}/survey-types`, "name", "code"),
-        loadOptions(accessToken, `/customers/${form.customer_id}/locations`, "location_name", "location_code"),
-        apiPaginated<CustomerPersonnel>(`/customers/${form.customer_id}/personnel?page=1&per_page=100&status=active`, { accessToken })
-      ]).then(([customer, nextSurveyTypes, nextLocations, personnelResult]) => {
+        loadOptions(accessToken, `/customers/${form.customer_id}/locations`, "location_name", "location_code")
+      ]).then(([customer, nextSurveyTypes, nextLocations]) => {
         setSelectedCustomer(customer);
         setSurveyTypes(nextSurveyTypes);
         setLocations(nextLocations);
-        setPersonnel(personnelResult.rows);
         setDependencyNotice(
-          nextSurveyTypes.length > 0 && nextLocations.length > 0 && personnelResult.rows.length > 0
+          nextSurveyTypes.length > 0 && nextLocations.length > 0
             ? null
-            : "Master Data Customer belum lengkap. Pastikan Personnel/PIC, Location, dan Survey Type aktif sudah tersedia."
+            : "Master Data Customer belum lengkap. Pastikan Location dan Survey Type aktif sudah tersedia."
         );
       }).catch((err) => {
         setError(err instanceof Error ? err.message : "Gagal mengambil PIC, Location, dan Survey Type.");
@@ -88,6 +87,27 @@ function CreateJobContent() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [accessToken, form.customer_id]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (!accessToken || !form.customer_id || !form.location_id) {
+        setPersonnel([]);
+        return;
+      }
+      setIsLoadingPersonnel(true);
+      apiData<CustomerPersonnel[]>(`/customers/${form.customer_id}/locations/${form.location_id}/personnel`, { accessToken })
+        .then((items) => {
+          setPersonnel(items);
+          setDependencyNotice(items.length === 0 ? "Location terpilih belum mempunyai mapping Personel/PIC aktif. Atur mapping pada detail Customer terlebih dahulu." : null);
+        })
+        .catch((err) => {
+          setPersonnel([]);
+          setError(err instanceof Error ? err.message : "Personel/PIC Location gagal dimuat.");
+        })
+        .finally(() => setIsLoadingPersonnel(false));
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [accessToken, form.customer_id, form.location_id]);
 
   useEffect(() => {
     if (!isDirty) return;
@@ -105,7 +125,15 @@ function CreateJobContent() {
       setDependencyNotice(null);
     }
     setForm((current) => {
-      if (key !== "customer_id") return { ...current, [key]: value };
+      if (key !== "customer_id" && key !== "location_id") return { ...current, [key]: value };
+      if (key === "location_id") return {
+        ...current,
+        location_id: value,
+        pic_customer_personnel_id: "",
+        pic_customer_name: "",
+        pic_customer_phone: "",
+        pic_customer_email: ""
+      };
       return {
         ...current,
         customer_id: value,
@@ -140,7 +168,7 @@ function CreateJobContent() {
     setIsSubmitting(true);
     setError(null);
     try {
-      const payload = { ...form, deadline: form.deadline ? new Date(form.deadline).toISOString() : undefined };
+      const payload = { ...form, spk_date: form.spk_date || undefined, deadline: form.deadline ? new Date(form.deadline).toISOString() : undefined };
       const result = await apiData<{ id: string }>("/jobs", { method: "POST", accessToken, body: JSON.stringify(payload) });
       router.replace(`/jobs/${result.id}`);
     } catch (err) {
@@ -155,33 +183,38 @@ function CreateJobContent() {
   }
 
   const dependenciesDisabled = !form.customer_id || isLoadingDependencies;
+  const personnelDisabled = dependenciesDisabled || !form.location_id || isLoadingPersonnel;
   return (
     <div className="page-stack">
       <PageHeader title="Buat Pekerjaan Inspeksi" description="Buat header pekerjaan sebelum menambah peti kemas dan menugaskan Surveyor GIFT." action={{ label: isSubmitting ? "Menyimpan" : "Simpan Pekerjaan", icon: Save, onClick: () => void submit(), disabled: isSubmitting || isLoadingDependencies }} />
       <div className="job-actions"><button className="secondary-button" onClick={leavePage} type="button"><ArrowLeft size={17} /><span>Kembali ke Semua Pekerjaan</span></button></div>
-      {error ? <div className="alert alert-danger">{error}</div> : null}
+      {error ? <div className="alert alert-danger" role="alert">{error}</div> : null}
       {dependencyNotice ? <div className="alert alert-warning">{dependencyNotice}</div> : null}
       <section className="workspace-panel">
         <div className="form-grid form-grid-wide">
           <Field label="Tanggal Pekerjaan"><input required type="date" value={form.job_date} onChange={(event) => update("job_date", event.target.value)} /></Field>
           <Field label="Customer"><Select disabled={isLoadingCustomers} value={form.customer_id} onChange={(value) => update("customer_id", value)} options={customers} placeholder={isLoadingCustomers ? "Memuat Customer..." : "Pilih Customer terlebih dahulu"} /></Field>
-          <Field label="PIC Customer"><select disabled={dependenciesDisabled} value={form.pic_customer_personnel_id} onChange={(event) => selectPersonnel(event.target.value)}><option value="">{dependenciesDisabled ? "Pilih Customer terlebih dahulu" : "Pilih Personnel/PIC aktif"}</option>{personnel.map((item) => <option key={item.id} value={item.id}>{item.personnel_code} - {item.full_name}</option>)}</select></Field>
+          <Field label="Location Pemeriksaan"><Select disabled={dependenciesDisabled} value={form.location_id} onChange={(value) => update("location_id", value)} options={locations} placeholder={dependenciesDisabled ? "Pilih Customer terlebih dahulu" : "Pilih Location aktif"} /></Field>
+          <Field label="Personel/PIC Customer"><select disabled={personnelDisabled} value={form.pic_customer_personnel_id} onChange={(event) => selectPersonnel(event.target.value)}><option value="">{!form.location_id ? "Pilih Location terlebih dahulu" : isLoadingPersonnel ? "Memuat Personel/PIC..." : "Pilih Personel/PIC yang dipetakan"}</option>{personnel.map((item) => <option key={item.id} value={item.id}>{item.personnel_code} - {item.full_name}</option>)}</select></Field>
           <Field label="Telepon PIC"><input readOnly value={form.pic_customer_phone} placeholder="Belum tersedia" /></Field>
           <Field label="Email PIC"><input readOnly value={form.pic_customer_email} placeholder="Belum tersedia" /></Field>
-          <Field label="Location"><Select disabled={dependenciesDisabled} value={form.location_id} onChange={(value) => update("location_id", value)} options={locations} placeholder={dependenciesDisabled ? "Pilih Customer terlebih dahulu" : "Pilih Location aktif"} /></Field>
           <Field label="Survey Type"><Select disabled={dependenciesDisabled} value={form.survey_type_id} onChange={(value) => update("survey_type_id", value)} options={surveyTypes} placeholder={dependenciesDisabled ? "Pilih Customer terlebih dahulu" : "Pilih Survey Type aktif"} /></Field>
           <Field label="Prioritas"><select value={form.priority} onChange={(event) => update("priority", event.target.value)}><option value="normal">Normal</option><option value="urgent">Urgent</option></select></Field>
           <Field label="Deadline"><input type="datetime-local" value={form.deadline} onChange={(event) => update("deadline", event.target.value)} /></Field>
           <Field label="Nomor Referensi"><input value={form.reference_no} onChange={(event) => update("reference_no", event.target.value)} /></Field>
+          <Field label="Nomor SPK"><input value={form.spk_no} onChange={(event) => update("spk_no", event.target.value)} /></Field>
+          <Field label="Tanggal SPK"><input type="date" value={form.spk_date} onChange={(event) => update("spk_date", event.target.value)} /></Field>
           <Field label="Booking Number"><input value={form.booking_no} onChange={(event) => update("booking_no", event.target.value)} /></Field>
           <Field label="DO Number"><input value={form.do_no} onChange={(event) => update("do_no", event.target.value)} /></Field>
           <Field label="BL Number"><input value={form.bl_no} onChange={(event) => update("bl_no", event.target.value)} /></Field>
           <Field label="Vessel"><input value={form.vessel} onChange={(event) => update("vessel", event.target.value)} /></Field>
           <Field label="Voyage"><input value={form.voyage} onChange={(event) => update("voyage", event.target.value)} /></Field>
           <Field label="Trucking Company"><input value={form.trucking_company} onChange={(event) => update("trucking_company", event.target.value)} /></Field>
+          <label className="field form-span-2"><span>Keterangan SPK</span><textarea rows={3} value={form.spk_notes} onChange={(event) => update("spk_notes", event.target.value)} /></label>
           <label className="field form-span-2"><span>Instruksi Admin</span><textarea rows={4} value={form.instruction} onChange={(event) => update("instruction", event.target.value)} /></label>
         </div>
-        {selectedCustomer && personnel.length === 0 ? <p className="muted-text">Customer aktif ini belum mempunyai Personnel/PIC aktif di Master Data.</p> : null}
+        <div className="alert alert-warning">Lampiran SPK belum dapat diunggah pada tahap ini karena penyimpanan objek belum diverifikasi. Nomor, tanggal, dan keterangan SPK tetap dapat disimpan.</div>
+        {selectedCustomer && form.location_id && personnel.length === 0 ? <p className="muted-text">Location terpilih belum mempunyai Personel/PIC aktif yang dipetakan.</p> : null}
       </section>
     </div>
   );
@@ -190,8 +223,8 @@ function CreateJobContent() {
 function validate(form: JobForm) {
   if (!form.job_date) return "Tanggal pekerjaan wajib diisi.";
   if (!form.customer_id) return "Customer wajib dipilih terlebih dahulu.";
-  if (!form.pic_customer_personnel_id) return "Personnel/PIC Customer wajib dipilih.";
-  if (!form.location_id) return "Location wajib dipilih.";
+  if (!form.location_id) return "Location Pemeriksaan wajib dipilih.";
+  if (!form.pic_customer_personnel_id) return "Personel/PIC Customer yang dipetakan ke Location wajib dipilih.";
   if (!form.survey_type_id) return "Survey Type wajib dipilih.";
   if (form.deadline && new Date(form.deadline).getTime() < new Date(form.job_date).getTime()) return "Deadline tidak boleh lebih awal dari tanggal pekerjaan.";
   return null;

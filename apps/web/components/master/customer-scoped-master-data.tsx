@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { CustomerReadinessIndex } from "@/components/master/customer-readiness";
 import { MasterDataPage } from "@/components/master/master-data-page";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -56,16 +57,12 @@ export function CustomerScopedMasterIndex({
   }, [accessToken, category]);
 
   if (category === "customer") {
-    return <MasterDataPage
-      resourceId="customers"
-      detailBaseHref={routeFamily === "actual" ? "/master/customers/customer" : undefined}
-      detailQuery={customerDetailTab ? "?tab=" + customerDetailTab : undefined}
-    />;
+    return <CustomerReadinessIndex />;
   }
 
   return <div className="page-stack master-data-customer-picker">
     <PageHeader title={config.label} description="Pilih Customer terlebih dahulu. Data yang dikelola akan tersimpan untuk Customer tersebut." />
-    {error ? <div className="alert alert-danger">{error}</div> : null}
+    {error ? <div className="alert alert-danger" role="alert">{error}</div> : null}
     {loading ? <div className="workspace-panel" role="status">Memuat Customer...</div> : null}
     {!loading && customers.length === 0 ? <div className="workspace-panel"><p className="muted-text">Customer belum tersedia.</p></div> : null}
     {!loading && customers.length > 0 ? <section aria-labelledby="master-customer-picker-heading" className="workspace-panel master-customer-picker-panel">
@@ -136,14 +133,15 @@ export function CustomerScopedMasterDetail({ category, customerId, routeFamily, 
   if (!customer) return <div className="workspace-panel">Memuat Customer...</div>;
   if (!mapping) return <MasterDataPage resourceId="customers" backHref={backHref} />;
 
+  const readOnly = customer.status !== "active";
   return <div className="page-stack">
     <div className="workspace-panel detail-grid">
       <div><span>Customer</span><strong>{customer.customer_name}</strong></div>
       <div><span>Kode</span><strong>{customer.customer_code}</strong></div>
       <div><span>Cakupan Data</span><strong>Khusus Customer ini</strong></div>
     </div>
-    <MasterDataPage resourceId={mapping.resourceId} endpointOverride={endpoint} fixedValues={{ customer_id: customerId }} backHref={backHref} />
-    {category === "survey-type" ? <SurveyTypeReferenceConfiguration customerId={customerId} /> : null}
+    <MasterDataPage resourceId={mapping.resourceId} endpointOverride={endpoint} fixedValues={{ customer_id: customerId }} backHref={backHref} readOnly={readOnly} readOnlyMessage="Customer tidak aktif. Master Data hanya dapat dilihat dan tidak dapat diubah." />
+    {category === "survey-type" ? <SurveyTypeReferenceConfiguration customerId={customerId} readOnly={readOnly} /> : null}
   </div>;
 }
 
@@ -154,7 +152,7 @@ type ReferenceOptions = {
   photo_categories: ReferenceRow[];
 };
 
-function SurveyTypeReferenceConfiguration({ customerId }: { customerId: string }) {
+function SurveyTypeReferenceConfiguration({ customerId, readOnly }: { customerId: string; readOnly: boolean }) {
   const { accessToken } = useAuth();
   const [surveyTypes, setSurveyTypes] = useState<Array<{ id: string; code: string; name: string }>>([]);
   const [surveyTypeId, setSurveyTypeId] = useState("");
@@ -180,6 +178,7 @@ function SurveyTypeReferenceConfiguration({ customerId }: { customerId: string }
   }, [accessToken, customerId, surveyTypeId]);
 
   function toggle(group: keyof ReferenceOptions, id: string) {
+    if (readOnly) return;
     setOptions((current) => current ? {
       ...current,
       [group]: current[group].map((item) => item.id === id ? { ...item, enabled: !enabled(item.enabled) } : item)
@@ -210,19 +209,19 @@ function SurveyTypeReferenceConfiguration({ customerId }: { customerId: string }
   }
 
   return <section className="workspace-panel page-stack">
-    <div className="section-title-row"><div><h2>Mapping Referensi Survey Type</h2><p className="muted-text">Mapping ini menentukan pilihan yang tersedia bagi Surveyor GIFT.</p></div><button className="primary-button" disabled={saving || !options} onClick={() => void save()}>{saving ? "Menyimpan..." : "Simpan Mapping"}</button></div>
+    <div className="section-title-row"><div><h2>Mapping Referensi Survey Type</h2><p className="muted-text">Mapping ini menentukan pilihan yang tersedia bagi Surveyor GIFT.</p></div>{!readOnly ? <button className="primary-button" disabled={saving || !options} onClick={() => void save()}>{saving ? "Menyimpan..." : "Simpan Mapping"}</button> : null}</div>
     <label className="field"><span>Survey Type</span><select value={surveyTypeId} onChange={(event) => setSurveyTypeId(event.target.value)}><option value="">Pilih Survey Type</option>{surveyTypes.map((item) => <option key={item.id} value={item.id}>{item.code} - {item.name}</option>)}</select></label>
     {message ? <div className="alert alert-warning">{message}</div> : null}
     {options ? <div className="detail-grid">
-      <ReferenceGroup title="Severity" rows={options.finding_severities} onToggle={(id) => toggle("finding_severities", id)} />
-      <ReferenceGroup title="Test Parameter" rows={options.test_parameters} onToggle={(id) => toggle("test_parameters", id)} />
-      <ReferenceGroup title="Photo Category" rows={options.photo_categories} onToggle={(id) => toggle("photo_categories", id)} />
+      <ReferenceGroup title="Severity" rows={options.finding_severities} disabled={readOnly} onToggle={(id) => toggle("finding_severities", id)} />
+      <ReferenceGroup title="Test Parameter" rows={options.test_parameters} disabled={readOnly} onToggle={(id) => toggle("test_parameters", id)} />
+      <ReferenceGroup title="Photo Category" rows={options.photo_categories} disabled={readOnly} onToggle={(id) => toggle("photo_categories", id)} />
     </div> : null}
   </section>;
 }
 
-function ReferenceGroup({ title, rows, onToggle }: { title: string; rows: ReferenceRow[]; onToggle: (id: string) => void }) {
-  return <div><strong>{title}</strong>{rows.map((item) => <label className="field form-check" key={item.id}><input type="checkbox" checked={enabled(item.enabled)} onChange={() => onToggle(item.id)} /> {item.code} - {item.name}</label>)}</div>;
+function ReferenceGroup({ title, rows, disabled, onToggle }: { title: string; rows: ReferenceRow[]; disabled: boolean; onToggle: (id: string) => void }) {
+  return <div><strong>{title}</strong>{rows.map((item) => <label className="field form-check" key={item.id}><input type="checkbox" checked={enabled(item.enabled)} disabled={disabled} onChange={() => onToggle(item.id)} /> {item.code} - {item.name}</label>)}</div>;
 }
 
 function enabled(value: boolean | number) {

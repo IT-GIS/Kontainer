@@ -4,14 +4,17 @@ import type { SurveyListItem } from "@/types/surveys";
 
 export type InspectionWorkView =
   | "all"
+  | "draft"
   | "unassigned"
+  | "assigned"
   | "in-progress"
-  | "pending-review"
+  | "submitted"
   | "need-revision"
   | "approved"
+  | "rejected"
   | "completed";
 
-export type InspectionWorkStage = Exclude<InspectionWorkView, "all" | "approved"> | "draft";
+export type InspectionWorkStage = Exclude<InspectionWorkView, "all">;
 
 export type InspectionReadinessItem = {
   label: string;

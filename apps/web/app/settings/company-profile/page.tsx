@@ -1,5 +1,7 @@
-import { NavigationPlaceholderPage } from "@/components/navigation/navigation-placeholder-page";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { AppShell } from "@/components/layout/app-shell";
+import { CompanyProfileSettings } from "@/components/settings/admin-settings";
 
 export default function CompanyProfileSettingsPage() {
-  return <NavigationPlaceholderPage title="Company Profile" backHref="/dashboard" backLabel="Kembali ke Dashboard" />;
+  return <ProtectedRoute><AppShell title="Company Profile"><CompanyProfileSettings /></AppShell></ProtectedRoute>;
 }

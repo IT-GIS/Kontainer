@@ -178,13 +178,9 @@ func (r Repository) Approve(ctx context.Context, surveyID uuid.UUID, input Appro
 		  WHERE jc.job_order_id=$1 AND jc.deleted_at IS NULL AND jc.status NOT IN ('approved','report_generated','cancelled')
 		)
 	`, jobID, actor.UserID)
-	report, err := r.createReportTx(ctx, tx, surveyID, base, actor, "container_inspection_report")
-	if err != nil {
-		return nil, err
-	}
-	item := map[string]any{"survey_id": surveyID.String(), "status": "approved", "report_no": report["report_no"], "report_generation_status": "queued"}
+	item := map[string]any{"survey_id": surveyID.String(), "status": "approved", "report_generation_status": "not_started"}
 	_ = r.insertAudit(ctx, tx, actor, "reviews.approve", "surveys", &surveyID, base, item)
-	_ = r.insertJobEvent(ctx, tx, jobID, "survey_approved", "Survey disetujui.", fmt.Sprint(report["report_no"]), actor.UserID, item)
+	_ = r.insertJobEvent(ctx, tx, jobID, "survey_approved", "Survey disetujui.", "Metadata laporan belum dibentuk.", actor.UserID, item)
 	return item, tx.Commit(ctx)
 }
 
