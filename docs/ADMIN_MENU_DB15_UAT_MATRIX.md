@@ -206,7 +206,8 @@ PNG memiliki dimensi target dan ukuran file nonzero. Karena viewer gambar lokal 
 | Auto report queue | DECISION_REQUIRED | Tentukan pemicu, retry, versioning, dan ownership proses |
 | Data produksi | BLOCKED | Dump saat ini didominasi UAT; Company Profile dan signer belum lengkap |
 | Route Surveyor GIFT `/settings/surveyors` | DECISION_REQUIRED | Route aktual `/master/surveyors` tersedia; perubahan canonical/redirect ditunda agar scope CI tetap sempit |
-| CI commit perbaikan/deployment | NOT_TESTED | Baseline `fa5a9da`: Web dan Go PASS, MySQL FAIL; workflow commit perbaikan diverifikasi setelah push. Deployment tidak diuji |
+| CI commit perbaikan `9dba3bc` | PASS | Workflow `Validate` run `30087909560`: MySQL, Go, Web, dan whitespace seluruhnya hijau |
+| Deployment production | NOT_TESTED | Tidak dijalankan pada scope ini |
 | Visual in-app browser | PARTIAL | Edge CDP lulus; bootstrap in-app browser tertahan runtime sandbox |
 
-Publikasi ke `origin/main` dilakukan setelah pengguna memberi instruksi push terpisah; scope commit dibatasi pada perbaikan MySQL, dokumentasi, dan bukti pengujian.
+Perbaikan dipublikasikan ke `origin/main` sebagai commit `9dba3bc`; workflow `Validate` run `30087909560` selesai PASS untuk seluruh job.

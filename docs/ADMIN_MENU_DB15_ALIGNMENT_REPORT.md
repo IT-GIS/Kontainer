@@ -1,7 +1,7 @@
 # Laporan Penyesuaian Menu Admin dan Database 15
 
 Tanggal audit dan implementasi: 24 Juli 2026
-Status keseluruhan: **PARTIAL** - perbaikan MySQL dan seluruh validasi CI-equivalent lokal lulus. Publikasi ke `origin/main` kemudian diotorisasi melalui instruksi terpisah; status workflow GitHub commit perbaikan harus diverifikasi di remote dan tidak diasumsikan hijau.
+Status keseluruhan: **PARTIAL** - perbaikan MySQL lulus pada validasi lokal dan GitHub Actions commit `9dba3bc`; status PARTIAL tetap dipertahankan karena deployment production, data resmi, object storage, dan keputusan bisnis dokumen masih di luar scope.
 
 ## 1. Ruang lingkup dan batas pekerjaan
 
@@ -258,7 +258,7 @@ Hasil database upgrade copy DB15:
 | Migration `0012` up/down/up | PASS | Down menghapus 4 kolom dan 3 FK; up ulang mengembalikannya; orphan 0 |
 | `git diff --check` | PASS | Pemeriksaan whitespace akhir dijalankan setelah dokumentasi |
 
-Status commit baseline `fa5a9da`: Web typecheck/build PASS dan Go API/Worker PASS pada GitHub Actions, sedangkan `Validate / MySQL integration test` FAIL karena `ERROR 3780`. Perbaikan lokal sudah lulus seluruh validasi di atas dan dipublikasikan setelah instruksi terpisah; status workflow commit perbaikan diverifikasi di remote dan tidak dinyatakan hijau sebelum selesai. Deployment production tidak dijalankan.
+Commit baseline `fa5a9da` sebelumnya gagal pada `Validate / MySQL integration test` dengan `ERROR 3780`. Setelah perbaikan dipublikasikan sebagai commit `9dba3bc`, workflow `Validate` run `30087909560` selesai PASS: MySQL integration, Go API/Worker, Web typecheck/build, dan whitespace seluruhnya hijau. Deployment production tidak dijalankan.
 
 ## 10. UAT dan screenshot
 
@@ -330,11 +330,12 @@ Follow-up perbaikan CI 24 Juli 2026 hanya mengubah migration `0010`, canonical p
 | Report queue otomatis | DECISION_REQUIRED | Keputusan bisnis pemicu/antrean belum ditetapkan |
 | Data produksi | BLOCKED | Dump didominasi data UAT dan Company Profile belum lengkap |
 | Route Surveyor GIFT `/settings/surveyors` | DECISION_REQUIRED | Route aktual `/master/surveyors` tetap dipakai; redirect/canonical rename dikerjakan terpisah |
-| CI commit perbaikan dan deployment production | NOT_TESTED | Baseline gagal pada MySQL; workflow commit perbaikan diverifikasi setelah push. Deployment tidak diuji |
+| CI commit perbaikan `9dba3bc` | PASS | Workflow `Validate` run `30087909560`: seluruh job hijau |
+| Deployment production | NOT_TESTED | Tidak dijalankan pada scope ini |
 | Inspeksi visual in-app | PARTIAL | Edge CDP lulus; runtime in-app dan viewer gambar tertahan sandbox |
 
 Hasil ini tidak dinyatakan production-ready. Pengaktifan upload, foto, dokumen akhir, atau data referensi produksi memerlukan sumber data dan keputusan bisnis terpisah.
 
 ## 13. Pernyataan publish
 
-**Publikasi ke `origin/main` dilakukan setelah pengguna memberi instruksi push terpisah. Scope commit dibatasi pada perbaikan MySQL, dokumentasi, dan bukti pengujian.**
+**Perbaikan dipublikasikan ke `origin/main` sebagai commit `9dba3bc` setelah instruksi push terpisah. Scope commit dibatasi pada perbaikan MySQL, dokumentasi, dan bukti pengujian.**
