@@ -1,0 +1,20 @@
+COMMAND=go test ./...
+EXIT=0
+?   	container-survey/services/api/cmd/api	[no test files]
+?   	container-survey/services/api/internal/apphttp	[no test files]
+ok  	container-survey/services/api/internal/auth	(cached)
+?   	container-survey/services/api/internal/config	[no test files]
+?   	container-survey/services/api/internal/dashboard	[no test files]
+ok  	container-survey/services/api/internal/database	(cached)
+ok  	container-survey/services/api/internal/finance	(cached)
+?   	container-survey/services/api/internal/health	[no test files]
+?   	container-survey/services/api/internal/http	[no test files]
+ok  	container-survey/services/api/internal/jobs	(cached)
+ok  	container-survey/services/api/internal/masterdata	(cached)
+?   	container-survey/services/api/internal/middleware	[no test files]
+?   	container-survey/services/api/internal/modules	[no test files]
+ok  	container-survey/services/api/internal/numbering	(cached)
+ok  	container-survey/services/api/internal/objectstorage	(cached)
+ok  	container-survey/services/api/internal/reviews	(cached)
+ok  	container-survey/services/api/internal/surveyor	(cached)
+ok  	container-survey/services/api/internal/users	(cached)

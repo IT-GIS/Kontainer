@@ -1,8 +1,8 @@
 # Matriks UAT Penyesuaian Menu Admin dan Database 15
 
-Tanggal: 23 Juli 2026
-Lingkungan: build production lokal web pada port sementara, API lokal pada port sementara, dan salinan import `kontainer_db (15).sql`.
-Data: seluruh data tambahan memakai label UAT/sintetis. Database sementara dibersihkan setelah pengujian.
+Tanggal: 24 Juli 2026
+Lingkungan: bukti UAT sebelumnya dipertahankan; follow-up ini memakai clean container MySQL 8.4.10 pada port 3307 dan build production lokal. Tidak ada data produksi yang diubah.
+Data: bukti UAT sebelumnya memakai data sintetis; follow-up clean migration tidak memasukkan data bisnis dan tidak menyentuh database produksi.
 
 Arti status:
 
@@ -145,17 +145,19 @@ Foto tidak menjadi syarat palsu pada skenario UAT ini karena template UAT tidak 
 | 4 | Upgrade copy DB15 | Kolom SPK dan FK bertambah | 4 kolom SPK dan 3 FK target tersedia | PASS |
 | 5 | Down migration DB15 | Perubahan `0012` dapat di-rollback | Kolom/FK target kembali 0 | PASS |
 | 6 | Up ulang DB15 | Schema kembali lengkap, data tidak hilang | 7 response tetap ada, tanpa orphan | PASS |
-| 7 | Clean database chain | `0001`–`0012` berjalan | Lulus setelah normalisasi collation existing pada `0010` | PASS |
+| 7 | Clean database chain | `0001`-`0012` berjalan pada MySQL 8.4 | Seluruh migration exit 0 | PASS |
 | 8 | Jumlah tabel clean DB | Struktur konsisten | 67 tabel | PASS |
+| 9 | MySQL integration test | Smoke test sama dengan GitHub Actions | `TestMasterDataSmokeWithTestDatabase` PASS, exit 0 | PASS |
 
-Defect existing yang ditemukan: `0010` mencampur `utf8mb4_unicode_ci` dan `utf8mb4_0900_ai_ci`, sehingga FK gagal pada MySQL 8.4. Sebanyak 19 deklarasi dinormalisasi ke collation foundation `utf8mb4_unicode_ci`; canonical patch `0015` diselaraskan.
+Defect direproduksi pada `0010` baris 139: parent `container_types.id` adalah `CHAR(36) utf8mb4_0900_ai_ci`, sedangkan child `fitness_checklist_templates.container_type_id` adalah `CHAR(36) utf8mb4_unicode_ci`. Canonical dump memakai `utf8mb4_0900_ai_ci`; 19 deklarasi migration `0010` dan patch `0015` diselaraskan ke collation tersebut tanpa menghapus FK. Audit runtime seluruh FK string target menunjukkan child dan parent sama-sama `CHAR(36) utf8mb4_0900_ai_ci`.
 
 ## 8. Test source dan build
 
 | Perintah | Hasil | Status |
 |---|---|---|
-| `go test ./...` — `services/api` | Seluruh package lulus | PASS |
-| `go test ./...` — `services/worker` | Seluruh package lulus | PASS |
+| MySQL integration `TestMasterDataSmokeWithTestDatabase` | PASS pada MySQL 8.4.10, exit 0 | PASS |
+| `go test ./...` - `services/api` | Seluruh package lulus, exit 0 | PASS |
+| `go test ./...` - `services/worker` | Seluruh package lulus, exit 0 | PASS |
 | `npm run typecheck --workspace apps/web` | Tidak ada type error | PASS |
 | `npm run test:navigation --workspace apps/web` | Struktur canonical dan label terlarang sesuai | PASS |
 | `npm run lint --workspace apps/web` | Tidak ada error/warning pada rerun | PASS |
@@ -164,9 +166,9 @@ Defect existing yang ditemukan: `0010` mencampur `utf8mb4_unicode_ci` dan `utf8m
 
 Catatan lingkungan:
 
-- Go test API pertama tertahan akses Go cache sandbox, lalu lulus saat dijalankan dengan izin yang diperlukan.
-- Build UAT pertama mengalami `spawn EPERM` dalam sandbox, lalu lulus saat rerun dengan izin yang diperlukan.
-- Kedua kejadian merupakan batas eksekusi lokal, bukan kegagalan source setelah rerun.
+- Smoke test pertama di sandbox menghasilkan warning izin cache/telemetry setelah test PASS; rerun di luar sandbox lulus bersih dengan exit 0.
+- Production build follow-up dijalankan di luar sandbox untuk menghindari batas proses child Windows dan lulus dengan exit 0.
+- Warning lingkungan tidak diperlakukan sebagai kegagalan source; status tabel di atas berasal dari rerun terminal yang bersih.
 
 ## 9. Browser UAT dan screenshot
 
@@ -203,7 +205,8 @@ PNG memiliki dimensi target dan ukuran file nonzero. Karena viewer gambar lokal 
 | Final PDF/QR/public verification | BLOCKED | Tetap nonaktif sampai keputusan dan dependensi tersedia |
 | Auto report queue | DECISION_REQUIRED | Tentukan pemicu, retry, versioning, dan ownership proses |
 | Data produksi | BLOCKED | Dump saat ini didominasi UAT; Company Profile dan signer belum lengkap |
-| CI remote/deployment | NOT_TESTED | Jalankan pipeline dan deployment terpisah setelah persetujuan |
+| Route Surveyor GIFT `/settings/surveyors` | DECISION_REQUIRED | Route aktual `/master/surveyors` tersedia; perubahan canonical/redirect ditunda agar scope CI tetap sempit |
+| CI commit perbaikan/deployment | NOT_TESTED | Baseline `fa5a9da`: Web dan Go PASS, MySQL FAIL; workflow commit perbaikan diverifikasi setelah push. Deployment tidak diuji |
 | Visual in-app browser | PARTIAL | Edge CDP lulus; bootstrap in-app browser tertahan runtime sandbox |
 
-Tidak ada commit dan tidak ada push.
+Publikasi ke `origin/main` dilakukan setelah pengguna memberi instruksi push terpisah; scope commit dibatasi pada perbaikan MySQL, dokumentasi, dan bukti pengujian.

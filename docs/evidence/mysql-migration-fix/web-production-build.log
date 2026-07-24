@@ -1,0 +1,110 @@
+COMMAND=npm run build --workspace apps/web
+EXIT=0
+
+> @container-survey/web@0.1.0 build
+> next build
+
+▲ Next.js 16.2.9 (Turbopack)
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 34.1s
+  Running TypeScript ...
+  Finished TypeScript in 18.4s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/70) ...
+  Generating static pages using 7 workers (17/70)
+  Generating static pages using 7 workers (34/70)
+  Generating static pages using 7 workers (52/70)
+✓ Generating static pages using 7 workers (70/70) in 5.3s
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /dashboard
+├ ○ /finance/customers
+├ ○ /finance/dashboard
+├ ○ /finance/invoices
+├ ƒ /finance/invoices/[id]
+├ ○ /finance/outstanding
+├ ○ /finance/payments
+├ ○ /finance/price-list
+├ ○ /finance/ready-to-invoice
+├ ƒ /fitness/[[...slug]]
+├ ○ /fitness/applications
+├ ƒ /fitness/applications/[applicationId]
+├ ○ /fitness/applications/create
+├ ○ /fitness/client-master-data
+├ ƒ /fitness/client-master-data/[clientId]
+├ ○ /fitness/clients
+├ ƒ /fitness/clients/[clientId]
+├ ○ /fitness/clients/create
+├ ○ /fitness/dashboard
+├ ○ /fitness/master-data
+├ ƒ /fitness/master-data/[category]
+├ ƒ /fitness/master-data/[category]/[clientId]
+├ ○ /fitness/master-data/checklist-templates
+├ ƒ /fitness/master-data/checklist-templates/[clientId]
+├ ƒ /fitness/master-data/checklist-templates/[clientId]/[templateId]/items
+├ ○ /fitness/master-data/customers/create
+├ ○ /jobs
+├ ƒ /jobs/[id]
+├ ƒ /jobs/[id]/containers/import
+├ ○ /jobs/assign
+├ ○ /jobs/create
+├ ○ /jobs/import
+├ ○ /login
+├ ƒ /master/[...route]
+├ ○ /master/cedex/components
+├ ○ /master/cedex/damages
+├ ○ /master/cedex/locations
+├ ○ /master/cedex/materials
+├ ○ /master/cedex/repairs
+├ ○ /master/container-types
+├ ƒ /master/customers
+├ ○ /master/customers/create
+├ ƒ /master/customers/customer/[customerId]
+├ ƒ /master/inspection-references
+├ ƒ /master/iso-cedex
+├ ○ /master/locations
+├ ○ /master/responsibility-codes
+├ ○ /master/survey-types
+├ ○ /master/surveyors
+├ ○ /monitoring/surveys
+├ ○ /monitoring/surveys/approved
+├ ○ /monitoring/surveys/in-progress
+├ ○ /monitoring/surveys/need-revision
+├ ○ /monitoring/surveys/submitted
+├ ○ /reports
+├ ƒ /reports/[id]
+├ ○ /reports/qr-validation
+├ ○ /reports/versions
+├ ƒ /review/[id]
+├ ○ /review/approved
+├ ○ /review/history
+├ ○ /review/need-revision
+├ ○ /review/pending
+├ ○ /settings/audit-log
+├ ○ /settings/company-profile
+├ ○ /settings/data-bootstrap
+├ ○ /settings/numbering
+├ ○ /settings/roles
+├ ○ /settings/users
+├ ○ /surveyor/dashboard
+├ ○ /surveyor/jobs
+├ ƒ /surveyor/jobs/[id]
+├ ƒ /surveyor/surveys/[id]
+├ ○ /surveyor/surveys/approved
+├ ○ /surveyor/surveys/draft
+├ ○ /surveyor/surveys/history
+├ ○ /surveyor/surveys/need-revision
+├ ○ /surveyor/surveys/submitted
+├ ○ /surveys/monitoring
+├ ○ /surveys/monitoring/approved
+├ ○ /surveys/monitoring/in-progress
+├ ○ /surveys/monitoring/need-revision
+└ ○ /surveys/monitoring/submitted
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

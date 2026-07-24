@@ -1,0 +1,6 @@
+COMMAND=go test ./internal/masterdata -run TestMasterDataSmokeWithTestDatabase -count=1 -v
+EXIT=0
+=== RUN   TestMasterDataSmokeWithTestDatabase
+--- PASS: TestMasterDataSmokeWithTestDatabase (0.44s)
+PASS
+ok  	container-survey/services/api/internal/masterdata	2.864s

@@ -1,0 +1,5 @@
+COMMAND=go test ./...
+EXIT=0
+?   	container-survey/services/worker/cmd/worker	[no test files]
+?   	container-survey/services/worker/internal/config	[no test files]
+?   	container-survey/services/worker/internal/jobs	[no test files]

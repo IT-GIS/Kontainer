@@ -1,0 +1,10 @@
+COMMAND=git diff --check
+EXIT=0
+warning: in the working copy of '.gitignore', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/app/fitness/master-data/[category]/[clientId]/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/app/fitness/master-data/[category]/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/constants/navigation-surveyor.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/next-env.d.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'database/patches/0015_container_fitness_foundation.sql', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'infra/docker/docker-compose.yml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'services/api/migrations/0010_container_fitness_foundation.up.sql', LF will be replaced by CRLF the next time Git touches it

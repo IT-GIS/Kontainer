@@ -1,0 +1,350 @@
+diff --git a/database/patches/0015_container_fitness_foundation.sql b/database/patches/0015_container_fitness_foundation.sql
+index 006a3f9..7f4c594 100644
+--- a/database/patches/0015_container_fitness_foundation.sql
++++ b/database/patches/0015_container_fitness_foundation.sql
+@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS container_manufacturers (
+   INDEX idx_container_manufacturers_name (manufacturer_name),
+   INDEX idx_container_manufacturers_status (status),
+   INDEX idx_container_manufacturers_deleted_at (deleted_at)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS fitness_approval_categories (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS fitness_approval_categories (
+   INDEX idx_fitness_approval_categories_lifecycle (container_lifecycle),
+   INDEX idx_fitness_approval_categories_mvp (is_mvp_active),
+   INDEX idx_fitness_approval_categories_status (status)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS maintenance_schemes (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS maintenance_schemes (
+   created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+   INDEX idx_maintenance_schemes_status (status)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS inspection_areas (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS inspection_areas (
+   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+   INDEX idx_inspection_areas_status (status),
+   INDEX idx_inspection_areas_display_order (display_order)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS structural_components (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS structural_components (
+   INDEX idx_structural_components_status (status),
+   INDEX idx_structural_components_display_order (display_order),
+   CONSTRAINT fk_structural_components_area FOREIGN KEY (inspection_area_id) REFERENCES inspection_areas(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS structural_damage_criteria (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS structural_damage_criteria (
+   INDEX idx_structural_damage_criteria_severity (severity_default),
+   INDEX idx_structural_damage_criteria_status (status),
+   CONSTRAINT fk_structural_damage_criteria_component FOREIGN KEY (component_id) REFERENCES structural_components(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS finding_severities (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS finding_severities (
+   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+   INDEX idx_finding_severities_level (level_no),
+   INDEX idx_finding_severities_status (status)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS inspection_test_parameters (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS inspection_test_parameters (
+   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+   INDEX idx_inspection_test_parameters_status (status),
+   INDEX idx_inspection_test_parameters_display_order (display_order)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS fitness_checklist_templates (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -159,7 +159,7 @@ CREATE TABLE IF NOT EXISTS fitness_checklist_templates (
+   CONSTRAINT fk_fitness_checklist_templates_container_type FOREIGN KEY (container_type_id) REFERENCES container_types(id),
+   CONSTRAINT fk_fitness_checklist_templates_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+   CONSTRAINT fk_fitness_checklist_templates_approved_by FOREIGN KEY (approved_by) REFERENCES users(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS fitness_checklist_template_items (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -189,7 +189,7 @@ CREATE TABLE IF NOT EXISTS fitness_checklist_template_items (
+   CONSTRAINT fk_fitness_checklist_template_items_area FOREIGN KEY (inspection_area_id) REFERENCES inspection_areas(id),
+   CONSTRAINT fk_fitness_checklist_template_items_component FOREIGN KEY (structural_component_id) REFERENCES structural_components(id),
+   CONSTRAINT fk_fitness_checklist_template_items_test_parameter FOREIGN KEY (test_parameter_id) REFERENCES inspection_test_parameters(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS evidence_photo_categories (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -204,7 +204,7 @@ CREATE TABLE IF NOT EXISTS evidence_photo_categories (
+   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+   INDEX idx_evidence_photo_categories_status (status),
+   INDEX idx_evidence_photo_categories_display_order (display_order)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS inspection_recommendations (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -220,7 +220,7 @@ CREATE TABLE IF NOT EXISTS inspection_recommendations (
+   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+   INDEX idx_inspection_recommendations_result (final_fitness_result_mapping),
+   INDEX idx_inspection_recommendations_status (status)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS authorized_signers (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -239,7 +239,7 @@ CREATE TABLE IF NOT EXISTS authorized_signers (
+   INDEX idx_authorized_signers_status (status),
+   INDEX idx_authorized_signers_deleted_at (deleted_at),
+   CONSTRAINT fk_authorized_signers_signature_file FOREIGN KEY (signature_file_id) REFERENCES file_objects(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS fitness_applications (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -273,7 +273,7 @@ CREATE TABLE IF NOT EXISTS fitness_applications (
+   CONSTRAINT fk_fitness_applications_category FOREIGN KEY (approval_category_id) REFERENCES fitness_approval_categories(id),
+   CONSTRAINT fk_fitness_applications_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+   CONSTRAINT fk_fitness_applications_updated_by FOREIGN KEY (updated_by) REFERENCES users(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS application_containers (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -303,7 +303,7 @@ CREATE TABLE IF NOT EXISTS application_containers (
+   INDEX idx_application_containers_deleted_at (deleted_at),
+   CONSTRAINT fk_application_containers_application FOREIGN KEY (fitness_application_id) REFERENCES fitness_applications(id),
+   CONSTRAINT fk_application_containers_container_type FOREIGN KEY (container_type_id) REFERENCES container_types(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS container_technical_specs (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -335,7 +335,7 @@ CREATE TABLE IF NOT EXISTS container_technical_specs (
+   INDEX idx_container_technical_specs_maintenance_scheme (maintenance_scheme_id),
+   CONSTRAINT fk_container_technical_specs_application_container FOREIGN KEY (application_container_id) REFERENCES application_containers(id),
+   CONSTRAINT fk_container_technical_specs_maintenance_scheme FOREIGN KEY (maintenance_scheme_id) REFERENCES maintenance_schemes(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS fitness_application_events (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -356,7 +356,7 @@ CREATE TABLE IF NOT EXISTS fitness_application_events (
+   CONSTRAINT fk_fitness_application_events_application FOREIGN KEY (fitness_application_id) REFERENCES fitness_applications(id),
+   CONSTRAINT fk_fitness_application_events_container FOREIGN KEY (application_container_id) REFERENCES application_containers(id),
+   CONSTRAINT fk_fitness_application_events_actor FOREIGN KEY (actor_id) REFERENCES users(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS fitness_container_import_batches (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -379,7 +379,7 @@ CREATE TABLE IF NOT EXISTS fitness_container_import_batches (
+   CONSTRAINT fk_fitness_container_import_batches_application FOREIGN KEY (fitness_application_id) REFERENCES fitness_applications(id),
+   CONSTRAINT fk_fitness_container_import_batches_file FOREIGN KEY (file_id) REFERENCES file_objects(id),
+   CONSTRAINT fk_fitness_container_import_batches_imported_by FOREIGN KEY (imported_by) REFERENCES users(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS fitness_container_import_rows (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -408,7 +408,7 @@ CREATE TABLE IF NOT EXISTS fitness_container_import_rows (
+   INDEX idx_fitness_container_import_rows_application_container (application_container_id),
+   CONSTRAINT fk_fitness_container_import_rows_batch FOREIGN KEY (import_batch_id) REFERENCES fitness_container_import_batches(id),
+   CONSTRAINT fk_fitness_container_import_rows_application_container FOREIGN KEY (application_container_id) REFERENCES application_containers(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ INSERT IGNORE INTO fitness_approval_categories (code, name, description, container_lifecycle, is_mvp_active, display_order, status)
+ VALUES
+diff --git a/services/api/migrations/0010_container_fitness_foundation.up.sql b/services/api/migrations/0010_container_fitness_foundation.up.sql
+index 006a3f9..7f4c594 100644
+--- a/services/api/migrations/0010_container_fitness_foundation.up.sql
++++ b/services/api/migrations/0010_container_fitness_foundation.up.sql
+@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS container_manufacturers (
+   INDEX idx_container_manufacturers_name (manufacturer_name),
+   INDEX idx_container_manufacturers_status (status),
+   INDEX idx_container_manufacturers_deleted_at (deleted_at)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS fitness_approval_categories (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS fitness_approval_categories (
+   INDEX idx_fitness_approval_categories_lifecycle (container_lifecycle),
+   INDEX idx_fitness_approval_categories_mvp (is_mvp_active),
+   INDEX idx_fitness_approval_categories_status (status)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS maintenance_schemes (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS maintenance_schemes (
+   created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+   INDEX idx_maintenance_schemes_status (status)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS inspection_areas (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS inspection_areas (
+   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+   INDEX idx_inspection_areas_status (status),
+   INDEX idx_inspection_areas_display_order (display_order)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS structural_components (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS structural_components (
+   INDEX idx_structural_components_status (status),
+   INDEX idx_structural_components_display_order (display_order),
+   CONSTRAINT fk_structural_components_area FOREIGN KEY (inspection_area_id) REFERENCES inspection_areas(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS structural_damage_criteria (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS structural_damage_criteria (
+   INDEX idx_structural_damage_criteria_severity (severity_default),
+   INDEX idx_structural_damage_criteria_status (status),
+   CONSTRAINT fk_structural_damage_criteria_component FOREIGN KEY (component_id) REFERENCES structural_components(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS finding_severities (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS finding_severities (
+   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+   INDEX idx_finding_severities_level (level_no),
+   INDEX idx_finding_severities_status (status)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS inspection_test_parameters (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS inspection_test_parameters (
+   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+   INDEX idx_inspection_test_parameters_status (status),
+   INDEX idx_inspection_test_parameters_display_order (display_order)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS fitness_checklist_templates (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -159,7 +159,7 @@ CREATE TABLE IF NOT EXISTS fitness_checklist_templates (
+   CONSTRAINT fk_fitness_checklist_templates_container_type FOREIGN KEY (container_type_id) REFERENCES container_types(id),
+   CONSTRAINT fk_fitness_checklist_templates_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+   CONSTRAINT fk_fitness_checklist_templates_approved_by FOREIGN KEY (approved_by) REFERENCES users(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS fitness_checklist_template_items (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -189,7 +189,7 @@ CREATE TABLE IF NOT EXISTS fitness_checklist_template_items (
+   CONSTRAINT fk_fitness_checklist_template_items_area FOREIGN KEY (inspection_area_id) REFERENCES inspection_areas(id),
+   CONSTRAINT fk_fitness_checklist_template_items_component FOREIGN KEY (structural_component_id) REFERENCES structural_components(id),
+   CONSTRAINT fk_fitness_checklist_template_items_test_parameter FOREIGN KEY (test_parameter_id) REFERENCES inspection_test_parameters(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS evidence_photo_categories (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -204,7 +204,7 @@ CREATE TABLE IF NOT EXISTS evidence_photo_categories (
+   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+   INDEX idx_evidence_photo_categories_status (status),
+   INDEX idx_evidence_photo_categories_display_order (display_order)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS inspection_recommendations (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -220,7 +220,7 @@ CREATE TABLE IF NOT EXISTS inspection_recommendations (
+   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+   INDEX idx_inspection_recommendations_result (final_fitness_result_mapping),
+   INDEX idx_inspection_recommendations_status (status)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS authorized_signers (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -239,7 +239,7 @@ CREATE TABLE IF NOT EXISTS authorized_signers (
+   INDEX idx_authorized_signers_status (status),
+   INDEX idx_authorized_signers_deleted_at (deleted_at),
+   CONSTRAINT fk_authorized_signers_signature_file FOREIGN KEY (signature_file_id) REFERENCES file_objects(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS fitness_applications (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -273,7 +273,7 @@ CREATE TABLE IF NOT EXISTS fitness_applications (
+   CONSTRAINT fk_fitness_applications_category FOREIGN KEY (approval_category_id) REFERENCES fitness_approval_categories(id),
+   CONSTRAINT fk_fitness_applications_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+   CONSTRAINT fk_fitness_applications_updated_by FOREIGN KEY (updated_by) REFERENCES users(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS application_containers (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -303,7 +303,7 @@ CREATE TABLE IF NOT EXISTS application_containers (
+   INDEX idx_application_containers_deleted_at (deleted_at),
+   CONSTRAINT fk_application_containers_application FOREIGN KEY (fitness_application_id) REFERENCES fitness_applications(id),
+   CONSTRAINT fk_application_containers_container_type FOREIGN KEY (container_type_id) REFERENCES container_types(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS container_technical_specs (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -335,7 +335,7 @@ CREATE TABLE IF NOT EXISTS container_technical_specs (
+   INDEX idx_container_technical_specs_maintenance_scheme (maintenance_scheme_id),
+   CONSTRAINT fk_container_technical_specs_application_container FOREIGN KEY (application_container_id) REFERENCES application_containers(id),
+   CONSTRAINT fk_container_technical_specs_maintenance_scheme FOREIGN KEY (maintenance_scheme_id) REFERENCES maintenance_schemes(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS fitness_application_events (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -356,7 +356,7 @@ CREATE TABLE IF NOT EXISTS fitness_application_events (
+   CONSTRAINT fk_fitness_application_events_application FOREIGN KEY (fitness_application_id) REFERENCES fitness_applications(id),
+   CONSTRAINT fk_fitness_application_events_container FOREIGN KEY (application_container_id) REFERENCES application_containers(id),
+   CONSTRAINT fk_fitness_application_events_actor FOREIGN KEY (actor_id) REFERENCES users(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS fitness_container_import_batches (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -379,7 +379,7 @@ CREATE TABLE IF NOT EXISTS fitness_container_import_batches (
+   CONSTRAINT fk_fitness_container_import_batches_application FOREIGN KEY (fitness_application_id) REFERENCES fitness_applications(id),
+   CONSTRAINT fk_fitness_container_import_batches_file FOREIGN KEY (file_id) REFERENCES file_objects(id),
+   CONSTRAINT fk_fitness_container_import_batches_imported_by FOREIGN KEY (imported_by) REFERENCES users(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ CREATE TABLE IF NOT EXISTS fitness_container_import_rows (
+   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+@@ -408,7 +408,7 @@ CREATE TABLE IF NOT EXISTS fitness_container_import_rows (
+   INDEX idx_fitness_container_import_rows_application_container (application_container_id),
+   CONSTRAINT fk_fitness_container_import_rows_batch FOREIGN KEY (import_batch_id) REFERENCES fitness_container_import_batches(id),
+   CONSTRAINT fk_fitness_container_import_rows_application_container FOREIGN KEY (application_container_id) REFERENCES application_containers(id)
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ INSERT IGNORE INTO fitness_approval_categories (code, name, description, container_lifecycle, is_mvp_active, display_order, status)
+ VALUES

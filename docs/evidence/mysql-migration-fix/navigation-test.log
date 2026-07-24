@@ -1,0 +1,7 @@
+COMMAND=npm run test:navigation --workspace apps/web
+EXIT=0
+
+> @container-survey/web@0.1.0 test:navigation
+> node scripts/check-admin-navigation.mjs
+
+Admin canonical navigation checks passed.

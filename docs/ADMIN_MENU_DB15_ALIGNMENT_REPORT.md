@@ -1,7 +1,7 @@
 # Laporan Penyesuaian Menu Admin dan Database 15
 
-Tanggal audit dan implementasi: 23 Juli 2026
-Status keseluruhan: **PARTIAL** — implementasi dan pengujian lokal yang tercantum di laporan ini lulus, tetapi data produksi, daftar CEDEX resmi, object storage, CI, dan keputusan bisnis dokumen belum tersedia.
+Tanggal audit dan implementasi: 24 Juli 2026
+Status keseluruhan: **PARTIAL** - perbaikan MySQL dan seluruh validasi CI-equivalent lokal lulus. Publikasi ke `origin/main` kemudian diotorisasi melalui instruksi terpisah; status workflow GitHub commit perbaikan harus diverifikasi di remote dan tidak diasumsikan hijau.
 
 ## 1. Ruang lingkup dan batas pekerjaan
 
@@ -17,7 +17,7 @@ Batas yang dipertahankan:
 - Data legacy dan tabel lama tidak dihapus.
 - Tidak dibuat seed CEDEX, checklist, metode uji, atau nilai ambang berdasarkan asumsi.
 - Personel/PIC Customer tetap terpisah dari Surveyor GIFT.
-- Tidak ada commit dan tidak ada push.
+- Validasi awal dilakukan tanpa commit/push; publikasi ke `origin/main` baru dilakukan setelah pengguna memberi instruksi terpisah.
 
 ## 2. Baseline Git dan worktree
 
@@ -25,12 +25,12 @@ Batas yang dipertahankan:
 |---|---|
 | Repository | `IT-GIS/Kontainer` |
 | Branch | `main` |
-| HEAD awal | `79760c06f723f5dff6cdf5cdd6ee15dbc17b4a7f` |
-| `origin/main` awal | `79760c06f723f5dff6cdf5cdd6ee15dbc17b4a7f` |
-| Commit | `feat: finalize admin ISO CEDEX and customer scope` |
+| HEAD awal | `fa5a9da550f596d01a6b1aa7d8805181875331e3` |
+| `origin/main` awal | `fa5a9da550f596d01a6b1aa7d8805181875331e3` |
+| Commit | `feat: align admin workflow with DB15` |
 | Paritas awal | HEAD lokal sama dengan `origin/main` |
 | Status awal | Dirty; perubahan existing diperlakukan sebagai pekerjaan pengguna |
-| Status akhir | Dirty; berisi perubahan existing dan perubahan tugas ini, tanpa commit/push |
+| Status sebelum publikasi | Dirty; perubahan existing pengguna dipisahkan dari scope commit perbaikan |
 
 Perubahan existing yang terdeteksi sebelum tugas dan tidak ditimpa sebagai bagian pekerjaan ini:
 
@@ -134,7 +134,9 @@ Pemeriksaan sumber menu ditambahkan melalui `apps/web/scripts/check-admin-naviga
 - `/master/iso-cedex`
 - `/review/pending`, `/review/history`
 - `/reports`, `/reports/archive`
-- `/settings/surveyors`, `/settings/company-profile`, `/settings/numbering`, `/settings/users`, `/settings/audit-log`
+- `/master/surveyors`, `/settings/company-profile`, `/settings/numbering`, `/settings/users`, `/settings/audit-log`
+
+Route Surveyor GIFT yang benar-benar tersedia tetap `/master/surveyors`. Rekomendasi `/settings/surveyors` belum diimplementasikan karena page/redirect tersebut belum ada dan perubahan route akan memperluas scope perbaikan CI. Assignment tetap memakai `surveyor_profiles`, terpisah dari `customer_personnel`.
 
 ### 5.2 Route compatibility
 
@@ -233,7 +235,7 @@ Perubahan:
 
 Audit orphan sebelum FK: 0 orphan `survey_id` dan 0 orphan `template_item_id`.
 
-Clean migration chain menemukan defect existing di migration `0010`: foundation memakai `utf8mb4_unicode_ci`, sementara 19 deklarasi tabel memakai `utf8mb4_0900_ai_ci`, sehingga FK tidak kompatibel pada MySQL 8.4. Deklarasi pada migration dan canonical patch `0015` dinormalisasi ke `utf8mb4_unicode_ci`. Setelah perbaikan, seluruh migration `0001` sampai `0012` lulus pada database kosong.
+Clean MySQL 8.4.10 mereproduksi `ERROR 3780` pada migration `0010_container_fitness_foundation.up.sql` baris 139, constraint `fk_fitness_checklist_templates_container_type`. Parent `container_types.id` bertipe `CHAR(36)` dengan `utf8mb4_0900_ai_ci`, sedangkan child `fitness_checklist_templates.container_type_id` bertipe `CHAR(36)` tetapi mewarisi `utf8mb4_unicode_ci` dari deklarasi tabel `0010`. Canonical dump dan parent foundation aktual memakai `utf8mb4_0900_ai_ci`, sehingga tepat 19 deklarasi tabel pada migration `0010` dan patch `0015` diselaraskan kembali ke `utf8mb4_0900_ai_ci`. Seluruh FK string terverifikasi memiliki tipe, charset, dan collation yang sama; constraint tidak dihapus.
 
 Hasil database upgrade copy DB15:
 
@@ -245,17 +247,18 @@ Hasil database upgrade copy DB15:
 
 | Perintah/area | Status | Catatan |
 |---|---|---|
-| `go test ./...` pada `services/api` | PASS | Rerun di luar sandbox setelah Go cache ditolak sandbox; seluruh package lulus |
-| `go test ./...` pada `services/worker` | PASS | Seluruh package lulus |
+| MySQL integration `TestMasterDataSmokeWithTestDatabase` | PASS | MySQL 8.4.10, exit 0, test PASS |
+| `go test ./...` pada `services/api` | PASS | Seluruh package lulus, exit 0 |
+| `go test ./...` pada `services/worker` | PASS | Seluruh package lulus, exit 0 |
 | `npm run typecheck --workspace apps/web` | PASS | Tidak ada type error |
-| `npm run test:navigation --workspace apps/web` | PASS | Enam grup canonical dan label terlarang tervalidasi |
-| `npm run lint --workspace apps/web` | PASS | Temuan lint diperbaiki; rerun tanpa error/warning |
-| `npm run build --workspace apps/web` | PASS | Build production lulus; satu rerun memerlukan izin karena `spawn EPERM` sandbox |
-| Migration clean database | PASS | `0001`–`0012` lulus setelah normalisasi collation existing |
-| Migration upgrade DB15 up/down/up | PASS | Schema dan data checklist terjaga |
+| `npm run test:navigation --workspace apps/web` | PASS | Enam grup canonical, label terlarang, dan source workspace canonical tervalidasi |
+| `npm run lint --workspace apps/web` | PASS | Exit 0 tanpa error |
+| `npm run build --workspace apps/web` | PASS | Next.js production build lulus, exit 0 |
+| Clean migration MySQL 8.4.10 | PASS | `0001`-`0012` seluruhnya exit 0; 67 tabel |
+| Migration `0012` up/down/up | PASS | Down menghapus 4 kolom dan 3 FK; up ulang mengembalikannya; orphan 0 |
 | `git diff --check` | PASS | Pemeriksaan whitespace akhir dijalankan setelah dokumentasi |
 
-CI remote tidak dijalankan dan tidak ada deployment production.
+Status commit baseline `fa5a9da`: Web typecheck/build PASS dan Go API/Worker PASS pada GitHub Actions, sedangkan `Validate / MySQL integration test` FAIL karena `ERROR 3780`. Perbaikan lokal sudah lulus seluruh validasi di atas dan dipublikasikan setelah instruksi terpisah; status workflow commit perbaikan diverifikasi di remote dan tidak dinyatakan hijau sebelum selesai. Deployment production tidak dijalankan.
 
 ## 10. UAT dan screenshot
 
@@ -310,6 +313,8 @@ Screenshot:
 - `docs/ADMIN_MENU_DB15_UAT_MATRIX.md`
 - `docs/screenshots/admin-menu-db15-alignment/`
 
+Follow-up perbaikan CI 24 Juli 2026 hanya mengubah migration `0010`, canonical patch `0015`, dua dokumen ini, dan bukti non-sensitif di `docs/evidence/mysql-migration-fix/`. Perubahan worktree pengguna di luar daftar tersebut dipertahankan.
+
 ## 12. Blocker dan keputusan tertunda
 
 | Area | Status | Keterangan |
@@ -324,11 +329,12 @@ Screenshot:
 | Final PDF, QR, public verification | BLOCKED | Sengaja nonaktif dan mengembalikan `FEATURE_NOT_ACTIVE` |
 | Report queue otomatis | DECISION_REQUIRED | Keputusan bisnis pemicu/antrean belum ditetapkan |
 | Data produksi | BLOCKED | Dump didominasi data UAT dan Company Profile belum lengkap |
-| CI dan deployment production | NOT_TESTED | Hanya validasi lokal; tidak ada deploy |
+| Route Surveyor GIFT `/settings/surveyors` | DECISION_REQUIRED | Route aktual `/master/surveyors` tetap dipakai; redirect/canonical rename dikerjakan terpisah |
+| CI commit perbaikan dan deployment production | NOT_TESTED | Baseline gagal pada MySQL; workflow commit perbaikan diverifikasi setelah push. Deployment tidak diuji |
 | Inspeksi visual in-app | PARTIAL | Edge CDP lulus; runtime in-app dan viewer gambar tertahan sandbox |
 
 Hasil ini tidak dinyatakan production-ready. Pengaktifan upload, foto, dokumen akhir, atau data referensi produksi memerlukan sumber data dan keputusan bisnis terpisah.
 
 ## 13. Pernyataan publish
 
-**Tidak ada commit dan tidak ada push yang dilakukan.**
+**Publikasi ke `origin/main` dilakukan setelah pengguna memberi instruksi push terpisah. Scope commit dibatasi pada perbaikan MySQL, dokumentasi, dan bukti pengujian.**

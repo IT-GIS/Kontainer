@@ -1,0 +1,12 @@
+PASS	navigation registers adminWorkspace
+PASS	navigation excludes containerFitnessAdminWorkspace
+PASS	admin excludes financeWorkspace
+PASS	admin includes one ISO CEDEX entry
+PASS	admin Surveyor GIFT uses /master/surveyors
+PASS	admin excludes /settings/surveyors
+PASS	finance roles exclude admin
+PASS	surveyor workspace declares surveyor-only roles
+PASS	actual /master/surveyors page exists
+PASS	actual /settings/surveyors page absent
+PASS	assignment backend references surveyor_profiles
+PASS	assignment does not join customer_personnel as surveyor
