@@ -656,8 +656,8 @@ export const masterResources: Record<string, MasterResource> = {
   },
   "cedex-locations": {
     id: "cedex-locations",
-    title: "Master CEDEX Location",
-    description: "Grid locations used to place container damage markers.",
+    title: "Location Code",
+    description: "Referensi posisi peti kemas yang digunakan saat mencatat temuan.",
     endpoint: "/master/cedex/locations",
     permissionModule: "cedex_locations",
     columns: [
@@ -665,24 +665,123 @@ export const masterResources: Record<string, MasterResource> = {
       { key: "face", label: "Face" },
       { key: "grid_code", label: "Grid" },
       { key: "container_size", label: "Container Size" },
-      { key: "display_order", label: "Order" },
+      { key: "display_order", label: "Sequence" },
       { key: "status", label: "Status", type: "status" }
     ],
     fields: [
-      { name: "code", label: "Code", required: true },
+      { name: "code", label: "Code", required: true, maxLength: 30 },
       { name: "face", label: "Face", type: "select", required: true, options: ["left", "right", "front", "door", "roof", "floor", "understructure"].map((value) => ({ label: value, value })) },
-      { name: "grid_code", label: "Grid Code", required: true },
-      { name: "cedex_mapping_code", label: "CEDEX Mapping Code" },
-      { name: "container_size", label: "Container Size", type: "select", options: ["all", "20", "40", "45"].map((value) => ({ label: value, value })) },
+      { name: "grid_code", label: "Grid Code", required: true, maxLength: 30 },
+      { name: "cedex_mapping_code", label: "CEDEX Mapping Code", maxLength: 50, nullable: true },
+      { name: "container_size", label: "Container Size", type: "select", nullable: true, options: ["all", "20", "40", "45"].map((value) => ({ label: value, value })) },
       { name: "description", label: "Description", type: "textarea", nullable: true },
-      { name: "display_order", label: "Display Order", type: "number", required: true },
+      { name: "display_order", label: "Sequence", type: "number", min: 0, step: 1, defaultValue: 0 },
       statusField
     ]
   },
-  "cedex-components": codeNameResource("cedex-components", "Master CEDEX Component", "CEDEX component references for survey damage records.", "/master/cedex/components", "cedex_components", "component_name", "Component Name"),
-  "cedex-damages": codeNameResource("cedex-damages", "Master CEDEX Damage", "Damage code references used by surveyors.", "/master/cedex/damages", "cedex_damages", "damage_name", "Damage Name"),
-  "cedex-repairs": codeNameResource("cedex-repairs", "Master Action Repair Code", "Action Repair hanya menjadi referensi teknis atau rekomendasi tindakan.", "/master/cedex/repairs", "cedex_repairs", "repair_name", "Action Name"),
-  "cedex-materials": codeNameResource("cedex-materials", "Master CEDEX Material", "Material references used by survey damage records.", "/master/cedex/materials", "cedex_materials", "material_name", "Material Name"),
+  "cedex-components": {
+    id: "cedex-components",
+    title: "Component Code",
+    description: "Referensi komponen peti kemas yang digunakan pada temuan Surveyor.",
+    endpoint: "/master/cedex/components",
+    permissionModule: "cedex_components",
+    columns: [
+      { key: "code", label: "Code" },
+      { key: "component_name", label: "Component Name" },
+      { key: "description", label: "Description" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "code", label: "Code", required: true, maxLength: 30 },
+      { name: "component_name", label: "Component Name", required: true, maxLength: 150 },
+      { name: "description", label: "Description", type: "textarea", nullable: true },
+      statusField
+    ]
+  },
+  "cedex-damages": {
+    id: "cedex-damages",
+    title: "Master CEDEX Damage",
+    description: "Damage code references used by surveyors.",
+    endpoint: "/master/cedex/damages",
+    permissionModule: "cedex_damages",
+    columns: [
+      { key: "code", label: "Damage Code" },
+      { key: "damage_name", label: "Damage Name" },
+      { key: "description", label: "Description" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "code", label: "Damage Code", required: true, maxLength: 30 },
+      { name: "damage_name", label: "Damage Name", required: true, maxLength: 150 },
+      { name: "description", label: "Description", type: "textarea", nullable: true },
+      statusField
+    ]
+  },
+  "cedex-actions": {
+    id: "cedex-actions",
+    title: "Action Code",
+    description: "Rekomendasi tindakan pemeriksaan. GIFT tidak mengelola pekerjaan repair internal.",
+    endpoint: "/master/cedex/repairs",
+    permissionModule: "cedex_repairs",
+    columns: [
+      { key: "code", label: "Action Code" },
+      { key: "repair_name", label: "Rekomendasi Tindakan" },
+      { key: "description", label: "Description" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "code", label: "Action Code", required: true, maxLength: 30 },
+      { name: "repair_name", label: "Rekomendasi Tindakan", required: true, maxLength: 150 },
+      { name: "description", label: "Description", type: "textarea", nullable: true },
+      statusField
+    ]
+  },
+  "cedex-references": {
+    id: "cedex-references",
+    title: "Inspection Reference",
+    description: "Presentasi master global parameter pengujian dan referensi standar existing.",
+    endpoint: "/fitness/master-data/test-parameters",
+    permissionModule: "inspection_test_parameters",
+    columns: [
+      { key: "code", label: "Reference Code" },
+      { key: "parameter_name", label: "Inspection Parameter" },
+      { key: "standard_reference", label: "Standard Reference" },
+      { key: "unit", label: "Unit" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "code", label: "Reference Code", required: true, maxLength: 80 },
+      { name: "parameter_name", label: "Inspection Parameter", required: true, maxLength: 180 },
+      { name: "description", label: "Description", type: "textarea", nullable: true },
+      { name: "unit", label: "Unit", nullable: true, maxLength: 50 },
+      { name: "standard_reference", label: "Standard Reference", nullable: true, maxLength: 200 },
+      { name: "applies_to_new_container", label: "Applies to New Container", type: "checkbox", defaultValue: true },
+      { name: "applies_to_existing_container", label: "Applies to Existing Container", type: "checkbox", defaultValue: true },
+      { name: "requires_numeric_result", label: "Requires Numeric Result", type: "checkbox", defaultValue: false },
+      { name: "requires_attachment", label: "Requires Attachment", type: "checkbox", defaultValue: false },
+      { name: "display_order", label: "Sequence", type: "number", min: 0, step: 1, defaultValue: 0 },
+      statusField
+    ]
+  },
+  "cedex-materials": {
+    id: "cedex-materials",
+    title: "Master CEDEX Material",
+    description: "Material references used by survey damage records.",
+    endpoint: "/master/cedex/materials",
+    permissionModule: "cedex_materials",
+    columns: [
+      { key: "code", label: "Code" },
+      { key: "material_name", label: "Material Name" },
+      { key: "description", label: "Description" },
+      { key: "status", label: "Status", type: "status" }
+    ],
+    fields: [
+      { name: "code", label: "Code", required: true, maxLength: 30 },
+      { name: "material_name", label: "Material Name", required: true, maxLength: 150 },
+      { name: "description", label: "Description", type: "textarea", nullable: true },
+      statusField
+    ]
+  },
   "responsibility-codes": codeNameResource("responsibility-codes", "Master Responsibility Code", "Responsibility codes used by survey damage records.", "/master/responsibility-codes", "responsibility_codes", "name", "Name")
 };
 

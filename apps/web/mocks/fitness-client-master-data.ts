@@ -141,9 +141,9 @@ export const fitnessClientMasterDataReferences: FitnessClientMasterDataReference
   namedReference("nl-cedex-damage-2", "client-nusantara", "cedex-damage", "NL-CD-02", "Cracked", "Damage CEDEX Customer Nusantara.", "Tidak Aktif"),
   namedReference("sj-cedex-damage-1", "client-samudra", "cedex-damage", "SJ-CD-01", "Dented", "Damage CEDEX Customer Samudra."),
 
-  namedReference("nl-cedex-repair-1", "client-nusantara", "cedex-repair", "NL-CR-01", "Straighten", "Referensi repair CEDEX Customer Nusantara."),
-  namedReference("nl-cedex-repair-2", "client-nusantara", "cedex-repair", "NL-CR-02", "Weld", "Referensi repair CEDEX Customer Nusantara."),
-  namedReference("sj-cedex-repair-1", "client-samudra", "cedex-repair", "SJ-CR-01", "Patch", "Referensi repair CEDEX Customer Samudra."),
+  namedReference("nl-cedex-action-1", "client-nusantara", "cedex-action", "NL-CR-01", "Straighten", "Referensi repair CEDEX Customer Nusantara."),
+  namedReference("nl-cedex-action-2", "client-nusantara", "cedex-action", "NL-CR-02", "Weld", "Referensi repair CEDEX Customer Nusantara."),
+  namedReference("sj-cedex-action-1", "client-samudra", "cedex-action", "SJ-CR-01", "Patch", "Referensi repair CEDEX Customer Samudra."),
 
   namedReference("nl-cedex-material-1", "client-nusantara", "cedex-material", "NL-CM-01", "Steel", "Referensi material CEDEX Customer Nusantara."),
   namedReference("nl-cedex-material-2", "client-nusantara", "cedex-material", "NL-CM-02", "Aluminium", "Referensi material CEDEX Customer Nusantara."),

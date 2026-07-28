@@ -1,9 +1,11 @@
 "use client";
 
+import { Plus, Search } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { CustomerReadinessIndex } from "@/components/master/customer-readiness";
-import { MasterDataPage } from "@/components/master/master-data-page";
+import { MasterDataPage, type MasterDataPageProps } from "@/components/master/master-data-page";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getFitnessMasterDataCategoryConfigByID, masterDataDetailHref, masterDataIndexHref, type MasterDataRouteFamily } from "@/constants/fitness-master-data-client-first";
@@ -26,7 +28,8 @@ const scopedResource = {
   "cedex-location": { resourceId: "cedex-locations", endpoint: "cedex/locations" },
   "cedex-component": { resourceId: "cedex-components", endpoint: "cedex/components" },
   "cedex-damage": { resourceId: "cedex-damages", endpoint: "cedex/damages" },
-  "cedex-repair": { resourceId: "cedex-repairs", endpoint: "cedex/repairs" },
+  "cedex-action": { resourceId: "cedex-actions", endpoint: "cedex/repairs" },
+  "cedex-reference": { resourceId: "cedex-references", endpoint: "/fitness/master-data/test-parameters", global: true },
   "cedex-material": { resourceId: "cedex-materials", endpoint: "cedex/materials" },
   "responsibility-code": { resourceId: "responsibility-codes", endpoint: "responsibility-codes" }
 } as const;
@@ -45,6 +48,7 @@ export function CustomerScopedMasterIndex({
   const { accessToken } = useAuth();
   const config = getFitnessMasterDataCategoryConfigByID(category);
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(category !== "customer");
 
@@ -56,25 +60,51 @@ export function CustomerScopedMasterIndex({
       .finally(() => setLoading(false));
   }, [accessToken, category]);
 
+  const router = useRouter();
+
+  const filteredCustomers = useMemo(() => {
+    if (!searchQuery.trim()) return customers;
+    const q = searchQuery.toLowerCase().trim();
+    return customers.filter(
+      (c) => c.customer_name.toLowerCase().includes(q) || c.customer_code.toLowerCase().includes(q)
+    );
+  }, [customers, searchQuery]);
+
   if (category === "customer") {
     return <CustomerReadinessIndex />;
   }
 
   return <div className="page-stack master-data-customer-picker">
-    <PageHeader title={config.label} description="Pilih Customer terlebih dahulu. Data yang dikelola akan tersimpan untuk Customer tersebut." />
+    <PageHeader
+      title={config.label}
+      description="Pilih Customer terlebih dahulu. Data yang dikelola akan tersimpan untuk Customer tersebut."
+      action={{ label: "Tambah Customer", icon: Plus, onClick: () => router.push("/master/customers/create") }}
+    />
     {error ? <div className="alert alert-danger" role="alert">{error}</div> : null}
+    <div className="toolbar">
+      <label className="search-box">
+        <Search size={17} />
+        <span className="sr-only">Search Customer</span>
+        <input
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Search Customer..."
+        />
+      </label>
+    </div>
     {loading ? <div className="workspace-panel" role="status">Memuat Customer...</div> : null}
     {!loading && customers.length === 0 ? <div className="workspace-panel"><p className="muted-text">Customer belum tersedia.</p></div> : null}
-    {!loading && customers.length > 0 ? <section aria-labelledby="master-customer-picker-heading" className="workspace-panel master-customer-picker-panel">
+    {!loading && customers.length > 0 && filteredCustomers.length === 0 ? <div className="workspace-panel"><p className="muted-text">Customer tidak ditemukan sesuai pencarian.</p></div> : null}
+    {!loading && filteredCustomers.length > 0 ? <section aria-labelledby="master-customer-picker-heading" className="workspace-panel master-customer-picker-panel">
       <div className="master-customer-picker-summary">
         <div>
-          <h2 id="master-customer-picker-heading">Customer tersedia</h2>
+          <h2 id="master-customer-picker-heading">DAFTAR CUSTOMER</h2>
           <p>Pilih Customer untuk membuka Master Data {config.label}.</p>
         </div>
-        <strong aria-live="polite">{customers.length} Customer</strong>
+        <strong aria-live="polite">{filteredCustomers.length} Customer</strong>
       </div>
       <div className="customer-master-picker-grid">
-        {customers.map((customer) => {
+        {filteredCustomers.map((customer) => {
           const status = customerStatus(customer.status);
           return <article className="master-customer-card" key={customer.id}>
             <div className="master-customer-card__content">
@@ -114,13 +144,44 @@ function customerStatus(value: string) {
   return { label: value || "Status tidak diketahui", tone: "neutral" as const };
 }
 
-export function CustomerScopedMasterDetail({ category, customerId, routeFamily, backHrefOverride }: { category: FitnessMasterDataCategory; customerId: string; routeFamily: MasterDataRouteFamily; backHrefOverride?: string }) {
+export function CustomerScopedMasterDetail({
+  category,
+  customerId,
+  routeFamily,
+  backHrefOverride,
+  addButtonLabelOverride,
+  dialogTitleOverride,
+  forceReadOnly = false,
+  forceReadOnlyMessage,
+  hideBackLink = false,
+  referenceConfigurationReadOnly,
+  masterDataProps
+}: {
+  category: FitnessMasterDataCategory;
+  customerId: string;
+  routeFamily: MasterDataRouteFamily;
+  backHrefOverride?: string;
+  addButtonLabelOverride?: string;
+  dialogTitleOverride?: string;
+  forceReadOnly?: boolean;
+  forceReadOnlyMessage?: string;
+  hideBackLink?: boolean;
+  referenceConfigurationReadOnly?: boolean;
+  masterDataProps?: Pick<MasterDataPageProps,
+    "showResourceHeader" | "showToolbarAdd" | "showRichEmptyState" | "showImportUnavailable" | "enableExport" | "enableSaveAndNew" |
+    "enableSorting" | "responsiveCards" | "dialogSize" | "actionIdPrefix" | "filters" |
+    "emptyTitle" | "emptyDescription"
+  >;
+}) {
   const { accessToken } = useAuth();
   const [customer, setCustomer] = useState<CustomerRow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mapping = category === "customer" ? null : scopedResource[category];
   const backHref = backHrefOverride ?? masterDataIndexHref(category, routeFamily);
-  const endpoint = useMemo(() => mapping ? `/customers/${customerId}/${mapping.endpoint}` : "/master/customers", [customerId, mapping]);
+  const endpoint = useMemo(() => {
+    if (!mapping) return "/master/customers";
+    return "global" in mapping && mapping.global ? mapping.endpoint : `/customers/${customerId}/${mapping.endpoint}`;
+  }, [customerId, mapping]);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -133,15 +194,29 @@ export function CustomerScopedMasterDetail({ category, customerId, routeFamily, 
   if (!customer) return <div className="workspace-panel">Memuat Customer...</div>;
   if (!mapping) return <MasterDataPage resourceId="customers" backHref={backHref} />;
 
-  const readOnly = customer.status !== "active";
+  const customerReadOnly = customer.status !== "active";
+  const readOnly = forceReadOnly || customerReadOnly;
+  const mappingReadOnly = customerReadOnly || (referenceConfigurationReadOnly ?? readOnly);
   return <div className="page-stack">
     <div className="workspace-panel detail-grid">
       <div><span>Customer</span><strong>{customer.customer_name}</strong></div>
       <div><span>Kode</span><strong>{customer.customer_code}</strong></div>
-      <div><span>Cakupan Data</span><strong>Khusus Customer ini</strong></div>
+      <div><span>Cakupan Data</span><strong>{"global" in mapping && mapping.global ? "Master global" : "Khusus Customer ini"}</strong></div>
     </div>
-    <MasterDataPage resourceId={mapping.resourceId} endpointOverride={endpoint} fixedValues={{ customer_id: customerId }} backHref={backHref} readOnly={readOnly} readOnlyMessage="Customer tidak aktif. Master Data hanya dapat dilihat dan tidak dapat diubah." />
-    {category === "survey-type" ? <SurveyTypeReferenceConfiguration customerId={customerId} readOnly={readOnly} /> : null}
+    <MasterDataPage
+      resourceId={mapping.resourceId}
+      endpointOverride={endpoint}
+      fixedValues={"global" in mapping && mapping.global ? undefined : { customer_id: customerId }}
+      backHref={hideBackLink ? undefined : backHref}
+      readOnly={readOnly}
+      readOnlyMessage={forceReadOnlyMessage ?? "Customer tidak aktif. Master Data hanya dapat dilihat dan tidak dapat diubah."}
+      addButtonLabelOverride={addButtonLabelOverride}
+      dialogTitleOverride={dialogTitleOverride}
+      {...masterDataProps}
+    />
+    {category === "survey-type" ? (
+      <SurveyTypeReferenceConfiguration customerId={customerId} readOnly={mappingReadOnly} />
+    ) : null}
   </div>;
 }
 

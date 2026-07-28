@@ -46,6 +46,7 @@ function CreateJobContent() {
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dependencyNotice, setDependencyNotice] = useState<string | null>(null);
+  const [personnelNotice, setPersonnelNotice] = useState<string | null>(null);
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(true);
   const [isLoadingDependencies, setIsLoadingDependencies] = useState(false);
   const [isLoadingPersonnel, setIsLoadingPersonnel] = useState(false);
@@ -73,16 +74,22 @@ function CreateJobContent() {
         setSelectedCustomer(customer);
         setSurveyTypes(nextSurveyTypes);
         setLocations(nextLocations);
-        setDependencyNotice(
-          nextSurveyTypes.length > 0 && nextLocations.length > 0
-            ? null
-            : "Master Data Customer belum lengkap. Pastikan Location dan Survey Type aktif sudah tersedia."
-        );
+        setForm((current) => ({ ...current, survey_type_id: nextSurveyTypes.length === 1 ? nextSurveyTypes[0].id : "" }));
+        if (nextLocations.length === 0) {
+          setDependencyNotice("Master Data Customer belum lengkap: Location aktif belum tersedia.");
+        } else if (nextSurveyTypes.length === 0) {
+          setDependencyNotice("Pembuatan Job memerlukan tepat satu Survey Type aktif untuk Customer. Saat ini tidak ada tipe yang tersedia; data legacy tidak dibuat otomatis.");
+        } else if (nextSurveyTypes.length > 1) {
+          setDependencyNotice(`Pembuatan Job memerlukan tepat satu Survey Type aktif untuk Customer. Ditemukan ${nextSurveyTypes.length} tipe aktif; tentukan data canonical terlebih dahulu.`);
+        } else {
+          setDependencyNotice(null);
+        }
       }).catch((err) => {
         setError(err instanceof Error ? err.message : "Gagal mengambil PIC, Location, dan Survey Type.");
         setSurveyTypes([]);
         setLocations([]);
         setPersonnel([]);
+        setForm((current) => ({ ...current, survey_type_id: "" }));
       }).finally(() => setIsLoadingDependencies(false));
     }, 0);
     return () => window.clearTimeout(timer);
@@ -98,10 +105,11 @@ function CreateJobContent() {
       apiData<CustomerPersonnel[]>(`/customers/${form.customer_id}/locations/${form.location_id}/personnel`, { accessToken })
         .then((items) => {
           setPersonnel(items);
-          setDependencyNotice(items.length === 0 ? "Location terpilih belum mempunyai mapping Personel/PIC aktif. Atur mapping pada detail Customer terlebih dahulu." : null);
+          setPersonnelNotice(items.length === 0 ? "Location terpilih belum mempunyai mapping Personel/PIC aktif. Atur mapping pada detail Customer terlebih dahulu." : null);
         })
         .catch((err) => {
           setPersonnel([]);
+          setPersonnelNotice(null);
           setError(err instanceof Error ? err.message : "Personel/PIC Location gagal dimuat.");
         })
         .finally(() => setIsLoadingPersonnel(false));
@@ -123,6 +131,7 @@ function CreateJobContent() {
       setLocations([]);
       setPersonnel([]);
       setDependencyNotice(null);
+      setPersonnelNotice(null);
     }
     setForm((current) => {
       if (key !== "customer_id" && key !== "location_id") return { ...current, [key]: value };
@@ -160,7 +169,7 @@ function CreateJobContent() {
 
   async function submit() {
     if (!accessToken) return;
-    const validationError = validate(form);
+    const validationError = validate(form, surveyTypes.length);
     if (validationError) {
       setError(validationError);
       return;
@@ -186,10 +195,11 @@ function CreateJobContent() {
   const personnelDisabled = dependenciesDisabled || !form.location_id || isLoadingPersonnel;
   return (
     <div className="page-stack">
-      <PageHeader title="Buat Pekerjaan Inspeksi" description="Buat header pekerjaan sebelum menambah peti kemas dan menugaskan Surveyor GIFT." action={{ label: isSubmitting ? "Menyimpan" : "Simpan Pekerjaan", icon: Save, onClick: () => void submit(), disabled: isSubmitting || isLoadingDependencies }} />
+      <PageHeader title="Buat Pekerjaan Inspeksi" description="Buat header pekerjaan sebelum menambah peti kemas dan menugaskan Surveyor GIFT." action={{ label: isSubmitting ? "Menyimpan" : "Simpan Pekerjaan", icon: Save, onClick: () => void submit(), disabled: isSubmitting || isLoadingDependencies || surveyTypes.length !== 1 }} />
       <div className="job-actions"><button className="secondary-button" onClick={leavePage} type="button"><ArrowLeft size={17} /><span>Kembali ke Semua Pekerjaan</span></button></div>
       {error ? <div className="alert alert-danger" role="alert">{error}</div> : null}
       {dependencyNotice ? <div className="alert alert-warning">{dependencyNotice}</div> : null}
+      {personnelNotice ? <div className="alert alert-warning">{personnelNotice}</div> : null}
       <section className="workspace-panel">
         <div className="form-grid form-grid-wide">
           <Field label="Tanggal Pekerjaan"><input required type="date" value={form.job_date} onChange={(event) => update("job_date", event.target.value)} /></Field>
@@ -198,7 +208,15 @@ function CreateJobContent() {
           <Field label="Personel/PIC Customer"><select disabled={personnelDisabled} value={form.pic_customer_personnel_id} onChange={(event) => selectPersonnel(event.target.value)}><option value="">{!form.location_id ? "Pilih Location terlebih dahulu" : isLoadingPersonnel ? "Memuat Personel/PIC..." : "Pilih Personel/PIC yang dipetakan"}</option>{personnel.map((item) => <option key={item.id} value={item.id}>{item.personnel_code} - {item.full_name}</option>)}</select></Field>
           <Field label="Telepon PIC"><input readOnly value={form.pic_customer_phone} placeholder="Belum tersedia" /></Field>
           <Field label="Email PIC"><input readOnly value={form.pic_customer_email} placeholder="Belum tersedia" /></Field>
-          <Field label="Survey Type"><Select disabled={dependenciesDisabled} value={form.survey_type_id} onChange={(value) => update("survey_type_id", value)} options={surveyTypes} placeholder={dependenciesDisabled ? "Pilih Customer terlebih dahulu" : "Pilih Survey Type aktif"} /></Field>
+          <Field label="Jenis Pemeriksaan">
+            <input
+              aria-describedby="job-survey-type-help"
+              readOnly
+              value={surveyTypes.length === 1 ? surveyTypes[0].label : ""}
+              placeholder={!form.customer_id ? "Pilih Customer terlebih dahulu" : isLoadingDependencies ? "Memuat jenis pemeriksaan..." : "Tepat satu tipe aktif diperlukan"}
+            />
+            <small className="muted-text" id="job-survey-type-help">Dipilih otomatis hanya bila Customer memiliki tepat satu Survey Type aktif.</small>
+          </Field>
           <Field label="Prioritas"><select value={form.priority} onChange={(event) => update("priority", event.target.value)}><option value="normal">Normal</option><option value="urgent">Urgent</option></select></Field>
           <Field label="Deadline"><input type="datetime-local" value={form.deadline} onChange={(event) => update("deadline", event.target.value)} /></Field>
           <Field label="Nomor Referensi"><input value={form.reference_no} onChange={(event) => update("reference_no", event.target.value)} /></Field>
@@ -220,12 +238,12 @@ function CreateJobContent() {
   );
 }
 
-function validate(form: JobForm) {
+function validate(form: JobForm, activeSurveyTypeCount: number) {
   if (!form.job_date) return "Tanggal pekerjaan wajib diisi.";
   if (!form.customer_id) return "Customer wajib dipilih terlebih dahulu.";
   if (!form.location_id) return "Location Pemeriksaan wajib dipilih.";
   if (!form.pic_customer_personnel_id) return "Personel/PIC Customer yang dipetakan ke Location wajib dipilih.";
-  if (!form.survey_type_id) return "Survey Type wajib dipilih.";
+  if (activeSurveyTypeCount !== 1 || !form.survey_type_id) return "Job hanya dapat dibuat bila tersedia tepat satu Survey Type aktif untuk Customer.";
   if (form.deadline && new Date(form.deadline).getTime() < new Date(form.job_date).getTime()) return "Deadline tidak boleh lebih awal dari tanggal pekerjaan.";
   return null;
 }

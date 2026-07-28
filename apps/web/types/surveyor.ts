@@ -116,6 +116,8 @@ export type SurveyDamage = {
   width?: number | null;
   depth?: number | null;
   unit?: string;
+  is_repair_required?: boolean;
+  is_cargo_worthy_impact?: boolean;
   remark?: string | null;
   photo_count?: number;
 };

@@ -29,12 +29,12 @@ export const adminWorkspace: NavigationWorkspace = {
       ]),
       n("Buat Job/SPK", "/jobs/create", FilePlus2, admin, ["jobs.create.all", "jobs.manage.all"])
     ]),
-    g("Master Data", Database, admin, [
+    g("Master Data", Database, shared, [
       n("Customer", "/master/customers", UsersRound, admin, ["customers.view.all"], [
         { path: "/master/customers", mode: "prefix" },
         { path: "/master/locations", mode: "prefix" }
       ]),
-      n("Referensi Pemeriksaan", "/master/inspection-references", ListChecks, admin, [
+      n("Referensi Pemeriksaan", "/master/inspection-references", ListChecks, shared, [
         "container_types.view.all", "survey_types.view.all", "fitness_checklist_templates.view.all",
         "inspection_test_parameters.view.all", "evidence_photo_categories.view.all", "finding_severities.view.all"
       ], [
@@ -43,9 +43,9 @@ export const adminWorkspace: NavigationWorkspace = {
         { path: "/master/survey-types", mode: "prefix" },
         { path: "/fitness/master-data/checklist-templates", mode: "prefix" }
       ]),
-      n("ISO CEDEX", "/master/iso-cedex", BookOpenCheck, admin, [
+      n("ISO CEDEX", "/master/iso-cedex", BookOpenCheck, shared, [
         "cedex_locations.view.all", "cedex_components.view.all", "cedex_damages.view.all",
-        "cedex_repairs.view.all", "cedex_materials.view.all", "responsibility_codes.view.all"
+        "cedex_repairs.view.all", "cedex_materials.view.all", "inspection_test_parameters.view.all", "responsibility_codes.view.all"
       ], [
         { path: "/master/iso-cedex", mode: "prefix" },
         { path: "/master/cedex", mode: "prefix" },

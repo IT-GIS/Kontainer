@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 
 const navigationSource = await readFile(new URL("../constants/navigation.ts", import.meta.url), "utf8");
 const adminSource = await readFile(new URL("../constants/navigation-admin.ts", import.meta.url), "utf8");
+const effectiveAdminSource = adminSource.replace(/\/\/.*$/gm, "");
 
 assert.match(navigationSource, /navigationWorkspaces:[\s\S]*adminWorkspace/);
 assert.doesNotMatch(navigationSource, /containerFitnessAdminWorkspace/);
@@ -16,7 +17,7 @@ const requiredGroups = [
   "Pengaturan"
 ];
 for (const label of requiredGroups) {
-  assert.ok(adminSource.includes(`"${label}"`), `Missing canonical label: ${label}`);
+  assert.ok(effectiveAdminSource.includes(`"${label}"`), `Missing canonical label: ${label}`);
 }
 
 const forbiddenCanonicalLabels = [
@@ -32,11 +33,11 @@ const forbiddenCanonicalLabels = [
   "Arsip Lama"
 ];
 for (const label of forbiddenCanonicalLabels) {
-  assert.ok(!adminSource.includes(`"${label}"`), `Forbidden canonical label: ${label}`);
+  assert.ok(!effectiveAdminSource.includes(`"${label}"`), `Forbidden canonical label: ${label}`);
 }
 
-assert.match(adminSource, /"Referensi Pemeriksaan", "\/master\/inspection-references"/);
-assert.match(adminSource, /"ISO CEDEX", "\/master\/iso-cedex"/);
-assert.match(adminSource, /"Surveyor GIFT", "\/master\/surveyors"/);
+assert.match(effectiveAdminSource, /"Referensi Pemeriksaan", "\/master\/inspection-references"/);
+assert.match(effectiveAdminSource, /"ISO CEDEX", "\/master\/iso-cedex"/);
+assert.match(effectiveAdminSource, /"Surveyor GIFT", "\/master\/surveyors"/);
 
 console.log("Admin canonical navigation checks passed.");

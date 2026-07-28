@@ -131,9 +131,9 @@ export function JobSurveyResultsTab({ support }: { support: JobDetailSupportingD
       { key: "location", header: "CEDEX Location", render: (row) => String(row.internal_location ?? row.face ?? "-") },
       { key: "component", header: "CEDEX Component", render: (row) => String(row.component_name ?? row.component_code ?? "-") },
       { key: "damage", header: "CEDEX Damage", render: (row) => String(row.damage_name ?? row.damage_code ?? "-") },
-      { key: "repair", header: "CEDEX Repair", render: (row) => String(row.repair_name ?? row.repair_code ?? "-") },
+      { key: "repair", header: "Rekomendasi Tindakan", render: (row) => String(row.repair_name ?? row.repair_code ?? "-") },
       { key: "material", header: "CEDEX Material", render: (row) => String(row.material_name ?? row.material_code ?? "-") },
-      { key: "responsibility", header: "Responsibility Code", render: (row) => String(row.responsibility_name ?? row.responsibility_code ?? "-") },
+      { key: "responsibility", header: "Responsibility (Legacy)", render: (row) => String(row.responsibility_name ?? row.responsibility_code ?? "-") },
       { key: "severity", header: "Severity / Ukuran", render: (row) => `${String(row.severity ?? "-")} / ${String(row.length ?? "-")} × ${String(row.width ?? "-")} × ${String(row.depth ?? "-")} ${String(row.unit ?? "")}` },
       { key: "remark", header: "Catatan", render: (row) => String(row.remark ?? "-") }
     ]} />

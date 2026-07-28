@@ -53,7 +53,20 @@ export default async function InspectionReferencesPage({ searchParams }: { searc
             tabs={tabs.map((tab) => ({ id: tab.id, label: tab.label, href: "/master/inspection-references?tab=" + tab.id }))}
           />
           {category && customerId ? (
-            <CustomerScopedMasterDetail backHrefOverride={baseHref} category={category} customerId={customerId} routeFamily="actual" />
+            <>
+              {active.id === "survey-type" ? (
+                <div className="alert alert-warning">Survey Type adalah referensi legacy baca-saja. Mapping Inspection Reference untuk tipe yang sudah ada tetap dapat dikelola melalui konfigurasi di bawah.</div>
+              ) : null}
+              <CustomerScopedMasterDetail
+                backHrefOverride={baseHref}
+                category={category}
+                customerId={customerId}
+                routeFamily="actual"
+                forceReadOnly={active.id === "survey-type"}
+                forceReadOnlyMessage="Survey Type lama dipertahankan dalam mode baca-saja; sistem tidak membuat tipe atau kode baru."
+                referenceConfigurationReadOnly={active.id === "survey-type" ? false : undefined}
+              />
+            </>
           ) : null}
           {category && !customerId ? (
             <CustomerScopedMasterIndex canonicalBaseHref={baseHref} category={category} routeFamily="actual" />

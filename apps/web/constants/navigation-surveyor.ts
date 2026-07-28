@@ -1,4 +1,4 @@
-import { CheckCircle2, ClipboardList, Clock3, FileText, Gauge, History, RotateCcw } from "lucide-react";
+import { ClipboardList, Gauge, History, RotateCcw } from "lucide-react";
 import type { NavigationLink, NavigationWorkspace } from "@/constants/navigation";
 import type { RoleCode } from "@/types/auth";
 
@@ -14,14 +14,11 @@ export const surveyorWorkspace: NavigationWorkspace = {
   items: [
     { ...n("Dashboard Surveyor", "/surveyor/dashboard", Gauge), permissions: ["surveyor_jobs.view.assigned"] },
     {
-      ...n("Job Saya", "/surveyor/jobs", ClipboardList),
+      ...n("Pekerjaan Saya", "/surveyor/jobs", ClipboardList),
       permissions: ["surveyor_jobs.view.assigned"],
       matches: [{ path: "/surveyor/jobs" }, { path: "/surveyor/jobs/:id", mode: "pattern" }]
     },
-    n("Draft Survey", "/surveyor/surveys/draft", FileText),
-    n("Need Revision", "/surveyor/surveys/need-revision", RotateCcw),
-    n("Submitted Survey", "/surveyor/surveys/submitted", Clock3),
-    n("Approved Survey", "/surveyor/surveys/approved", CheckCircle2),
-    n("Riwayat Survey", "/surveyor/surveys/history", History)
+    n("Perlu Revisi", "/surveyor/surveys/need-revision", RotateCcw),
+    n("Riwayat Pemeriksaan", "/surveyor/surveys/history", History)
   ]
 };

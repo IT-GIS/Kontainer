@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, Edit, Eye, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
+import { ClipboardList, Download, Edit, Eye, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { masterResources, type MasterField, type MasterResource } from "@/constants/master-data";
@@ -16,8 +16,9 @@ type MasterRow = Record<string, string | number | boolean | null | undefined>;
 type SelectOption = { value: string; label: string };
 type RelationFieldState = { options: SelectOption[]; isLoading: boolean; error: string | null };
 type RelationOptions = Record<string, RelationFieldState>;
+export type MasterDataFilter = { key: string; label: string; options: Array<{ label: string; value: string }> };
 
-type MasterDataPageProps = {
+export type MasterDataPageProps = {
   resourceId: keyof typeof masterResources;
   endpointOverride?: string;
   fixedValues?: MasterRow;
@@ -29,6 +30,21 @@ type MasterDataPageProps = {
   readOnly?: boolean;
   readOnlyMessage?: string;
   startInCreateMode?: boolean;
+  addButtonLabelOverride?: string;
+  dialogTitleOverride?: string;
+  showResourceHeader?: boolean;
+  showToolbarAdd?: boolean;
+  showRichEmptyState?: boolean;
+  showImportUnavailable?: boolean;
+  enableExport?: boolean;
+  enableSaveAndNew?: boolean;
+  enableSorting?: boolean;
+  responsiveCards?: boolean;
+  dialogSize?: "medium" | "large" | "drawer";
+  actionIdPrefix?: string;
+  filters?: MasterDataFilter[];
+  emptyTitle?: string;
+  emptyDescription?: string;
 };
 
 const defaultStatusOptions = [
@@ -36,7 +52,34 @@ const defaultStatusOptions = [
   { label: "Tidak Aktif", value: "inactive" }
 ];
 
-export function MasterDataPage({ resourceId, endpointOverride, fixedValues, backHref, detailBaseHref, detailQuery, relationEndpointOverrides, checklistItemsBaseHref, readOnly = false, readOnlyMessage, startInCreateMode = false }: MasterDataPageProps) {
+export function MasterDataPage({
+  resourceId,
+  endpointOverride,
+  fixedValues,
+  backHref,
+  detailBaseHref,
+  detailQuery,
+  relationEndpointOverrides,
+  checklistItemsBaseHref,
+  readOnly = false,
+  readOnlyMessage,
+  startInCreateMode = false,
+  addButtonLabelOverride,
+  dialogTitleOverride,
+  showResourceHeader = true,
+  showToolbarAdd = false,
+  showRichEmptyState = false,
+  showImportUnavailable = false,
+  enableExport = false,
+  enableSaveAndNew = false,
+  enableSorting = false,
+  responsiveCards = false,
+  dialogSize = "medium",
+  actionIdPrefix,
+  filters = [],
+  emptyTitle = "Data belum tersedia",
+  emptyDescription = "Tambahkan data pertama agar referensi dapat digunakan."
+}: MasterDataPageProps) {
   const resource = masterResources[resourceId];
   const accessibilityID = useId();
   const formErrorID = `${accessibilityID}-form-error`;
@@ -46,9 +89,13 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
   const [rows, setRows] = useState<MasterRow[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalRows, setTotalRows] = useState(0);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({});
+  const [sortBy, setSortBy] = useState("");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -63,6 +110,7 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
   const listRequestSeq = useRef(0);
   const relationRequestSeq = useRef(0);
   const createOpenedRef = useRef(false);
+  const formBaselineRef = useRef("");
 
   const statusOptions = resource.statusOptions ?? defaultStatusOptions;
   const canCreate = !readOnly && can(user, `${resource.permissionModule}.create.all`);
@@ -80,12 +128,20 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
     setError(null);
     try {
       const result = await apiPaginated<MasterRow>(
-        `${resourceEndpoint}${buildQuery({ page, per_page: 10, search: debouncedSearch, status })}`,
+        `${resourceEndpoint}${buildQuery({
+          page,
+          per_page: 10,
+          search: debouncedSearch,
+          status,
+          ...(enableSorting && sortBy ? { sort_by: sortBy, sort_order: sortOrder } : {}),
+          ...filterValues
+        })}`,
         { accessToken }
       );
       if (requestID !== listRequestSeq.current) return;
       setRows(result.rows);
       setTotalPages(Number(result.meta.total_pages ?? 1));
+      setTotalRows(Number(result.meta.total ?? result.rows.length));
     } catch (err) {
       if (requestID === listRequestSeq.current) {
         setError(err instanceof Error ? err.message : "Gagal mengambil data.");
@@ -95,7 +151,7 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
         setIsLoading(false);
       }
     }
-  }, [accessToken, debouncedSearch, page, resourceEndpoint, status]);
+  }, [accessToken, debouncedSearch, enableSorting, filterValues, page, resourceEndpoint, sortBy, sortOrder, status]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -116,8 +172,13 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
       setSelected(null);
       setDetailRow(null);
       setPage(1);
+      setTotalRows(0);
       setSearchInput("");
       setDebouncedSearch("");
+      setStatus("");
+      setFilterValues({});
+      setSortBy("");
+      setSortOrder("asc");
       setSuccess(null);
       setFormError(null);
       setRelationSearch({});
@@ -130,11 +191,20 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
     if (!startInCreateMode || readOnly || createOpenedRef.current) return;
     createOpenedRef.current = true;
     setSelected(null);
-    setFormData({ ...defaultFormData(resource), ...fixedPayload });
+    const nextForm = { ...defaultFormData(resource), ...fixedPayload };
+    setFormData(nextForm);
+    formBaselineRef.current = JSON.stringify(nextForm);
     setDialogMode("create");
     setError(null);
     setFormError(null);
   }, [fixedPayload, readOnly, resource, startInCreateMode]);
+
+  useEffect(() => {
+    if (!dialogMode || JSON.stringify(formData) === formBaselineRef.current) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [dialogMode, formData]);
 
   useEffect(() => {
     if (!accessToken || !dialogMode || relationFields.length === 0) return;
@@ -183,7 +253,8 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
     ...resource.columns.map((column) => ({
       key: column.key,
       header: column.label,
-      render: (row: MasterRow) => renderCell(row[column.key], column.type)
+      render: (row: MasterRow) => renderCell(row[column.key], column.type),
+      sortable: enableSorting && resource.fields.some((field) => field.name === column.key)
     })),
     {
       key: "actions",
@@ -226,7 +297,9 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
 
   function openCreate() {
     setSelected(null);
-    setFormData({ ...defaultFormData(resource), ...fixedPayload });
+    const nextForm = { ...defaultFormData(resource), ...fixedPayload };
+    setFormData(nextForm);
+    formBaselineRef.current = JSON.stringify(nextForm);
     setRelationSearch({});
     setDialogMode("create");
     setError(null);
@@ -236,7 +309,9 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
 
   function openEdit(row: MasterRow) {
     setSelected(row);
-    setFormData({ ...formDataFromRow(resource, row), ...fixedPayload });
+    const nextForm = { ...formDataFromRow(resource, row), ...fixedPayload };
+    setFormData(nextForm);
+    formBaselineRef.current = JSON.stringify(nextForm);
     setRelationSearch({});
     setDialogMode("edit");
     setError(null);
@@ -244,7 +319,10 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
     setSuccess(null);
   }
 
-  function closeDialog() {
+  function closeDialog(force = false) {
+    if (!force && dialogMode && JSON.stringify(formData) !== formBaselineRef.current && !window.confirm("Perubahan belum disimpan. Tutup form?")) {
+      return;
+    }
     setDialogMode(null);
     setSelected(null);
     setFormData({ ...defaultFormData(resource), ...fixedPayload });
@@ -275,12 +353,85 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
         await apiData(`${resourceEndpoint}/${selected.id}`, { method: "PUT", accessToken, body: JSON.stringify(payload) });
         setSuccess("Data berhasil diperbarui.");
       }
-      closeDialog();
+      closeDialog(true);
       await loadRows();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Gagal menyimpan data.");
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleSaveAndNew() {
+    if (!accessToken || dialogMode !== "create" || isSubmitting) {
+      return;
+    }
+    const validation = validateForm(resource, formData);
+    if (validation) {
+      setFormError(validation);
+      return;
+    }
+    setIsSubmitting(true);
+    setError(null);
+    setFormError(null);
+    setSuccess(null);
+    try {
+      const payload = serializePayload(resource, { ...formData, ...fixedPayload }, "create");
+      await apiData(resourceEndpoint, { method: "POST", accessToken, body: JSON.stringify(payload) });
+      setSuccess("Data berhasil dibuat. Silakan isi data baru.");
+      const nextForm = { ...defaultFormData(resource), ...fixedPayload };
+      setFormData(nextForm);
+      formBaselineRef.current = JSON.stringify(nextForm);
+      setRelationSearch({});
+      setFormError(null);
+      await loadRows();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Gagal menyimpan data.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleExport() {
+    if (!accessToken) return;
+    setError(null);
+    try {
+      const baseQuery = {
+        per_page: 100,
+        search: debouncedSearch,
+        status,
+        ...(enableSorting && sortBy ? { sort_by: sortBy, sort_order: sortOrder } : {}),
+        ...filterValues
+      };
+      const firstPage = await apiPaginated<MasterRow>(`${resourceEndpoint}${buildQuery({ ...baseQuery, page: 1 })}`, { accessToken });
+      const allRows = [...firstPage.rows];
+      const exportPages = Number(firstPage.meta.total_pages ?? 1);
+      for (let exportPage = 2; exportPage <= exportPages; exportPage += 1) {
+        const result = await apiPaginated<MasterRow>(`${resourceEndpoint}${buildQuery({ ...baseQuery, page: exportPage })}`, { accessToken });
+        allRows.push(...result.rows);
+      }
+      const exportColumns = resource.columns.filter((col) => col.key !== "actions");
+      const header = exportColumns.map((col) => col.label).join(",");
+      const csvRows = allRows.map((row) =>
+        exportColumns.map((col) => {
+          const value = String(row[col.key] ?? "");
+          return value.includes(",") || value.includes('"') || value.includes("\n")
+            ? `"${value.replace(/"/g, '""')}"`
+            : value;
+        }).join(",")
+      );
+      const csv = [header, ...csvRows].join("\n");
+      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${resource.title.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal mengekspor data.");
     }
   }
 
@@ -317,14 +468,26 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
     }
   }
 
+  function resetFilters() {
+    setPage(1);
+    setSearchInput("");
+    setDebouncedSearch("");
+    setStatus("");
+    setFilterValues({});
+    setSortBy("");
+    setSortOrder("asc");
+  }
+
   return (
     <div className="page-stack">
       {backHref ? <Link className="secondary-button" href={backHref}>Kembali</Link> : null}
-      <PageHeader
-        title={resource.title}
-        description={resource.description}
-        action={canCreate ? { label: "Tambah", icon: Plus, onClick: openCreate } : undefined}
-      />
+      {showResourceHeader ? (
+        <PageHeader
+          title={resource.title}
+          description={resource.description}
+          action={canCreate ? { label: addButtonLabelOverride ?? "Tambah", icon: Plus, onClick: openCreate } : undefined}
+        />
+      ) : null}
 
       {readOnly ? <div className="alert alert-warning">{readOnlyMessage ?? "Data ditampilkan dalam mode baca-saja."}</div> : null}
 
@@ -341,13 +504,66 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
             {statusOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
           </select>
         </label>
-        {error ? <button className="secondary-button" onClick={() => void loadRows()} type="button"><RotateCcw size={16} /> Retry</button> : null}
+        {filters.map((filter) => (
+          <label key={filter.key}>
+            <span className="sr-only">{filter.label}</span>
+            <select
+              aria-label={filter.label}
+              value={filterValues[filter.key] ?? ""}
+              onChange={(event) => {
+                setPage(1);
+                setFilterValues((current) => ({ ...current, [filter.key]: event.target.value }));
+              }}
+            >
+              <option value="">Semua {filter.label}</option>
+              {filter.options.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+            </select>
+          </label>
+        ))}
+        {canCreate && showToolbarAdd ? (
+          <button className="primary-button" id={actionIdPrefix ? `${actionIdPrefix}-add` : undefined} onClick={openCreate} type="button">
+            <Plus size={16} /><span>{addButtonLabelOverride ?? "Tambah"}</span>
+          </button>
+        ) : null}
+        {showImportUnavailable ? (
+          <button className="secondary-button" disabled id={actionIdPrefix ? `${actionIdPrefix}-import` : undefined} title="Belum tersedia" type="button">
+            <span>Import</span>
+          </button>
+        ) : null}
+        {enableExport ? (
+          <button className="secondary-button" id={actionIdPrefix ? `${actionIdPrefix}-export` : undefined} onClick={() => void handleExport()} type="button">
+            <Download size={16} /><span>Export</span>
+          </button>
+        ) : null}
+        <button className="secondary-button" onClick={resetFilters} type="button">Reset Filter</button>
+        <button className="icon-button" id={actionIdPrefix ? `${actionIdPrefix}-refresh` : undefined} onClick={() => void loadRows()} title="Refresh" aria-label="Refresh data" type="button">
+          <RotateCcw size={16} />
+        </button>
       </div>
 
       {success ? <div className="alert alert-success">{success}</div> : null}
       {error ? <div className="alert alert-danger" role="alert">{error}</div> : null}
 
-      <DataTable columns={columns} rows={rows} isLoading={isLoading} page={page} totalPages={totalPages} onPageChange={setPage} emptyText="Data belum tersedia." />
+      <DataTable
+        columns={columns}
+        rows={rows}
+        isLoading={isLoading}
+        page={page}
+        totalPages={totalPages}
+        totalRows={totalRows}
+        onPageChange={setPage}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSort={enableSorting ? (key, order) => { setPage(1); setSortBy(key); setSortOrder(order); } : undefined}
+        responsiveCards={responsiveCards}
+        emptyText={showRichEmptyState ? (
+          <div className="master-empty-state">
+            <strong>{emptyTitle}</strong>
+            <span>{emptyDescription}</span>
+            {canCreate && showToolbarAdd ? <button className="primary-button" onClick={openCreate} type="button"><Plus size={16} /><span>{addButtonLabelOverride ?? "Tambah"}</span></button> : null}
+          </div>
+        ) : "Data belum tersedia."}
+      />
 
       {detailRow ? (
         <section className="workspace-panel">
@@ -367,12 +583,15 @@ export function MasterDataPage({ resourceId, endpointOverride, fixedValues, back
       ) : null}
 
       <FormDialog
-        title={dialogMode === "create" ? `Tambah ${resource.title}` : `Edit ${resource.title}`}
+        title={dialogMode === "create" ? `Tambah ${dialogTitleOverride ?? resource.title}` : `Edit ${dialogTitleOverride ?? resource.title}`}
         open={Boolean(dialogMode)}
         onClose={closeDialog}
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
         submitLabel={dialogMode === "create" ? "Simpan" : "Update"}
+        onSaveAndNew={enableSaveAndNew && dialogMode === "create" ? () => void handleSaveAndNew() : undefined}
+        saveAndNewLabel="Save & New"
+        size={dialogSize}
       >
         {formError ? <div className="alert alert-danger" id={formErrorID} role="alert">{formError}</div> : null}
         <div className="form-grid">
@@ -538,10 +757,28 @@ function serializePayload(resource: MasterResource, data: MasterRow, mode: "crea
 
 function validateForm(resource: MasterResource, data: MasterRow) {
   for (const field of resource.fields) {
-    if (!field.required) continue;
     const value = data[field.name];
-    if (value === undefined || value === null || String(value).trim() === "") {
+    const empty = value === undefined || value === null || String(value).trim() === "";
+    if (field.required && empty) {
       return `${field.label} wajib diisi.`;
+    }
+    if (empty) continue;
+    const text = String(value);
+    if (field.maxLength && text.length > field.maxLength) {
+      return `${field.label} maksimal ${field.maxLength} karakter.`;
+    }
+    if (field.pattern && !new RegExp(field.pattern).test(text)) {
+      return `${field.label} tidak sesuai format yang diwajibkan.`;
+    }
+    const numericValue = Number(value);
+    if ((field.type === "number" || field.type === "decimal") && !Number.isFinite(numericValue)) {
+      return `${field.label} harus berupa angka.`;
+    }
+    if (field.min !== undefined && numericValue < field.min) {
+      return `${field.label} minimal ${field.min}.`;
+    }
+    if (field.max !== undefined && numericValue > field.max) {
+      return `${field.label} maksimal ${field.max}.`;
     }
   }
   return null;

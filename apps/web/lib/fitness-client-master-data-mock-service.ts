@@ -34,7 +34,7 @@ const customerOverviewCategories: Exclude<FitnessMasterDataCategory, "customer">
   "cedex-location",
   "cedex-component",
   "cedex-damage",
-  "cedex-repair",
+  "cedex-action",
   "cedex-material",
   "responsibility-code"
 ];
@@ -93,8 +93,8 @@ export async function getFitnessClientCedexDamages(clientId: string, mode: Fitne
   return getFitnessClientMasterDataReferences(clientId, "cedex-damage", mode);
 }
 
-export async function getFitnessClientCedexRepairs(clientId: string, mode: FitnessMockMode = "success") {
-  return getFitnessClientMasterDataReferences(clientId, "cedex-repair", mode);
+export async function getFitnessClientCedexActions(clientId: string, mode: FitnessMockMode = "success") {
+  return getFitnessClientMasterDataReferences(clientId, "cedex-action", mode);
 }
 
 export async function getFitnessClientCedexMaterials(clientId: string, mode: FitnessMockMode = "success") {

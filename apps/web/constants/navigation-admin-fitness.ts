@@ -69,7 +69,7 @@ export const containerFitnessAdminWorkspace: NavigationWorkspace = {
       n("CEDEX Location", fitnessMasterDataIndexHref("cedex-location"), MapPin, admin, [{ path: "/fitness/master-data/cedex-locations", mode: "prefix" }]),
       n("CEDEX Component", fitnessMasterDataIndexHref("cedex-component"), PackageCheck, admin, [{ path: "/fitness/master-data/cedex-components", mode: "prefix" }]),
       n("CEDEX Damage", fitnessMasterDataIndexHref("cedex-damage"), Layers, admin, [{ path: "/fitness/master-data/cedex-damages", mode: "prefix" }]),
-      n("CEDEX Repair", fitnessMasterDataIndexHref("cedex-repair"), Wrench, admin, [{ path: "/fitness/master-data/cedex-repairs", mode: "prefix" }]),
+      n("CEDEX Action", fitnessMasterDataIndexHref("cedex-action"), Wrench, admin, [{ path: "/fitness/master-data/cedex-actions", mode: "prefix" }]),
       n("CEDEX Material", fitnessMasterDataIndexHref("cedex-material"), Boxes, admin, [{ path: "/fitness/master-data/cedex-materials", mode: "prefix" }]),
       n("Responsibility Code", "/fitness/master-data/responsibility-codes", Tags, admin, [{ path: "/fitness/master-data/responsibility-codes", mode: "prefix" }])
     ]),

@@ -81,6 +81,9 @@
       - ../../services/api/migrations/0007_reviews_reports.up.sql:/docker-entrypoint-initdb.d/0007_reviews_reports.sql:ro
       - ../../services/api/migrations/0008_finance.up.sql:/docker-entrypoint-initdb.d/0008_finance.sql:ro
       - ../../services/api/migrations/0009_storage_relations.up.sql:/docker-entrypoint-initdb.d/0009_storage_relations.sql:ro
+      - ../../services/api/migrations/0010_container_fitness_foundation.up.sql:/docker-entrypoint-initdb.d/0010_container_fitness_foundation.sql:ro
+      - ../../services/api/migrations/0011_customer_scoped_master_data.up.sql:/docker-entrypoint-initdb.d/0011_customer_scoped_master_data.sql:ro
+      - ../../services/api/migrations/0012_admin_db15_alignment.up.sql:/docker-entrypoint-initdb.d/0012_admin_db15_alignment.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$${MYSQL_ROOT_PASSWORD}"]
       interval: 10s

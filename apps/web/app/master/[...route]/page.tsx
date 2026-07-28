@@ -7,9 +7,9 @@ const canonicalTabByPath: Record<string, string> = {
   "cedex/locations": "/master/iso-cedex?tab=location",
   "cedex/components": "/master/iso-cedex?tab=component",
   "cedex/damages": "/master/iso-cedex?tab=damage",
-  "cedex/repairs": "/master/iso-cedex?tab=action-repair",
+  "cedex/repairs": "/master/iso-cedex?tab=action",
   "cedex/materials": "/master/iso-cedex?tab=material",
-  "responsibility-codes": "/master/iso-cedex?tab=responsibility"
+  "responsibility-codes": "/master/iso-cedex?legacy=responsibility"
 };
 
 export default async function ActualMasterDataDynamicPage({ params }: { params: Promise<{ route: string[] }> }) {

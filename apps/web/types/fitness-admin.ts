@@ -237,7 +237,8 @@ export type FitnessMasterDataCategory =
   | "cedex-location"
   | "cedex-component"
   | "cedex-damage"
-  | "cedex-repair"
+  | "cedex-action"
+  | "cedex-reference"
   | "cedex-material"
   | "responsibility-code";
 
@@ -250,7 +251,8 @@ export type FitnessMasterDataCategorySlug =
   | "cedex-locations"
   | "cedex-components"
   | "cedex-damages"
-  | "cedex-repairs"
+  | "cedex-actions"
+  | "cedex-references"
   | "cedex-materials"
   | "responsibility-codes";
 

@@ -14,6 +14,9 @@ type FormDialogProps = {
   closeOnEscape?: boolean;
   onClose: () => void;
   onSubmit: () => void;
+  onSaveAndNew?: () => void;
+  saveAndNewLabel?: string;
+  size?: "medium" | "large" | "drawer";
 };
 
 export function FormDialog({
@@ -26,7 +29,10 @@ export function FormDialog({
   closeOnBackdrop = true,
   closeOnEscape = true,
   onClose,
-  onSubmit
+  onSubmit,
+  onSaveAndNew,
+  saveAndNewLabel = "Simpan & Baru",
+  size = "medium"
 }: FormDialogProps) {
   const { dialogRef, titleId, descriptionId, requestClose, handleBackdropMouseDown } = useDialogBehavior({
     open,
@@ -44,7 +50,7 @@ export function FormDialog({
         aria-describedby={description ? descriptionId : undefined}
         aria-labelledby={titleId}
         aria-modal="true"
-        className="dialog-panel"
+        className={`dialog-panel dialog-panel-${size}`}
         ref={dialogRef as React.RefObject<HTMLDivElement>}
         role="dialog"
         tabIndex={-1}
@@ -63,6 +69,11 @@ export function FormDialog({
           <button className="secondary-button" disabled={isSubmitting} onClick={requestClose} type="button">
             Batalkan
           </button>
+          {onSaveAndNew ? (
+            <button className="secondary-button" disabled={isSubmitting} onClick={onSaveAndNew} type="button">
+              <span>{isSubmitting ? "Menyimpan..." : saveAndNewLabel}</span>
+            </button>
+          ) : null}
           <button className="primary-button" disabled={isSubmitting} onClick={onSubmit} type="button">
             <span>{isSubmitting ? "Menyimpan..." : submitLabel}</span>
           </button>
