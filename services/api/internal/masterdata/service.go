@@ -222,8 +222,13 @@ func normalizeFieldValue(resource Resource, field Field, value any, create bool)
 		}
 		value = trimmed
 	}
+	if field.Name == "code" {
+		if _, _, ok := isoCEDEXCodeSpec(resource.Name); ok {
+			value = strings.ToUpper(stringValue(value))
+		}
+	}
 	switch field.Name {
-	case "payment_term_days", "display_order", "default_interval_months", "level_no", "version_no":
+	case "payment_term_days", "display_order", "default_interval_months", "level_no", "version_no", "priority":
 		switch v := value.(type) {
 		case float64:
 			return int(v), true, nil
@@ -235,7 +240,7 @@ func normalizeFieldValue(resource Resource, field Field, value any, create bool)
 				return parsed, true, nil
 			}
 		}
-	case "is_mvp_active", "requires_next_examination_date", "is_structural_critical", "affects_fitness_default", "repair_required_default", "requires_supervisor_review", "applies_to_new_container", "applies_to_existing_container", "requires_numeric_result", "requires_attachment", "is_required_default", "is_required", "is_critical", "fail_requires_repair", "fail_marks_unfit", "is_active":
+	case "is_mvp_active", "requires_next_examination_date", "is_structural_critical", "requires_dimension", "requires_reinspection", "affects_fitness_default", "repair_required_default", "requires_supervisor_review", "applies_to_new_container", "applies_to_existing_container", "requires_numeric_result", "requires_attachment", "is_required_default", "is_required", "is_critical", "fail_requires_repair", "fail_marks_unfit", "is_active":
 		switch v := value.(type) {
 		case bool:
 			return v, true, nil
@@ -330,6 +335,14 @@ func validatePayload(resource Resource, payload map[string]any, create bool) err
 }
 
 func validateFieldValue(resource Resource, field Field, value any) error {
+	if field.Name == "code" {
+		if expectedLength, label, ok := isoCEDEXCodeSpec(resource.Name); ok {
+			code := stringValue(value)
+			if len(code) != expectedLength || !isASCIIAlphaNumeric(code) {
+				return fmt.Errorf("%w: %s wajib terdiri dari tepat %d karakter huruf atau angka", ErrInvalidInput, label, expectedLength)
+			}
+		}
+	}
 	if field.Name == resource.statusField() {
 		if resource.statusField() == "is_active" {
 			if _, ok := value.(bool); !ok {
@@ -389,6 +402,35 @@ func validateFieldValue(resource Resource, field Field, value any) error {
 	return nil
 }
 
+func isoCEDEXCodeSpec(resourceName string) (int, string, bool) {
+	switch resourceName {
+	case "cedex_locations":
+		return 4, "Location Code", true
+	case "cedex_components":
+		return 3, "Component Code", true
+	case "cedex_damages":
+		return 2, "Damage Code", true
+	case "cedex_repairs":
+		return 2, "Action Repair Code", true
+	case "cedex_materials":
+		return 2, "Material Code", true
+	default:
+		return 0, "", false
+	}
+}
+
+func isASCIIAlphaNumeric(value string) bool {
+	if value == "" {
+		return false
+	}
+	for _, character := range value {
+		if !((character >= 'A' && character <= 'Z') || (character >= '0' && character <= '9')) {
+			return false
+		}
+	}
+	return true
+}
+
 func effectiveFieldType(field Field) string {
 	if field.Type != "" {
 		return field.Type
@@ -400,11 +442,11 @@ func effectiveFieldType(field Field) string {
 		return "tel"
 	case "website":
 		return "url"
-	case "valid_from", "valid_until", "manufacture_date", "application_date", "client_letter_date", "next_examination_date":
+	case "valid_from", "valid_until", "effective_date", "expiry_date", "manufacture_date", "application_date", "client_letter_date", "next_examination_date":
 		return "date"
 	case "gps_latitude", "gps_longitude":
 		return "decimal"
-	case "payment_term_days", "display_order", "default_interval_months", "level_no", "version_no":
+	case "payment_term_days", "display_order", "default_interval_months", "level_no", "version_no", "priority":
 		return "number"
 	}
 	return "text"
@@ -455,7 +497,7 @@ func effectiveNumericBounds(field Field) (*float64, *float64) {
 	case "gps_longitude":
 		min, max := -180.0, 180.0
 		return &min, &max
-	case "payment_term_days", "display_order":
+	case "payment_term_days", "display_order", "priority":
 		min := 0.0
 		return &min, nil
 	case "default_interval_months", "level_no", "version_no":

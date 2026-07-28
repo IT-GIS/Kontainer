@@ -68,6 +68,15 @@ func (s *Service) GetSurvey(ctx context.Context, id uuid.UUID, actor Actor) (map
 func (s *Service) MasterOptions(ctx context.Context, id uuid.UUID, actor Actor) (SurveyMasterOptions, error) {
 	return s.repo.MasterOptions(ctx, id, actor)
 }
+func (s *Service) PreviewDamageDecision(ctx context.Context, id uuid.UUID, input DamageInput, actor Actor) (DamageDecisionEvaluation, error) {
+	return s.repo.PreviewDamageDecision(ctx, id, input, actor)
+}
+func (s *Service) CreateCodeProposal(ctx context.Context, id uuid.UUID, input CodeProposalInput, actor Actor) (map[string]any, error) {
+	if err := requireSurveyorMutationRole(actor); err != nil {
+		return nil, err
+	}
+	return s.repo.CreateCodeProposal(ctx, id, input, actor)
+}
 
 func (s *Service) UpdateGeneralInfo(ctx context.Context, id uuid.UUID, input GeneralInfoInput, actor Actor) (map[string]any, error) {
 	if err := requireSurveyorMutationRole(actor); err != nil {

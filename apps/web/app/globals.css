@@ -4196,7 +4196,45 @@ pre {
 .iso-cedex-summary-grid {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.iso-cedex-how-it-works {
+  align-items: flex-start;
+  display: flex;
+  gap: 8px;
+}
+
+.iso-scope-banner {
+  align-items: flex-start;
+  background: color-mix(in srgb, var(--primary) 6%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border));
+  border-radius: 10px;
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.iso-scope-banner span {
+  color: var(--muted);
+}
+
+.location-code-generator {
+  background: color-mix(in srgb, var(--primary) 4%, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.location-structure-grid {
+  margin-top: 4px;
+}
+
+.code-preview {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
 }
 
 .iso-cedex-summary-card {
@@ -4345,6 +4383,11 @@ pre {
     justify-content: center;
     width: 100%;
   }
+
+  .iso-scope-banner,
+  .iso-cedex-how-it-works {
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 640px) {
@@ -4449,3 +4492,66 @@ pre {
     padding: 0;
   }
 }
+
+.iso-form-stage {
+  align-items: center;
+  background: color-mix(in srgb, var(--primary) 7%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+  border-radius: 14px;
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.iso-form-stage p {
+  color: var(--muted);
+  margin: 3px 0 0;
+}
+
+.iso-form-step {
+  align-items: center;
+  background: var(--primary);
+  border-radius: 999px;
+  color: white;
+  display: inline-flex;
+  flex: 0 0 32px;
+  font-weight: 800;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.iso-decision-rule-panel {
+  border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
+  box-shadow: 0 18px 45px rgb(15 23 42 / 8%);
+  scroll-margin-top: 18px;
+}
+
+.iso-decision-rule-panel > .section-title-row > div {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+}
+
+.iso-decision-rule-panel .eyebrow,
+.iso-decision-rule-panel h2,
+.iso-decision-rule-panel p {
+  margin-bottom: 0;
+  margin-top: 0;
+}
+
+.iso-decision-rule-panel .alert {
+  align-items: flex-start;
+  display: flex;
+  gap: 9px;
+}
+
+@media (max-width: 640px) {
+  .iso-form-stage {
+    align-items: flex-start;
+  }
+
+  .iso-decision-rule-panel {
+    border-radius: 0;
+    margin-inline: -16px;
+  }

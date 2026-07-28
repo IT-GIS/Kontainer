@@ -6,12 +6,13 @@ import { IsoCedexWorkspace, type IsoCedexTab } from "@/components/master/iso-ced
 
 type Query = Promise<Record<string, string | string[] | undefined>>;
 
-const canonicalTabs: IsoCedexTab[] = ["location", "component", "damage", "material", "action", "reference"];
+const canonicalTabs: IsoCedexTab[] = ["location", "component", "damage", "action", "material"];
 
 export default async function IsoCedexPage({ searchParams }: { searchParams: Query }) {
   const query = await searchParams;
   const requestedTab = first(query.tab);
   const customerId = first(query.customerId);
+  const customerMode = first(query.scope) === "customer" || Boolean(customerId);
   const requestedLegacy = first(query.legacy);
 
   if (requestedTab === "action-repair") {
@@ -20,21 +21,24 @@ export default async function IsoCedexPage({ searchParams }: { searchParams: Que
   if (requestedTab === "responsibility") {
     redirect(legacyHref(customerId));
   }
+  if (requestedTab === "reference") {
+    redirect("/master/inspection-references?tab=test-parameter");
+  }
 
   const activeTab = canonicalTabs.includes(requestedTab as IsoCedexTab) ? requestedTab as IsoCedexTab : "location";
   const legacyResponsibility = requestedLegacy === "responsibility";
   const pickerHref = legacyResponsibility
     ? "/master/iso-cedex?legacy=responsibility"
-    : `/master/iso-cedex?tab=${activeTab}`;
+    : `/master/iso-cedex?scope=customer&tab=${activeTab}`;
 
   return (
     <ProtectedRoute roles={["super_admin", "admin", "supervisor", "management"]}>
       <AppShell
-        title={legacyResponsibility ? "Responsibility Code (Legacy)" : "Master ISO CEDEX"}
-        subtitle="Referensi inspeksi peti kemas yang aman terhadap konteks Customer."
+        title={legacyResponsibility ? "Responsibility Code (Legacy)" : "ISO CEDEX Code"}
+        subtitle="Kamus kode untuk temuan Inspeksi Kelaikan."
         breadcrumbs={[{ label: "Master Data" }, { label: legacyResponsibility ? "Responsibility Code" : "ISO CEDEX" }]}
       >
-        {!customerId ? (
+        {(legacyResponsibility || customerMode) && !customerId ? (
           <CustomerScopedMasterIndex
             canonicalBaseHref={pickerHref}
             category={legacyResponsibility ? "responsibility-code" : "cedex-location"}

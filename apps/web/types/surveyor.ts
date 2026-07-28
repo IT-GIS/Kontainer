@@ -68,6 +68,7 @@ export type SurveyGeneralInfo = {
   csc_plate_status?: string | null;
   door_status?: string | null;
   general_condition?: string | null;
+  container_lifecycle?: "new" | "existing" | null;
   weather?: string | null;
   general_remark?: string | null;
 };
@@ -112,6 +113,7 @@ export type SurveyDamage = {
   responsibility_name?: string | null;
   severity: string;
   quantity?: number | null;
+  quantity_unit?: string | null;
   length?: number | null;
   width?: number | null;
   depth?: number | null;
@@ -119,6 +121,16 @@ export type SurveyDamage = {
   is_repair_required?: boolean;
   is_cargo_worthy_impact?: boolean;
   remark?: string | null;
+  decision_rule_id?: string | null;
+  decision_result?: string | null;
+  decision_reason?: string | null;
+  tolerance_snapshot?: Record<string, unknown> | string | null;
+  finding_description?: string | null;
+  inspection_reference_id?: string | null;
+  inspection_reference_code?: string | null;
+  inspection_reference_name?: string | null;
+  inspection_standard_reference?: string | null;
+  inspection_reference_clause?: string | null;
   photo_count?: number;
 };
 
@@ -189,6 +201,17 @@ export type SurveyMasterOption = {
   container_size?: string | null;
   unit?: string | null;
   standard_reference?: string | null;
+  applicable_face?: string | null;
+  is_structural_critical?: boolean;
+  damage_category?: string | null;
+  default_severity?: string | null;
+  requires_dimension?: boolean;
+  default_action_id?: string | null;
+  default_inspection_reference_id?: string | null;
+  result_mapping?: string | null;
+  requires_reinspection?: boolean;
+  reference_type?: string | null;
+  clause_section?: string | null;
 };
 
 export type SurveyMasterOptions = {
@@ -210,4 +233,31 @@ export type SheetFace = {
   face: string;
   label: string;
   locations: SheetLocation[];
+};
+
+export type DamageDecisionPreview = {
+  configured: boolean;
+  matched: boolean;
+  requires_dimension: boolean;
+  default_severity?: string;
+  default_action_id?: string;
+  default_inspection_reference_id?: string;
+  decision_rule_id?: string;
+  measurement_field?: string;
+  measurement_value?: number;
+  comparison_operator?: string;
+  minimum_value?: number;
+  maximum_value?: number;
+  unit?: string;
+  tolerance?: string;
+  decision_result?: string;
+  decision_reason?: string;
+  recommended_action_id?: string;
+  recommended_action_code?: string;
+  recommended_action_name?: string;
+  inspection_reference_id?: string;
+  inspection_reference_code?: string;
+  inspection_reference_name?: string;
+  inspection_standard_reference?: string;
+  inspection_reference_clause?: string;
 };

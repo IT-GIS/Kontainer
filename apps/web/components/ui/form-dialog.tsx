@@ -67,7 +67,7 @@ export function FormDialog({
         <div className="dialog-body">{children}</div>
         <div className="dialog-actions">
           <button className="secondary-button" disabled={isSubmitting} onClick={requestClose} type="button">
-            Batalkan
+            Batal
           </button>
           {onSaveAndNew ? (
             <button className="secondary-button" disabled={isSubmitting} onClick={onSaveAndNew} type="button">

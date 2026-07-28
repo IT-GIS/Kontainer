@@ -124,7 +124,7 @@ func (r Repository) damageSurveyID(ctx context.Context, damageID uuid.UUID) (uui
 }
 
 func (r Repository) resolveCEDEXLocation(ctx context.Context, tx database.Tx, customerID uuid.UUID, input DamageInput) (*uuid.UUID, string, string, error) {
-	query := `SELECT id, face, COALESCE(NULLIF(grid_code,''), code) FROM cedex_locations WHERE %s AND customer_id=$2 AND status='active' LIMIT 1`
+	query := `SELECT id, face, COALESCE(NULLIF(grid_code,''), code) FROM cedex_locations WHERE %s AND (customer_id=$2 OR customer_id IS NULL) AND status='active' ORDER BY customer_id IS NULL LIMIT 1`
 	var id uuid.UUID
 	var face, internalLocation string
 	if input.CEDEXLocationID != "" {

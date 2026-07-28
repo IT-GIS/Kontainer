@@ -1,4 +1,5 @@
 import { ProtectedRoute } from "@/components/auth/protected-route";
+import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { ChecklistReferenceTab } from "@/components/master/checklist-reference-tab";
 import { CustomerScopedMasterDetail, CustomerScopedMasterIndex } from "@/components/master/customer-scoped-master-data";
@@ -8,13 +9,14 @@ import { WorkspaceTabs } from "@/components/ui/workspace-tabs";
 import type { FitnessMasterDataCategory } from "@/types/fitness-admin";
 
 type Query = Promise<Record<string, string | string[] | undefined>>;
-type TabID = "container-type" | "survey-type" | "checklist" | "test-parameter" | "photo-category" | "finding-severity";
+type TabID = "container-type" | "survey-type" | "checklist" | "test-parameter" | "decision-rule" | "photo-category" | "finding-severity";
 
 const tabs: Array<{ id: TabID; label: string }> = [
   { id: "container-type", label: "Container Type" },
   { id: "survey-type", label: "Survey Type" },
   { id: "checklist", label: "Checklist" },
   { id: "test-parameter", label: "Test Parameter" },
+  { id: "decision-rule", label: "Tolerance & Decision Rule" },
   { id: "photo-category", label: "Photo Category" },
   { id: "finding-severity", label: "Finding Severity" }
 ];
@@ -41,12 +43,13 @@ export default async function InspectionReferencesPage({ searchParams }: { searc
   return (
     <ProtectedRoute>
       <AppShell
-        title="Referensi Pemeriksaan"
-        subtitle="Kelola referensi yang digunakan dalam pelaksanaan pemeriksaan peti kemas."
-        breadcrumbs={[{ label: "Master Data" }, { label: "Referensi Pemeriksaan" }]}
+        title="Acuan & Kriteria Pemeriksaan"
+        subtitle="Kelola Inspection Reference dan Decision Rule tervalidasi untuk Inspeksi Kelaikan."
+        breadcrumbs={[{ label: "Master Data" }, { label: "Acuan & Kriteria Pemeriksaan" }]}
       >
         <div className="page-stack">
-          <PageHeader title="Referensi Pemeriksaan" description="Kelola Container Type, Survey Type, Checklist, Test Parameter, Photo Category, dan Finding Severity." />
+          <Link className="secondary-button" href="/master/iso-cedex">&larr; Kembali ke ISO CEDEX Code</Link>
+          <PageHeader title="Acuan & Kriteria Pemeriksaan" description="Inspection Reference menyediakan dasar pemeriksaan; Tolerance & Decision Rule hanya boleh diisi dari sumber teknis yang telah diverifikasi." />
           <WorkspaceTabs
             activeID={active.id}
             label="Jenis Referensi Pemeriksaan"
@@ -72,6 +75,29 @@ export default async function InspectionReferencesPage({ searchParams }: { searc
             <CustomerScopedMasterIndex canonicalBaseHref={baseHref} category={category} routeFamily="actual" />
           ) : null}
           {active.id === "checklist" ? <ChecklistReferenceTab baseHref={baseHref} customerId={customerId} /> : null}
+          {active.id === "decision-rule" ? <MasterDataPage
+            resourceId="cedex-decision-rules"
+            endpointOverride="/master/cedex/decision-rules"
+            relationEndpointOverrides={{
+              damage_id: "/master/cedex/damages",
+              component_id: "/master/cedex/components",
+              location_id: "/master/cedex/locations",
+              material_id: "/master/cedex/materials",
+              container_type_id: "/master/container-types",
+              recommended_action_id: "/master/cedex/repairs"
+            }}
+            showToolbarAdd
+            showRichEmptyState
+            enableExport
+            enableSaveAndNew
+            enableSorting
+            responsiveCards
+            dialogSize="large"
+            addButtonLabelOverride="+ Tambah Decision Rule"
+            dialogTitleOverride="Decision Rule"
+            emptyTitle="Belum ada Decision Rule global"
+            emptyDescription="Tambahkan hanya rule yang memiliki Inspection Reference dan nilai tolerance tervalidasi."
+          /> : null}
           {globalResource ? <MasterDataPage resourceId={globalResource} /> : null}
         </div>
       </AppShell>

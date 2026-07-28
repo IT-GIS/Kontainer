@@ -39,7 +39,7 @@ func TestNormalizeAliasedFields(t *testing.T) {
 
 func TestValidateCedexLocationFilters(t *testing.T) {
 	payload := mustNormalize(t, Resources["cedex_locations"], map[string]any{
-		"code": "L1", "face": "invalid", "grid_code": "L1", "container_size": "all",
+		"code": "LG1N", "description": "Left lower section 1", "source_type": "standard_global", "face": "invalid", "grid_code": "LG1N", "container_size": "all",
 	}, true)
 	if err := validatePayload(Resources["cedex_locations"], payload, true); err == nil {
 		t.Fatal("expected invalid face to fail")

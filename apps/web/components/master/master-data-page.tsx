@@ -1,9 +1,10 @@
 "use client";
 
-import { ClipboardList, Download, Edit, Eye, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
+import { ClipboardList, Download, Edit, Eye, History, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { masterResources, type MasterField, type MasterResource } from "@/constants/master-data";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { apiData, apiPaginated, buildQuery } from "@/lib/api-client";
 import { can } from "@/lib/permissions";
@@ -12,7 +13,7 @@ import { FormDialog } from "@/components/ui/form-dialog";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 
-type MasterRow = Record<string, string | number | boolean | null | undefined>;
+export type MasterRow = Record<string, string | number | boolean | null | undefined>;
 type SelectOption = { value: string; label: string };
 type RelationFieldState = { options: SelectOption[]; isLoading: boolean; error: string | null };
 type RelationOptions = Record<string, RelationFieldState>;
@@ -45,6 +46,11 @@ export type MasterDataPageProps = {
   filters?: MasterDataFilter[];
   emptyTitle?: string;
   emptyDescription?: string;
+  onSaved?: (row: MasterRow, mode: "create" | "edit") => void;
+  renderRowActions?: (row: MasterRow) => ReactNode;
+  canMutateRow?: (row: MasterRow) => boolean;
+  locationGenerator?: boolean;
+  showHistoryAction?: boolean;
 };
 
 const defaultStatusOptions = [
@@ -78,7 +84,12 @@ export function MasterDataPage({
   actionIdPrefix,
   filters = [],
   emptyTitle = "Data belum tersedia",
-  emptyDescription = "Tambahkan data pertama agar referensi dapat digunakan."
+  emptyDescription = "Tambahkan data pertama agar referensi dapat digunakan.",
+  onSaved,
+  renderRowActions,
+  canMutateRow,
+  locationGenerator = false,
+  showHistoryAction = false
 }: MasterDataPageProps) {
   const resource = masterResources[resourceId];
   const accessibilityID = useId();
@@ -102,7 +113,7 @@ export function MasterDataPage({
   const [dialogMode, setDialogMode] = useState<"create" | "edit" | null>(null);
   const [selected, setSelected] = useState<MasterRow | null>(null);
   const [detailRow, setDetailRow] = useState<MasterRow | null>(null);
-  const [formData, setFormData] = useState<MasterRow>(() => ({ ...defaultFormData(resource), ...fixedPayload }));
+  const [formData, setFormData] = useState<MasterRow>(() => createFormData(resource, fixedPayload, locationGenerator));
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [relationOptions, setRelationOptions] = useState<RelationOptions>({});
@@ -168,7 +179,7 @@ export function MasterDataPage({
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      setFormData({ ...defaultFormData(resource), ...fixedPayload });
+      setFormData(createFormData(resource, fixedPayload, locationGenerator));
       setSelected(null);
       setDetailRow(null);
       setPage(1);
@@ -185,19 +196,19 @@ export function MasterDataPage({
       setRelationOptions({});
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [fixedPayload, resource, resourceEndpoint]);
+  }, [fixedPayload, locationGenerator, resource, resourceEndpoint]);
 
   useEffect(() => {
     if (!startInCreateMode || readOnly || createOpenedRef.current) return;
     createOpenedRef.current = true;
     setSelected(null);
-    const nextForm = { ...defaultFormData(resource), ...fixedPayload };
+    const nextForm = createFormData(resource, fixedPayload, locationGenerator);
     setFormData(nextForm);
     formBaselineRef.current = JSON.stringify(nextForm);
     setDialogMode("create");
     setError(null);
     setFormError(null);
-  }, [fixedPayload, readOnly, resource, startInCreateMode]);
+  }, [fixedPayload, locationGenerator, readOnly, resource, startInCreateMode]);
 
   useEffect(() => {
     if (!dialogMode || JSON.stringify(formData) === formBaselineRef.current) return;
@@ -253,7 +264,7 @@ export function MasterDataPage({
     ...resource.columns.map((column) => ({
       key: column.key,
       header: column.label,
-      render: (row: MasterRow) => renderCell(row[column.key], column.type),
+      render: (row: MasterRow) => renderMasterCell(row, column.key, column.type),
       sortable: enableSorting && resource.fields.some((field) => field.name === column.key)
     })),
     {
@@ -275,20 +286,26 @@ export function MasterDataPage({
               <ClipboardList size={16} />
             </Link>
           ) : null}
-          {canUpdate ? (
+          {canUpdate && (canMutateRow?.(row) ?? true) ? (
             <button aria-label={`Edit ${recordLabel(resource, row)}`} className="icon-button" onClick={() => openEdit(row)} title="Edit">
               <Edit size={16} />
             </button>
           ) : null}
-          {canUpdate && isInactiveRow(resource, row) ? (
+          {canUpdate && (canMutateRow?.(row) ?? true) && isInactiveRow(resource, row) ? (
             <button aria-label={`Aktifkan ${recordLabel(resource, row)}`} className="icon-button" onClick={() => void handleActivate(row)} title="Aktifkan">
               <RotateCcw size={16} />
             </button>
           ) : null}
-          {canDelete && !isInactiveRow(resource, row) ? (
+          {canDelete && (canMutateRow?.(row) ?? true) && !isInactiveRow(resource, row) ? (
             <button aria-label={`Nonaktifkan ${recordLabel(resource, row)}`} className="icon-button danger-action" onClick={() => void handleDelete(row)} title="Nonaktifkan">
               <Trash2 size={16} />
             </button>
+          ) : null}
+          {renderRowActions?.(row)}
+          {showHistoryAction ? (
+            <Link aria-label={`Riwayat ${recordLabel(resource, row)}`} className="icon-button" href={`/settings/audit-log?search=${encodeURIComponent(String(row.id ?? recordLabel(resource, row)))}`} title="Riwayat">
+              <History size={16} />
+            </Link>
           ) : null}
         </div>
       )
@@ -297,7 +314,7 @@ export function MasterDataPage({
 
   function openCreate() {
     setSelected(null);
-    const nextForm = { ...defaultFormData(resource), ...fixedPayload };
+    const nextForm = createFormData(resource, fixedPayload, locationGenerator);
     setFormData(nextForm);
     formBaselineRef.current = JSON.stringify(nextForm);
     setRelationSearch({});
@@ -325,7 +342,7 @@ export function MasterDataPage({
     }
     setDialogMode(null);
     setSelected(null);
-    setFormData({ ...defaultFormData(resource), ...fixedPayload });
+    setFormData(createFormData(resource, fixedPayload, locationGenerator));
     setRelationSearch({});
     setRelationOptions({});
     setFormError(null);
@@ -346,15 +363,18 @@ export function MasterDataPage({
     setSuccess(null);
     try {
       const payload = serializePayload(resource, { ...formData, ...fixedPayload }, dialogMode);
+      const savedMode = dialogMode;
+      let saved: MasterRow | undefined;
       if (dialogMode === "create") {
-        await apiData(resourceEndpoint, { method: "POST", accessToken, body: JSON.stringify(payload) });
+        saved = await apiData<MasterRow>(resourceEndpoint, { method: "POST", accessToken, body: JSON.stringify(payload) });
         setSuccess("Data berhasil dibuat.");
       } else if (selected?.id) {
-        await apiData(`${resourceEndpoint}/${selected.id}`, { method: "PUT", accessToken, body: JSON.stringify(payload) });
+        saved = await apiData<MasterRow>(`${resourceEndpoint}/${selected.id}`, { method: "PUT", accessToken, body: JSON.stringify(payload) });
         setSuccess("Data berhasil diperbarui.");
       }
       closeDialog(true);
       await loadRows();
+      if (saved) onSaved?.(saved, savedMode);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Gagal menyimpan data.");
     } finally {
@@ -377,9 +397,10 @@ export function MasterDataPage({
     setSuccess(null);
     try {
       const payload = serializePayload(resource, { ...formData, ...fixedPayload }, "create");
-      await apiData(resourceEndpoint, { method: "POST", accessToken, body: JSON.stringify(payload) });
+      const saved = await apiData<MasterRow>(resourceEndpoint, { method: "POST", accessToken, body: JSON.stringify(payload) });
+      onSaved?.(saved, "create");
       setSuccess("Data berhasil dibuat. Silakan isi data baru.");
-      const nextForm = { ...defaultFormData(resource), ...fixedPayload };
+      const nextForm = createFormData(resource, fixedPayload, locationGenerator);
       setFormData(nextForm);
       formBaselineRef.current = JSON.stringify(nextForm);
       setRelationSearch({});
@@ -492,6 +513,7 @@ export function MasterDataPage({
       {readOnly ? <div className="alert alert-warning">{readOnlyMessage ?? "Data ditampilkan dalam mode baca-saja."}</div> : null}
 
       <div className="toolbar">
+      {!readOnly && user && !canCreate && showToolbarAdd ? <div className="alert alert-warning">Anda tidak memiliki izin untuk menambah data ISO CEDEX.</div> : null}
         <label className="search-box">
           <Search size={17} />
           <span className="sr-only">Cari {resource.title}</span>
@@ -590,12 +612,13 @@ export function MasterDataPage({
         isSubmitting={isSubmitting}
         submitLabel={dialogMode === "create" ? "Simpan" : "Update"}
         onSaveAndNew={enableSaveAndNew && dialogMode === "create" ? () => void handleSaveAndNew() : undefined}
-        saveAndNewLabel="Save & New"
+        saveAndNewLabel="Simpan & Tambah Lagi"
         size={dialogSize}
       >
         {formError ? <div className="alert alert-danger" id={formErrorID} role="alert">{formError}</div> : null}
+        {locationGenerator ? <LocationCodeGenerator formData={formData} setFormData={setFormData} /> : null}
         <div className="form-grid">
-          {resource.fields.map((field) => (
+          {visibleFormFields(resource, formData, locationGenerator).map((field) => (
             <FieldInput
               field={field}
               key={field.name}
@@ -605,13 +628,68 @@ export function MasterDataPage({
               relationSearch={relationSearch[field.name] ?? ""}
               errorID={formError ? formErrorID : undefined}
               onRelationSearch={(value) => setRelationSearch((current) => ({ ...current, [field.name]: value }))}
-              onChange={(value) => setFormData((current) => ({ ...current, [field.name]: value }))}
+              onChange={(value) => setFormData((current) => locationGenerator ? updateLocationManualField(current, field.name, value) : ({ ...current, [field.name]: value }))}
             />
           ))}
         </div>
       </FormDialog>
     </div>
   );
+}
+
+function LocationCodeGenerator({ formData, setFormData }: { formData: MasterRow; setFormData: Dispatch<SetStateAction<MasterRow>> }) {
+  const mode = String(formData.input_mode ?? "structured");
+  const size = String(formData.container_size ?? "20");
+  const sections = size === "20" ? ["1", "2", "3", "4", "5"] : ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+  const span = String(formData.transverse_span ?? "N");
+
+  function setMode(nextMode: "structured" | "manual") {
+    setFormData((current) => ({
+      ...current,
+      input_mode: nextMode,
+      sector_code: "",
+      vertical_code: "",
+      start_section: "",
+      end_section: "",
+      transverse_span: nextMode === "structured" ? "N" : "",
+      container_size: nextMode === "structured" ? "20" : current.container_size,
+      code: "",
+      face: "",
+      grid_code: ""
+    }));
+  }
+
+  function updateStructure(key: string, value: string) {
+    setFormData((current) => {
+      const next = { ...current, [key]: value };
+      if (key === "container_size") {
+        next.start_section = "";
+        next.end_section = "";
+      }
+      if (key === "transverse_span" && value === "N") next.end_section = "";
+      const preview = structuredLocationPreview(next);
+      next.code = preview;
+      next.grid_code = preview;
+      next.face = sectorFace(String(next.sector_code ?? ""));
+      return next;
+    });
+  }
+
+  return <div className="location-code-generator page-stack">
+    <div className="segmented-control" aria-label="Mode input Location Code">
+      <button className={mode === "structured" ? "selected" : ""} onClick={() => setMode("structured")} type="button">Generate dari Struktur</button>
+      <button className={mode === "manual" ? "selected" : ""} onClick={() => setMode("manual")} type="button">Input Manual</button>
+    </div>
+    {mode === "structured" ? <div className="form-grid location-structure-grid">
+      <label className="field"><span>Sector *</span><select value={String(formData.sector_code ?? "")} onChange={(event) => updateStructure("sector_code", event.target.value)}><option value="">Pilih Sector</option>{[["D", "Rear / Door End"], ["L", "Left Hand"], ["R", "Right Hand"], ["F", "Front End"], ["U", "Understructure"], ["T", "Top / Roof"], ["B", "Base / Floor"]].map(([value, label]) => <option key={value} value={value}>{value} — {label}</option>)}</select></label>
+      <label className="field"><span>Vertical Position *</span><select value={String(formData.vertical_code ?? "")} onChange={(event) => updateStructure("vertical_code", event.target.value)}><option value="">Pilih Vertical</option>{[["G", "Ground"], ["B", "Bottom"], ["T", "Top"], ["H", "Height"], ["X", "Half Position"]].map(([value, label]) => <option key={value} value={value}>{value} — {label}</option>)}</select></label>
+      <label className="field"><span>Container Size *</span><select value={size} onChange={(event) => updateStructure("container_size", event.target.value)}><option value="20">20 feet</option><option value="40">40 feet</option><option value="45">45 feet</option></select></label>
+      <label className="field"><span>Start Section *</span><select value={String(formData.start_section ?? "")} onChange={(event) => updateStructure("start_section", event.target.value)}><option value="">Pilih Section</option>{sections.map((section) => <option key={section} value={section}>{section}</option>)}</select></label>
+      <label className="field"><span>Transverse / Span *</span><select value={span} onChange={(event) => updateStructure("transverse_span", event.target.value)}><option value="N">N — Satu titik</option><option value="RANGE">Range — Rentang section</option></select></label>
+      {span === "RANGE" ? <label className="field"><span>End Section *</span><select value={String(formData.end_section ?? "")} onChange={(event) => updateStructure("end_section", event.target.value)}><option value="">Pilih End Section</option>{sections.map((section) => <option key={section} value={section}>{section}</option>)}</select></label> : null}
+      <label className="field form-span-2"><span>Location Code Preview</span><input className="code-preview" readOnly value={String(formData.code ?? "")} placeholder="Contoh: TB5N" /></label>
+    </div> : <div className="alert alert-warning">Input manual hanya tersedia untuk Admin dan tetap divalidasi sebagai empat karakter alfanumerik.</div>}
+  </div>;
 }
 
 function FieldInput({ field, value, onChange, optionsOverride, relationState, relationSearch, onRelationSearch, errorID }: { field: MasterField; value: MasterRow[string]; onChange: (value: MasterRow[string]) => void; optionsOverride?: SelectOption[]; relationState?: RelationFieldState; relationSearch?: string; onRelationSearch?: (value: string) => void; errorID?: string }) {
@@ -657,7 +735,7 @@ function FieldInput({ field, value, onChange, optionsOverride, relationState, re
         <input
           aria-describedby={errorID}
           value={String(value ?? "")}
-          onChange={(event) => onChange(field.type === "number" || field.type === "decimal" ? numberOrEmpty(event.target.value) : event.target.value)}
+          onChange={(event) => onChange(field.type === "number" || field.type === "decimal" ? numberOrEmpty(event.target.value) : field.uppercase ? event.target.value.toUpperCase() : event.target.value)}
           required={field.required}
           type={inputType}
           min={field.min}
@@ -693,7 +771,16 @@ function renderDetailValue(value: MasterRow[string], type?: MasterField["type"])
   return String(value);
 }
 
-function renderCell(value: MasterRow[string], type?: "status" | "boolean") {
+function renderMasterCell(row: MasterRow, key: string, type?: "status" | "boolean" | "source") {
+  if (key === "section_range") {
+    const start = String(row.start_section ?? "");
+    const end = String(row.end_section ?? "");
+    return start ? (end ? `${start}–${end}` : start) : renderCell(row.grid_code, undefined);
+  }
+  return renderCell(row[key], type);
+}
+
+function renderCell(value: MasterRow[string], type?: "status" | "boolean" | "source") {
   if (type === "status") {
     const label = String(value || "inactive");
     const normalized = label.toLowerCase();
@@ -703,6 +790,11 @@ function renderCell(value: MasterRow[string], type?: "status" | "boolean") {
   }
   if (type === "boolean") {
     return <StatusBadge tone={value ? "success" : "neutral"}>{value ? "Ya" : "Tidak"}</StatusBadge>;
+  }
+  if (type === "source") {
+    const source = String(value ?? "legacy");
+    const labels: Record<string, string> = { standard_global: "Standar Global", customer_specific: "Khusus Customer", legacy: "Legacy" };
+    return <StatusBadge tone={source === "standard_global" ? "success" : source === "customer_specific" ? "warning" : "neutral"}>{labels[source] ?? source}</StatusBadge>;
   }
   return value === undefined || value === null || value === "" ? <span className="muted-text">-</span> : String(value);
 }
@@ -723,6 +815,58 @@ function defaultFormData(resource: MasterResource): MasterRow {
     }
   }
   return data;
+}
+
+function createFormData(resource: MasterResource, fixedValues: MasterRow, locationGenerator: boolean) {
+  const data = { ...defaultFormData(resource), ...fixedValues };
+  if (!locationGenerator) return data;
+  return {
+    ...data,
+    input_mode: "structured",
+    sector_code: "",
+    vertical_code: "",
+    start_section: "",
+    end_section: "",
+    transverse_span: "N",
+    container_size: "20",
+    code: "",
+    face: "",
+    grid_code: ""
+  };
+}
+
+function visibleFormFields(resource: MasterResource, data: MasterRow, locationGenerator: boolean) {
+  if (!locationGenerator) return resource.fields;
+  const mode = String(data.input_mode ?? "structured");
+  const structuredFields = new Set(["description", "source_type", "source_reason", "display_order", "status"]);
+  const manualFields = new Set(["input_mode", "code", "container_size", "description", "source_type", "source_reason", "display_order", "status"]);
+  return resource.fields.filter((field) => (mode === "structured" ? structuredFields : manualFields).has(field.name));
+}
+
+function updateLocationManualField(current: MasterRow, fieldName: string, value: MasterRow[string]) {
+  const next = { ...current, [fieldName]: value };
+  if (String(next.input_mode ?? "") === "manual" && fieldName === "code") {
+    const code = String(value ?? "").toUpperCase();
+    next.code = code;
+    next.grid_code = code;
+    next.face = sectorFace(code.slice(0, 1));
+  }
+  return next;
+}
+
+function structuredLocationPreview(data: MasterRow) {
+  const sector = String(data.sector_code ?? "");
+  const vertical = String(data.vertical_code ?? "");
+  const start = String(data.start_section ?? "");
+  const span = String(data.transverse_span ?? "N");
+  const end = String(data.end_section ?? "");
+  if (!sector || !vertical || !start || (span === "RANGE" && !end)) return "";
+  return `${sector}${vertical}${start}${span === "RANGE" ? end : "N"}`.toUpperCase();
+}
+
+function sectorFace(sector: string) {
+  const faces: Record<string, string> = { D: "door", L: "left", R: "right", F: "front", U: "understructure", T: "roof", B: "floor" };
+  return faces[sector.toUpperCase()] ?? "";
 }
 
 function formDataFromRow(resource: MasterResource, row: MasterRow): MasterRow {
@@ -756,6 +900,13 @@ function serializePayload(resource: MasterResource, data: MasterRow, mode: "crea
 }
 
 function validateForm(resource: MasterResource, data: MasterRow) {
+  const codeSpec = codeValidationSpec(resource.id);
+  if (codeSpec) {
+    const code = String(data.code ?? "").trim();
+    if (!new RegExp(`^[A-Za-z0-9]{${codeSpec.length}}$`).test(code)) {
+      return `${codeSpec.label} wajib terdiri dari tepat ${codeSpec.length} karakter huruf atau angka.`;
+    }
+  }
   for (const field of resource.fields) {
     const value = data[field.name];
     const empty = value === undefined || value === null || String(value).trim() === "";
@@ -784,6 +935,17 @@ function validateForm(resource: MasterResource, data: MasterRow) {
   return null;
 }
 
+function codeValidationSpec(resourceID: string) {
+  const specs: Record<string, { length: number; label: string }> = {
+    "cedex-locations": { length: 4, label: "Location Code" },
+    "cedex-components": { length: 3, label: "Component Code" },
+    "cedex-damages": { length: 2, label: "Damage Code" },
+    "cedex-actions": { length: 2, label: "Action Repair Code" },
+    "cedex-materials": { length: 2, label: "Material Code" }
+  };
+  return specs[resourceID];
+}
+
 function numberOrEmpty(value: string) {
   if (value === "") return "";
   return Number(value);
@@ -807,7 +969,14 @@ function relationLabelKey(fieldName: string) {
     structural_component_id: "component_label",
     test_parameter_id: "test_parameter_label",
     approval_category_id: "approval_category_label",
-    container_type_id: "container_type_label"
+    container_type_id: "container_type_label",
+    damage_id: "damage_label",
+    location_id: "location_label",
+    material_id: "material_label",
+    inspection_reference_id: "inspection_reference_label",
+    recommended_action_id: "recommended_action_label",
+    default_action_id: "default_action_label",
+    default_inspection_reference_id: "default_inspection_reference_label"
   };
   return mapping[fieldName];
 }

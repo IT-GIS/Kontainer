@@ -35,8 +35,15 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	handler.resource(master, authService, "/cedex/locations", Resources["cedex_locations"])
 	handler.resource(master, authService, "/cedex/components", Resources["cedex_components"])
 	handler.resource(master, authService, "/cedex/damages", Resources["cedex_damages"])
+	handler.resource(master, authService, "/cedex/decision-rules", Resources["cedex_damage_decision_rules"])
 	handler.resource(master, authService, "/cedex/repairs", Resources["cedex_repairs"])
 	handler.resource(master, authService, "/cedex/materials", Resources["cedex_materials"])
+	handler.resource(master, authService, "/cedex/code-proposals", Resources["cedex_code_proposals"])
+	master.POST(
+		"/cedex/code-proposals/:id/review",
+		middleware.RequirePermission(authService, "cedex_code_proposals.review.all"),
+		handler.ReviewCodeProposal,
+	)
 	handler.resource(master, authService, "/responsibility-codes", Resources["responsibility_codes"])
 	v1.GET("/customers/readiness", middleware.RequirePermission(authService, "customers.view.all"), handler.ListCustomerReadiness)
 
@@ -49,6 +56,7 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	handler.resourceItems(customerMaster, authService, "/cedex/locations", customerScopedResource(Resources["cedex_locations"]), "customer_id")
 	handler.resourceItems(customerMaster, authService, "/cedex/components", customerScopedResource(Resources["cedex_components"]), "customer_id")
 	handler.resourceItems(customerMaster, authService, "/cedex/damages", customerScopedResource(Resources["cedex_damages"]), "customer_id")
+	handler.resourceItems(customerMaster, authService, "/cedex/decision-rules", customerScopedResource(Resources["cedex_damage_decision_rules"]), "customer_id")
 	handler.resourceItems(customerMaster, authService, "/cedex/repairs", customerScopedResource(Resources["cedex_repairs"]), "customer_id")
 	handler.resourceItems(customerMaster, authService, "/cedex/materials", customerScopedResource(Resources["cedex_materials"]), "customer_id")
 	handler.resourceItems(customerMaster, authService, "/responsibility-codes", customerScopedResource(Resources["responsibility_codes"]), "customer_id")
@@ -96,6 +104,24 @@ func (h Handler) GetCustomerReferenceOptions(c *gin.Context) {
 		return
 	}
 	apphttp.OK(c, "Konfigurasi referensi berhasil diambil.", item)
+}
+
+func (h Handler) ReviewCodeProposal(c *gin.Context) {
+	id, ok := parseID(c)
+	if !ok {
+		return
+	}
+	var input CodeProposalReviewInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		apphttp.Fail(c, http.StatusUnprocessableEntity, "Validasi gagal.", "VALIDATION_ERROR", []apphttp.ErrorDetail{{Message: "Request body review tidak valid."}})
+		return
+	}
+	item, err := h.service.ReviewCodeProposal(c.Request.Context(), id, input, actorFromContext(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Pengajuan ISO CEDEX berhasil direview.", item)
 }
 
 func (h Handler) SetCustomerReferenceOptions(c *gin.Context) {
@@ -215,7 +241,7 @@ func (h Handler) resource(group *gin.RouterGroup, authService *auth.Service, pat
 
 	group.GET(path, view, h.List(resource))
 	group.GET(path+"/:id", view, h.Get(resource))
-	if resource.LegacyOnly {
+	if resource.ReadOnly || (resource.LegacyOnly && !resource.AllowGlobalMutation) {
 		return
 	}
 	group.POST(path, create, h.Create(resource))

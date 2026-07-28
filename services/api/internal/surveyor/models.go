@@ -61,19 +61,20 @@ type StartSurveyInput struct {
 }
 
 type GeneralInfoInput struct {
-	SurveyDateTime   string   `json:"survey_date_time"`
-	CargoStatus      string   `json:"cargo_status"`
-	SealNo           string   `json:"seal_no"`
-	TruckNo          string   `json:"truck_no"`
-	DriverName       string   `json:"driver_name"`
-	ChassisNo        string   `json:"chassis_no"`
-	CSCPlateStatus   string   `json:"csc_plate_status"`
-	DoorStatus       string   `json:"door_status"`
-	GeneralCondition string   `json:"general_condition"`
-	Weather          string   `json:"weather"`
-	GPSLatitude      *float64 `json:"gps_latitude"`
-	GPSLongitude     *float64 `json:"gps_longitude"`
-	GeneralRemark    string   `json:"general_remark"`
+	SurveyDateTime     string   `json:"survey_date_time"`
+	CargoStatus        string   `json:"cargo_status"`
+	SealNo             string   `json:"seal_no"`
+	TruckNo            string   `json:"truck_no"`
+	DriverName         string   `json:"driver_name"`
+	ChassisNo          string   `json:"chassis_no"`
+	CSCPlateStatus     string   `json:"csc_plate_status"`
+	DoorStatus         string   `json:"door_status"`
+	GeneralCondition   string   `json:"general_condition"`
+	ContainerLifecycle string   `json:"container_lifecycle"`
+	Weather            string   `json:"weather"`
+	GPSLatitude        *float64 `json:"gps_latitude"`
+	GPSLongitude       *float64 `json:"gps_longitude"`
+	GeneralRemark      string   `json:"general_remark"`
 }
 
 type ChecklistInput struct {
@@ -101,6 +102,7 @@ type DamageInput struct {
 	ResponsibilityID     string   `json:"responsibility_code_id"`
 	Severity             string   `json:"severity"`
 	Quantity             *int     `json:"quantity"`
+	QuantityUnit         string   `json:"quantity_unit"`
 	Length               *float64 `json:"length"`
 	Width                *float64 `json:"width"`
 	Depth                *float64 `json:"depth"`
@@ -109,6 +111,15 @@ type DamageInput struct {
 	IsCargoWorthyImpact  bool     `json:"is_cargo_worthy_impact"`
 	IsPhotoOnly          bool     `json:"is_photo_only"`
 	Remark               string   `json:"remark"`
+}
+
+type CodeProposalInput struct {
+	CodeType       string `json:"code_type"`
+	Code           string `json:"code"`
+	Description    string `json:"description"`
+	Reason         string `json:"reason"`
+	EvidenceFileID string `json:"evidence_file_id"`
+	Notes          string `json:"notes"`
 }
 
 type SurveyMasterOptions struct {

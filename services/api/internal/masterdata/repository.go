@@ -276,6 +276,9 @@ func (r Repository) InsertAudit(ctx context.Context, entry AuditEntry) error {
 }
 
 func (r Repository) ValidateDomainMutation(ctx context.Context, resource Resource, payload map[string]any, id *uuid.UUID) error {
+	if err := r.validateISOCEDEXMutation(ctx, resource, payload); err != nil {
+		return err
+	}
 	if resource.Name == "company_profiles" {
 		args := []any{}
 		where := ""

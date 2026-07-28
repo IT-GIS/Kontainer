@@ -352,16 +352,21 @@ func (r Repository) UpdateGeneralInfo(ctx context.Context, surveyID uuid.UUID, i
 	if !editableStatus(fmt.Sprint(base["status"])) {
 		return nil, ErrInvalidStatus
 	}
+	lifecycle := strings.ToLower(strings.TrimSpace(input.ContainerLifecycle))
+	if lifecycle != "" && lifecycle != "new" && lifecycle != "existing" {
+		return nil, validationError("CONTAINER_LIFECYCLE_INVALID", "Kategori peti kemas harus New atau Existing.")
+	}
 	if input.CargoStatus == "laden" && strings.TrimSpace(input.SealNo) == "" {
 		return nil, ErrInvalidInput
 	}
 	item, err := scanRow(tx.QueryRow(ctx, `
 		UPDATE survey_general_infos SET survey_date_time=$2, cargo_status=$3, seal_no=NULLIF($4,''), truck_no=NULLIF($5,''), driver_name=NULLIF($6,''),
-		  chassis_no=NULLIF($7,''), csc_plate_status=NULLIF($8,''), door_status=NULLIF($9,''), general_condition=NULLIF($10,''), weather=NULLIF($11,''),
-		  gps_latitude=$12, gps_longitude=$13, general_remark=NULLIF($14,''), updated_at=now()
+		  chassis_no=NULLIF($7,''), csc_plate_status=NULLIF($8,''), door_status=NULLIF($9,''), general_condition=NULLIF($10,''),
+		  container_lifecycle=NULLIF($11,''), weather=NULLIF($12,''),
+		  gps_latitude=$13, gps_longitude=$14, general_remark=NULLIF($15,''), updated_at=now()
 		WHERE survey_id=$1
 		RETURNING id, survey_id, cargo_status, seal_no, general_condition, survey_date_time
-	`, surveyID, surveyDate, input.CargoStatus, input.SealNo, input.TruckNo, input.DriverName, input.ChassisNo, input.CSCPlateStatus, input.DoorStatus, input.GeneralCondition, input.Weather, input.GPSLatitude, input.GPSLongitude, input.GeneralRemark), []string{"id", "survey_id", "cargo_status", "seal_no", "general_condition", "survey_date_time"})
+	`, surveyID, surveyDate, input.CargoStatus, input.SealNo, input.TruckNo, input.DriverName, input.ChassisNo, input.CSCPlateStatus, input.DoorStatus, input.GeneralCondition, lifecycle, input.Weather, input.GPSLatitude, input.GPSLongitude, input.GeneralRemark), []string{"id", "survey_id", "cargo_status", "seal_no", "general_condition", "survey_date_time"})
 	if err != nil {
 		return nil, err
 	}
@@ -474,7 +479,14 @@ func (r Repository) Sheet(ctx context.Context, surveyID uuid.UUID, actor Actor) 
 		JOIN job_orders jo ON jo.id=s.job_order_id
 		JOIN job_containers jc ON jc.id=s.job_container_id
 		LEFT JOIN container_types ct ON ct.id=jc.container_type_id
-		JOIN cedex_locations cl ON cl.status='active' AND cl.customer_id=jo.customer_id
+		JOIN cedex_locations cl ON cl.status='active'
+		  AND (cl.customer_id=jo.customer_id OR (
+		    cl.customer_id IS NULL AND NOT EXISTS (
+		      SELECT 1 FROM cedex_locations override
+		      WHERE override.customer_id=jo.customer_id AND override.status='active'
+		        AND LOWER(override.code)=LOWER(cl.code)
+		    )
+		  ))
 		  AND (
 		    cl.container_size IS NULL OR cl.container_size='all'
 		    OR cl.container_size=CASE
@@ -534,7 +546,11 @@ func (r Repository) Damages(ctx context.Context, surveyID uuid.UUID, actor Actor
 		       cr.id AS repair_code_id, cr.code AS repair_code, cr.repair_name AS repair_name,
 		       cm.id AS material_code_id, cm.code AS material_code, cm.material_name,
 		       rc.id AS responsibility_code_id, rc.code AS responsibility_code, rc.name AS responsibility_name,
-		       sd.severity, sd.quantity, sd.length_value AS length, sd.width_value AS width, sd.depth_value AS depth,
+		       sd.decision_rule_id, sd.decision_result, sd.decision_reason, sd.tolerance_snapshot,
+		       sd.finding_description, ir.id AS inspection_reference_id,
+		       ir.code AS inspection_reference_code, ir.parameter_name AS inspection_reference_name,
+		       ir.standard_reference AS inspection_standard_reference, ir.clause_section AS inspection_reference_clause,
+		       sd.severity, sd.quantity, sd.quantity_unit, sd.length_value AS length, sd.width_value AS width, sd.depth_value AS depth,
 		       sd.unit, sd.is_repair_required, sd.is_cargo_worthy_impact, sd.remark,
 		       COUNT(sp.id) AS photo_count
 		FROM survey_damages sd
@@ -546,7 +562,8 @@ func (r Repository) Damages(ctx context.Context, surveyID uuid.UUID, actor Actor
 		LEFT JOIN responsibility_codes rc ON rc.id=sd.responsibility_id
 		LEFT JOIN survey_photos sp ON sp.damage_id=sd.id AND sp.deleted_at IS NULL
 		WHERE sd.survey_id=$1 AND sd.deleted_at IS NULL
-		GROUP BY sd.id, cl.id, cc.id, cd.id, cr.id, cm.id, rc.id
+		LEFT JOIN inspection_test_parameters ir ON ir.id=sd.inspection_reference_id
+		GROUP BY sd.id, cl.id, cc.id, cd.id, cr.id, cm.id, rc.id, ir.id
 		ORDER BY sd.damage_no
 	`, surveyID)
 	if err != nil {
@@ -869,6 +886,40 @@ func (r Repository) saveDamage(ctx context.Context, damageID uuid.UUID, surveyID
 	if err := r.validateSeverityTx(ctx, tx, customerID, surveyTypeID, severity); err != nil {
 		return nil, err
 	}
+	evaluation, err := r.evaluateDamageDecisionTx(ctx, tx, base, input, damageCodeID, componentID, cedexLocationID, materialID)
+	if err != nil {
+		return nil, err
+	}
+	effectiveActionID := repairID
+	if evaluation.RecommendedActionID != "" {
+		parsed := nullableUUIDString(evaluation.RecommendedActionID)
+		if parsed != nil {
+			effectiveActionID = parsed
+		}
+	}
+	if effectiveActionID == nil && evaluation.DefaultActionID != "" {
+		parsed := nullableUUIDString(evaluation.DefaultActionID)
+		if parsed != nil {
+			effectiveActionID = parsed
+		}
+	}
+	if repairID == nil {
+		repairID = effectiveActionID
+	}
+	if effectiveActionID != nil {
+		if err := r.validateScopedReferenceTx(ctx, tx, "cedex_repairs", *effectiveActionID, customerID, "RECOMMENDED_ACTION_SCOPE"); err != nil {
+			return nil, err
+		}
+	}
+	decisionRuleID := nullableUUIDString(evaluation.DecisionRuleID)
+	inspectionReferenceID := nullableUUIDString(evaluation.InspectionReferenceID)
+	isRepairRequired := input.IsRepairRequired || evaluation.DecisionResult == "need_repair" || evaluation.DecisionResult == "need_reinspection"
+	isCargoWorthyImpact := input.IsCargoWorthyImpact || evaluation.DecisionResult == "not_passed"
+	findingDescription, err := r.buildFindingDescriptionTx(ctx, tx, componentID, damageCodeID, materialID, effectiveActionID, face, internalLocation, input, evaluation)
+	if err != nil {
+		return nil, err
+	}
+	toleranceSnapshot := evaluation.snapshotJSON()
 	if damageID == uuid.Nil {
 		damageNo, err := r.nextDamageNo(ctx, tx, surveyID)
 		if err != nil {
@@ -877,41 +928,62 @@ func (r Repository) saveDamage(ctx context.Context, damageID uuid.UUID, surveyID
 		item, err := scanRow(tx.QueryRow(ctx, `
 			INSERT INTO survey_damages (
 			  survey_id, damage_no, face, internal_location, cedex_location_id, manual_location_reason,
-			  component_id, damage_id, repair_id, material_id, responsibility_id, severity, quantity,
-			  length_value, width_value, depth_value, unit, is_repair_required,
-			  is_cargo_worthy_impact, is_photo_only, remark, created_by, updated_by
+			  component_id, damage_id, repair_id, material_id, responsibility_id,
+			  decision_rule_id, inspection_reference_id, recommended_action_id,
+			  decision_result, decision_reason, tolerance_snapshot, finding_description,
+			  severity, quantity, quantity_unit, length_value, width_value, depth_value, unit,
+			  is_repair_required, is_cargo_worthy_impact, is_photo_only, remark, created_by, updated_by
 			)
-			VALUES ($1,$2,$3,$4,$5,NULLIF($6,''),$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,NULLIF($21,''),$22,$22)
-			RETURNING id, damage_no, face, internal_location, severity
+			VALUES ($1,$2,$3,$4,$5,NULLIF($6,''),$7,$8,$9,$10,$11,$12,$13,$14,
+			  NULLIF($15,''),NULLIF($16,''),NULLIF($17,''),NULLIF($18,''),
+			  $19,$20,NULLIF($21,''),$22,$23,$24,$25,$26,$27,$28,NULLIF($29,''),$30,$30)
+			RETURNING id, damage_no, face, internal_location, severity, decision_result, finding_description
 		`, surveyID, damageNo, face, internalLocation, cedexLocationID, input.ManualLocationReason,
-			componentID, damageCodeID, repairID, materialID, responsibilityID, severity, input.Quantity,
-			input.Length, input.Width, input.Depth, defaultString(input.Unit, "cm"), input.IsRepairRequired,
-			input.IsCargoWorthyImpact, input.IsPhotoOnly, input.Remark, actor.UserID,
-		), []string{"id", "damage_no", "face", "internal_location", "severity"})
+			componentID, damageCodeID, repairID, materialID, responsibilityID,
+			decisionRuleID, inspectionReferenceID, effectiveActionID,
+			evaluation.DecisionResult, evaluation.DecisionReason, toleranceSnapshot, findingDescription,
+			severity, input.Quantity, defaultString(input.QuantityUnit, "pc"), input.Length, input.Width, input.Depth, defaultString(input.Unit, "cm"),
+			isRepairRequired, isCargoWorthyImpact, input.IsPhotoOnly, input.Remark, actor.UserID,
+		), []string{"id", "damage_no", "face", "internal_location", "severity", "decision_result", "finding_description"})
 		if err != nil {
 			return nil, err
 		}
 		newID := parseUUIDString(item["id"])
 		_ = r.insertAudit(ctx, tx, actor, "survey_damages.create", "survey_damages", &newID, nil, item)
+		if decisionRuleID != nil {
+			if err := r.insertAudit(ctx, tx, actor, "cedex_damage_decision_rules.apply", "cedex_damage_decision_rules", decisionRuleID, nil, map[string]any{"survey_damage_id": newID.String(), "snapshot": toleranceSnapshot}); err != nil {
+				return nil, err
+			}
+		}
 		return item, tx.Commit(ctx)
 	}
 	item, err := scanRow(tx.QueryRow(ctx, `
 		UPDATE survey_damages
 		SET face=$2, internal_location=$3, cedex_location_id=$4, manual_location_reason=NULLIF($5,''),
 		  component_id=$6, damage_id=$7, repair_id=$8, material_id=$9, responsibility_id=$10,
-		  severity=$11, quantity=$12, length_value=$13, width_value=$14, depth_value=$15, unit=$16,
-		  is_repair_required=$17, is_cargo_worthy_impact=$18, is_photo_only=$19,
-		  remark=NULLIF($20,''), updated_by=$21, updated_at=now()
+		  decision_rule_id=$11, inspection_reference_id=$12, recommended_action_id=$13,
+		  decision_result=NULLIF($14,''), decision_reason=NULLIF($15,''),
+		  tolerance_snapshot=NULLIF($16,''), finding_description=NULLIF($17,''),
+		  severity=$18, quantity=$19, quantity_unit=NULLIF($20,''), length_value=$21, width_value=$22, depth_value=$23, unit=$24,
+		  is_repair_required=$25, is_cargo_worthy_impact=$26, is_photo_only=$27,
+		  remark=NULLIF($28,''), updated_by=$29, updated_at=now()
 		WHERE id=$1 AND deleted_at IS NULL
-		RETURNING id, damage_no, face, internal_location, severity
+		RETURNING id, damage_no, face, internal_location, severity, decision_result, finding_description
 	`, damageID, face, internalLocation, cedexLocationID, input.ManualLocationReason,
-		componentID, damageCodeID, repairID, materialID, responsibilityID, severity, input.Quantity,
-		input.Length, input.Width, input.Depth, defaultString(input.Unit, "cm"), input.IsRepairRequired,
-		input.IsCargoWorthyImpact, input.IsPhotoOnly, input.Remark, actor.UserID,
-	), []string{"id", "damage_no", "face", "internal_location", "severity"})
+		componentID, damageCodeID, repairID, materialID, responsibilityID,
+		decisionRuleID, inspectionReferenceID, effectiveActionID,
+		evaluation.DecisionResult, evaluation.DecisionReason, toleranceSnapshot, findingDescription,
+		severity, input.Quantity, defaultString(input.QuantityUnit, "pc"), input.Length, input.Width, input.Depth, defaultString(input.Unit, "cm"),
+		isRepairRequired, isCargoWorthyImpact, input.IsPhotoOnly, input.Remark, actor.UserID,
+	), []string{"id", "damage_no", "face", "internal_location", "severity", "decision_result", "finding_description"})
 	if err != nil {
 		return nil, err
 	}
 	_ = r.insertAudit(ctx, tx, actor, "survey_damages.update", "survey_damages", &damageID, nil, item)
+	if decisionRuleID != nil {
+		if err := r.insertAudit(ctx, tx, actor, "cedex_damage_decision_rules.apply", "cedex_damage_decision_rules", decisionRuleID, nil, map[string]any{"survey_damage_id": damageID.String(), "snapshot": toleranceSnapshot}); err != nil {
+			return nil, err
+		}
+	}
 	return item, tx.Commit(ctx)
 }

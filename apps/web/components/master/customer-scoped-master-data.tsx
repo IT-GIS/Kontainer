@@ -169,8 +169,8 @@ export function CustomerScopedMasterDetail({
   referenceConfigurationReadOnly?: boolean;
   masterDataProps?: Pick<MasterDataPageProps,
     "showResourceHeader" | "showToolbarAdd" | "showRichEmptyState" | "showImportUnavailable" | "enableExport" | "enableSaveAndNew" |
-    "enableSorting" | "responsiveCards" | "dialogSize" | "actionIdPrefix" | "filters" |
-    "emptyTitle" | "emptyDescription"
+    "enableSorting" | "responsiveCards" | "dialogSize" | "actionIdPrefix" | "filters" | "relationEndpointOverrides" |
+    "emptyTitle" | "emptyDescription" | "onSaved" | "renderRowActions" | "canMutateRow" | "locationGenerator" | "showHistoryAction"
   >;
 }) {
   const { accessToken } = useAuth();
@@ -197,6 +197,12 @@ export function CustomerScopedMasterDetail({
   const customerReadOnly = customer.status !== "active";
   const readOnly = forceReadOnly || customerReadOnly;
   const mappingReadOnly = customerReadOnly || (referenceConfigurationReadOnly ?? readOnly);
+  const fixedValues = "global" in mapping && mapping.global
+    ? undefined
+    : {
+        customer_id: customerId,
+        ...(category.startsWith("cedex-") && category !== "cedex-reference" ? { source_type: "customer_specific" } : {})
+      };
   return <div className="page-stack">
     <div className="workspace-panel detail-grid">
       <div><span>Customer</span><strong>{customer.customer_name}</strong></div>
@@ -206,7 +212,7 @@ export function CustomerScopedMasterDetail({
     <MasterDataPage
       resourceId={mapping.resourceId}
       endpointOverride={endpoint}
-      fixedValues={"global" in mapping && mapping.global ? undefined : { customer_id: customerId }}
+      fixedValues={fixedValues}
       backHref={hideBackLink ? undefined : backHref}
       readOnly={readOnly}
       readOnlyMessage={forceReadOnlyMessage ?? "Customer tidak aktif. Master Data hanya dapat dilihat dan tidak dapat diubah."}

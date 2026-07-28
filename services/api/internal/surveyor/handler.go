@@ -35,6 +35,8 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	v1.POST("/surveys/start", middleware.RequirePermission(authService, "surveys.start.assigned"), h.StartSurvey)
 	v1.GET("/surveys/:id", middleware.RequirePermission(authService, "surveys.view.assigned"), h.GetSurvey)
 	v1.GET("/surveys/:id/master-options", middleware.RequirePermission(authService, "surveys.view.assigned"), h.MasterOptions)
+	v1.POST("/surveys/:id/damage-decision-preview", middleware.RequirePermission(authService, "surveys.view.assigned"), h.PreviewDamageDecision)
+	v1.POST("/surveys/:id/cedex-code-proposals", middleware.RequirePermission(authService, "surveys.update.assigned"), h.CreateCodeProposal)
 	v1.PUT("/surveys/:id/general-info", middleware.RequirePermission(authService, "surveys.update.assigned"), h.UpdateGeneralInfo)
 	v1.GET("/surveys/:id/checklist", middleware.RequirePermission(authService, "surveys.view.assigned"), h.Checklist)
 	v1.PUT("/surveys/:id/checklist", middleware.RequirePermission(authService, "surveys.update.assigned"), h.UpdateChecklist)
@@ -141,6 +143,40 @@ func (h Handler) MasterOptions(c *gin.Context) {
 		return
 	}
 	apphttp.OK(c, "Opsi Master Data Survey berhasil diambil.", item)
+}
+
+func (h Handler) PreviewDamageDecision(c *gin.Context) {
+	id, ok := parseID(c)
+	if !ok {
+		return
+	}
+	var input DamageInput
+	if !bindJSON(c, &input) {
+		return
+	}
+	item, err := h.service.PreviewDamageDecision(c.Request.Context(), id, input, actorFromContext(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Decision Rule berhasil dievaluasi.", item)
+}
+
+func (h Handler) CreateCodeProposal(c *gin.Context) {
+	id, ok := parseID(c)
+	if !ok {
+		return
+	}
+	var input CodeProposalInput
+	if !bindJSON(c, &input) {
+		return
+	}
+	item, err := h.service.CreateCodeProposal(c.Request.Context(), id, input, actorFromContext(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.Created(c, "Pengajuan kode baru berhasil dikirim.", item)
 }
 
 func (h Handler) UpdateGeneralInfo(c *gin.Context) {
