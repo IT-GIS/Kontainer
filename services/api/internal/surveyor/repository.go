@@ -915,7 +915,7 @@ func (r Repository) saveDamage(ctx context.Context, damageID uuid.UUID, surveyID
 	inspectionReferenceID := nullableUUIDString(evaluation.InspectionReferenceID)
 	isRepairRequired := input.IsRepairRequired || evaluation.DecisionResult == "need_repair" || evaluation.DecisionResult == "need_reinspection"
 	isCargoWorthyImpact := input.IsCargoWorthyImpact || evaluation.DecisionResult == "not_passed"
-	findingDescription, err := r.buildFindingDescriptionTx(ctx, tx, componentID, damageCodeID, materialID, effectiveActionID, face, internalLocation, input, evaluation)
+	findingDescription, err := r.buildFindingDescriptionTx(ctx, tx, cedexLocationID, componentID, damageCodeID, materialID, effectiveActionID, face, internalLocation, input, evaluation)
 	if err != nil {
 		return nil, err
 	}

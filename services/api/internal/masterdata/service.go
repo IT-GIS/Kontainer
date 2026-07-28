@@ -120,7 +120,11 @@ func (s *Service) Update(ctx context.Context, resource Resource, id uuid.UUID, p
 		if err != nil {
 			return err
 		}
-		return auditWithRepo(ctx, repo, resource, "update", actor, oldValue, updated)
+		action := "update"
+		if isInactiveRecord(resource, oldValue) && !isInactiveRecord(resource, updated) {
+			action = "activate"
+		}
+		return auditWithRepo(ctx, repo, resource, action, actor, oldValue, updated)
 	})
 	if err != nil {
 		return nil, classifyMutationError(err)
@@ -469,7 +473,7 @@ func effectiveAllowedValues(resource Resource, field Field) []string {
 	case "location_type":
 		return []string{"depot", "yard", "port", "warehouse", "factory", "customer_site", "other"}
 	case "face":
-		return []string{"left", "right", "front", "door", "roof", "floor", "understructure"}
+		return []string{"left", "right", "front", "door", "roof", "floor", "understructure", "other"}
 	case "container_size":
 		return []string{"all", "20", "40", "45"}
 	case "severity_default":

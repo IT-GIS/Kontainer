@@ -237,6 +237,63 @@ func TestReactivatePayloadAccepted(t *testing.T) {
 	}
 }
 
+func TestReactivateInsertsActivateAudit(t *testing.T) {
+	repo := newFakeMasterRepo()
+	id := uuid.New()
+	repo.records[id.String()] = map[string]any{"id": id.String(), "code": "AREA-1", "area_name": "Area", "status": "inactive"}
+	service := NewServiceWithRepository(repo)
+	if _, err := service.Update(context.Background(), Resources["inspection_areas"], id, map[string]any{"status": "active"}, testActor()); err != nil {
+		t.Fatalf("expected activate success, got %v", err)
+	}
+	if len(repo.audits) != 1 || repo.audits[0].Action != "inspection_areas.activate" {
+		t.Fatalf("expected activate audit, got %#v", repo.audits)
+	}
+}
+
+func TestISOCEDEXCodeValidationAndNormalization(t *testing.T) {
+	tests := []struct {
+		resource string
+		valid    map[string]any
+		invalid  string
+	}{
+		{"cedex_locations", map[string]any{"code": "a1b2", "face": "other", "grid_code": "A1B2", "description": "Lokasi", "source_type": "standard_global"}, "A1B"},
+		{"cedex_components", map[string]any{"code": "fpp", "component_name": "Panel", "description": "Panel", "source_type": "standard_global"}, "FP"},
+		{"cedex_damages", map[string]any{"code": "br", "damage_name": "Broken", "description": "Broken", "default_severity": "minor", "source_type": "standard_global"}, "BR3"},
+		{"cedex_repairs", map[string]any{"code": "sn", "repair_name": "Section renew", "description": "Section renew", "source_type": "standard_global"}, "S-"},
+		{"cedex_materials", map[string]any{"code": "pp", "material_name": "Plywood", "description": "Plywood", "source_type": "standard_global"}, "P "},
+	}
+	for _, test := range tests {
+		t.Run(test.resource, func(t *testing.T) {
+			resource := Resources[test.resource]
+			payload := mustNormalize(t, resource, test.valid, true)
+			if payload["code"] != strings.ToUpper(stringValue(test.valid["code"])) {
+				t.Fatalf("expected uppercase code, got %#v", payload["code"])
+			}
+			if err := validatePayload(resource, payload, true); err != nil {
+				t.Fatalf("expected valid payload, got %v", err)
+			}
+			invalid := mustNormalize(t, resource, map[string]any{"code": test.invalid}, false)
+			if err := validatePayload(resource, invalid, false); err == nil {
+				t.Fatal("expected invalid code to fail")
+			}
+		})
+	}
+}
+
+func TestISOCEDEXDuplicateRejectedCaseInsensitive(t *testing.T) {
+	repo := newFakeMasterRepo()
+	service := NewServiceWithRepository(repo)
+	resource := Resources["cedex_materials"]
+	first := map[string]any{"code": "pp", "material_name": "Plywood", "description": "Plywood", "source_type": "standard_global"}
+	if _, err := service.Create(context.Background(), resource, first, testActor()); err != nil {
+		t.Fatalf("expected first create success, got %v", err)
+	}
+	duplicate := map[string]any{"code": "PP", "material_name": "Plywood duplicate", "description": "Duplicate", "source_type": "standard_global"}
+	if _, err := service.Create(context.Background(), resource, duplicate, testActor()); !errors.Is(err, ErrDuplicate) {
+		t.Fatalf("expected case-insensitive duplicate rejection, got %v", err)
+	}
+}
+
 func TestForeignKeyDBErrorDetection(t *testing.T) {
 	err := errString("Cannot add or update a child row: a foreign key constraint fails")
 	if !isForeignKeyDBError(err) {

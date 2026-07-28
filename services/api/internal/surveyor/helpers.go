@@ -474,7 +474,7 @@ func recommendedResult(survey map[string]any) string {
 }
 
 func faceLabel(face string) string {
-	labels := map[string]string{"left": "Left Side", "right": "Right Side", "front": "Front", "door": "Door", "roof": "Roof", "floor": "Floor", "understructure": "Understructure"}
+	labels := map[string]string{"left": "Left Side", "right": "Right Side", "front": "Front", "door": "Door", "roof": "Roof", "floor": "Floor", "understructure": "Understructure", "other": "Other"}
 	if label, ok := labels[face]; ok {
 		return label
 	}

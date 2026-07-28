@@ -14,6 +14,7 @@ import (
 func (r Repository) buildFindingDescriptionTx(
 	ctx context.Context,
 	tx database.Tx,
+	locationID *uuid.UUID,
 	componentID uuid.UUID,
 	damageID uuid.UUID,
 	materialID *uuid.UUID,
@@ -23,16 +24,17 @@ func (r Repository) buildFindingDescriptionTx(
 	input DamageInput,
 	evaluation DamageDecisionEvaluation,
 ) (string, error) {
-	var componentName, damageName, materialName, actionName string
+	var locationDescription, componentName, damageName, materialName, actionName string
 	err := tx.QueryRow(ctx, `
-		SELECT component.component_name, damage.damage_name,
+		SELECT COALESCE(location.description,''), component.component_name, damage.damage_name,
 		       COALESCE(material.material_name,''), COALESCE(action.repair_name,'')
 		FROM cedex_components component
 		JOIN cedex_damages damage ON damage.id=$2
 		LEFT JOIN cedex_materials material ON material.id=$3
 		LEFT JOIN cedex_repairs action ON action.id=$4
+		LEFT JOIN cedex_locations location ON location.id=$5
 		WHERE component.id=$1
-	`, componentID, damageID, materialID, actionID).Scan(&componentName, &damageName, &materialName, &actionName)
+	`, componentID, damageID, materialID, actionID, locationID).Scan(&locationDescription, &componentName, &damageName, &materialName, &actionName)
 	if err != nil {
 		return "", err
 	}
@@ -55,9 +57,11 @@ func (r Repository) buildFindingDescriptionTx(
 		dimensions = append(dimensions, "jumlah "+strconv.Itoa(*input.Quantity)+" "+quantityUnit)
 	}
 
-	parts := []string{
-		fmt.Sprintf("Ditemukan %s pada %s di %s %s.", damageName, componentName, face, internalLocation),
+	locationLabel := strings.TrimSpace(strings.Join([]string{face, internalLocation}, " "))
+	if strings.TrimSpace(locationDescription) != "" {
+		locationLabel = strings.TrimSpace(internalLocation + " - " + locationDescription)
 	}
+	parts := []string{fmt.Sprintf("Ditemukan %s pada %s di %s.", damageName, componentName, locationLabel)}
 	if len(dimensions) > 0 {
 		parts = append(parts, "Ukuran: "+strings.Join(dimensions, ", ")+".")
 	}

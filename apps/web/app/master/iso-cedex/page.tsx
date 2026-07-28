@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AppShell } from "@/components/layout/app-shell";
-import { CustomerScopedMasterIndex } from "@/components/master/customer-scoped-master-data";
+import { CustomerScopedMasterDetail, CustomerScopedMasterIndex } from "@/components/master/customer-scoped-master-data";
 import { IsoCedexWorkspace, type IsoCedexTab } from "@/components/master/iso-cedex-workspace";
 
 type Query = Promise<Record<string, string | string[] | undefined>>;
@@ -12,11 +12,10 @@ export default async function IsoCedexPage({ searchParams }: { searchParams: Que
   const query = await searchParams;
   const requestedTab = first(query.tab);
   const customerId = first(query.customerId);
-  const customerMode = first(query.scope) === "customer" || Boolean(customerId);
   const requestedLegacy = first(query.legacy);
 
   if (requestedTab === "action-repair") {
-    redirect(canonicalHref(customerId, "action"));
+    redirect(canonicalHref("action"));
   }
   if (requestedTab === "responsibility") {
     redirect(legacyHref(customerId));
@@ -27,9 +26,10 @@ export default async function IsoCedexPage({ searchParams }: { searchParams: Que
 
   const activeTab = canonicalTabs.includes(requestedTab as IsoCedexTab) ? requestedTab as IsoCedexTab : "location";
   const legacyResponsibility = requestedLegacy === "responsibility";
-  const pickerHref = legacyResponsibility
-    ? "/master/iso-cedex?legacy=responsibility"
-    : `/master/iso-cedex?scope=customer&tab=${activeTab}`;
+
+  if (!legacyResponsibility && (first(query.scope) === "customer" || customerId)) {
+    redirect(canonicalHref(activeTab));
+  }
 
   return (
     <ProtectedRoute roles={["super_admin", "admin", "supervisor", "management"]}>
@@ -38,27 +38,30 @@ export default async function IsoCedexPage({ searchParams }: { searchParams: Que
         subtitle="Kamus kode untuk temuan Inspeksi Kelaikan."
         breadcrumbs={[{ label: "Master Data" }, { label: legacyResponsibility ? "Responsibility Code" : "ISO CEDEX" }]}
       >
-        {(legacyResponsibility || customerMode) && !customerId ? (
+        {legacyResponsibility && !customerId ? (
           <CustomerScopedMasterIndex
-            canonicalBaseHref={pickerHref}
-            category={legacyResponsibility ? "responsibility-code" : "cedex-location"}
+            canonicalBaseHref="/master/iso-cedex?legacy=responsibility"
+            category="responsibility-code"
+            routeFamily="actual"
+          />
+        ) : legacyResponsibility && customerId ? (
+          <CustomerScopedMasterDetail
+            category="responsibility-code"
+            customerId={customerId}
+            forceReadOnly
+            forceReadOnlyMessage="Responsibility Code adalah referensi legacy dan hanya dapat dibaca."
             routeFamily="actual"
           />
         ) : (
-          <IsoCedexWorkspace
-            customerId={customerId}
-            initialTab={activeTab}
-            showLegacyResponsibility={legacyResponsibility}
-          />
+          <IsoCedexWorkspace initialTab={activeTab} />
         )}
       </AppShell>
     </ProtectedRoute>
   );
 }
 
-function canonicalHref(customerId: string | undefined, tab: IsoCedexTab) {
-  const customer = customerId ? `customerId=${encodeURIComponent(customerId)}&` : "";
-  return `/master/iso-cedex?${customer}tab=${tab}`;
+function canonicalHref(tab: IsoCedexTab) {
+  return `/master/iso-cedex?tab=${tab}`;
 }
 
 function legacyHref(customerId: string | undefined) {
