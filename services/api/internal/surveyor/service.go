@@ -68,6 +68,9 @@ func (s *Service) GetSurvey(ctx context.Context, id uuid.UUID, actor Actor) (map
 func (s *Service) MasterOptions(ctx context.Context, id uuid.UUID, actor Actor) (SurveyMasterOptions, error) {
 	return s.repo.MasterOptions(ctx, id, actor)
 }
+func (s *Service) ListCodeProposals(ctx context.Context, actor Actor) ([]map[string]any, error) {
+	return s.repo.ListCodeProposals(ctx, actor)
+}
 func (s *Service) PreviewDamageDecision(ctx context.Context, id uuid.UUID, input DamageInput, actor Actor) (DamageDecisionEvaluation, error) {
 	return s.repo.PreviewDamageDecision(ctx, id, input, actor)
 }
@@ -143,6 +146,13 @@ func (s *Service) PhotoContent(ctx context.Context, photoID uuid.UUID, variant s
 		return PhotoContent{}, ErrNotFound
 	}
 	return s.photoContent(ctx, photoID, variant, actor)
+}
+
+func (s *Service) DeletePhoto(ctx context.Context, photoID uuid.UUID, actor Actor) (map[string]any, error) {
+	if err := requireSurveyorMutationRole(actor); err != nil {
+		return nil, err
+	}
+	return s.repo.DeletePhoto(ctx, photoID, actor)
 }
 
 func (s *Service) MaxUploadBytes() int64 { return s.maxUploadBytes }

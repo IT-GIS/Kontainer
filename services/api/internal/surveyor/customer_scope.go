@@ -86,7 +86,9 @@ func (r Repository) MasterOptions(ctx context.Context, surveyID uuid.UUID, actor
 	if options.CEDEXLocations, err = r.optionRows(ctx, `
 		SELECT location.id, location.code, location.code AS name, location.description,
 		       location.face, location.grid_code, location.container_size, location.display_order,
-		       location.source_type
+		       location.input_mode, location.sector_code, location.vertical_code,
+		       location.start_section, location.end_section, location.transverse_span,
+		       location.source_type, location.status
 		FROM cedex_locations location
 		WHERE location.status='active'
 		  AND (location.customer_id=$1 OR (

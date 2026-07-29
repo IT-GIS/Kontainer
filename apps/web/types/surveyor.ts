@@ -126,6 +126,8 @@ export type SurveyDamage = {
   decision_reason?: string | null;
   tolerance_snapshot?: Record<string, unknown> | string | null;
   finding_description?: string | null;
+  dimension_profile?: DimensionProfile | null;
+  location_selection_snapshot?: LocationSelectionSnapshot | string | null;
   inspection_reference_id?: string | null;
   inspection_reference_code?: string | null;
   inspection_reference_name?: string | null;
@@ -154,6 +156,11 @@ export type SurveyDetail = {
   survey_no: string;
   status: string;
   job_order_no: string;
+  spk_no?: string | null;
+  spk_date?: string | null;
+  pic_customer_name?: string | null;
+  pic_customer_phone?: string | null;
+  pic_customer_email?: string | null;
   container_no: string;
   customer_name: string;
   location_name: string;
@@ -164,7 +171,14 @@ export type SurveyDetail = {
   container_type_id?: string | null;
   container_type_name?: string | null;
   container_type_code?: string | null;
+  container_size?: string | null;
   iso_type_code?: string | null;
+  owner_code?: string | null;
+  serial_number?: string | null;
+  check_digit?: string | null;
+  check_digit_status?: string | null;
+  manufacture_date?: string | null;
+  csc_plate_status?: string | null;
   job_instruction?: string | null;
   job_deadline?: string | null;
   assignment_instruction?: string | null;
@@ -199,6 +213,14 @@ export type SurveyMasterOption = {
   face?: string;
   grid_code?: string;
   container_size?: string | null;
+  input_mode?: "structured" | "manual" | string;
+  sector_code?: string | null;
+  vertical_code?: string | null;
+  start_section?: string | null;
+  end_section?: string | null;
+  transverse_span?: string | null;
+  source_type?: string | null;
+  status?: string;
   unit?: string | null;
   standard_reference?: string | null;
   applicable_face?: string | null;
@@ -233,6 +255,26 @@ export type SheetFace = {
   face: string;
   label: string;
   locations: SheetLocation[];
+};
+
+export type DimensionProfile =
+  | "length_width"
+  | "length_width_depth"
+  | "depth_only"
+  | "quantity_only"
+  | "linear_length"
+  | "area"
+  | "none"
+  | "manual_review";
+
+export type LocationSelectionSnapshot = {
+  container_size: "20" | "40" | "45";
+  face: "R" | "L" | "T" | "B" | "U" | "D" | "F";
+  vertical_position: "H" | "T" | "X" | "B" | "G";
+  section_start: string;
+  section_end: string;
+  transverse_position: "L" | "R" | "X";
+  view_direction: "rear_to_front";
 };
 
 export type DamageDecisionPreview = {

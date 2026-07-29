@@ -8,6 +8,7 @@
     "lint": "eslint .",
     "test:navigation": "node scripts/check-admin-navigation.mjs",
     "test:iso-cedex": "node scripts/check-iso-cedex-contract.mjs",
+    "test:survey-sheet": "node scripts/check-interactive-survey-sheet.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

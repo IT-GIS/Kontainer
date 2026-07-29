@@ -2,7 +2,8 @@
 
 import { Search } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AppShell } from "@/components/layout/app-shell";
 import { DataTable } from "@/components/ui/data-table";
@@ -13,16 +14,17 @@ import { apiPaginated, buildQuery } from "@/lib/api-client";
 import type { SurveyorJob } from "@/types/surveyor";
 
 export default function SurveyorJobsPage() {
-  return <ProtectedRoute><AppShell title="Job Saya"><SurveyorJobsContent /></AppShell></ProtectedRoute>;
+  return <ProtectedRoute><AppShell title="Job Saya"><Suspense fallback={<div className="loading-state">Memuat pekerjaan...</div>}><SurveyorJobsContent /></Suspense></AppShell></ProtectedRoute>;
 }
 
 function SurveyorJobsContent() {
+  const searchParams = useSearchParams();
   const { accessToken } = useAuth();
   const [rows, setRows] = useState<SurveyorJob[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(() => searchParams.get("status") ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 

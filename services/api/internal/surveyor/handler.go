@@ -31,6 +31,7 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	v1.GET("/surveyor/jobs/:id", middleware.RequirePermission(authService, "surveyor_jobs.view.assigned"), h.GetJob)
 	v1.GET("/surveyor/jobs/:id/containers", middleware.RequirePermission(authService, "surveyor_jobs.view.assigned"), h.ListContainers)
 	v1.GET("/surveyor/surveys", middleware.RequirePermission(authService, "surveys.view.assigned"), h.ListSurveys)
+	v1.GET("/surveyor/cedex-code-proposals", middleware.RequirePermission(authService, "surveys.view.assigned"), h.ListCodeProposals)
 
 	v1.POST("/surveys/start", middleware.RequirePermission(authService, "surveys.start.assigned"), h.StartSurvey)
 	v1.GET("/surveys/:id", middleware.RequirePermission(authService, "surveys.view.assigned"), h.GetSurvey)
@@ -51,6 +52,7 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	v1.DELETE("/survey-damages/:id", middleware.RequirePermission(authService, "survey_damages.delete.assigned"), h.DeleteDamage)
 	v1.POST("/survey-damages/:id/photos", middleware.RequirePermission(authService, "survey_photos.upload.assigned"), h.UploadPhoto)
 	v1.GET("/survey-photos/:id/content", middleware.RequirePermission(authService, "survey_photos.view.assigned"), h.PhotoContent)
+	v1.DELETE("/survey-photos/:id", middleware.RequirePermission(authService, "survey_photos.delete.assigned"), h.DeletePhoto)
 }
 
 func (h Handler) Dashboard(c *gin.Context) {
@@ -177,6 +179,15 @@ func (h Handler) CreateCodeProposal(c *gin.Context) {
 		return
 	}
 	apphttp.Created(c, "Pengajuan kode baru berhasil dikirim.", item)
+}
+
+func (h Handler) ListCodeProposals(c *gin.Context) {
+	items, err := h.service.ListCodeProposals(c.Request.Context(), actorFromContext(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Pengajuan kode CEDEX berhasil diambil.", items)
 }
 
 func (h Handler) UpdateGeneralInfo(c *gin.Context) {
@@ -357,6 +368,19 @@ func (h Handler) PhotoContent(c *gin.Context) {
 	fileName := path.Base(content.FileName)
 	c.Header("Content-Disposition", fmt.Sprintf(`%s; filename="%s"`, disposition, fileName))
 	c.DataFromReader(http.StatusOK, content.Size, content.ContentType, content.Reader, nil)
+}
+
+func (h Handler) DeletePhoto(c *gin.Context) {
+	id, ok := parseID(c)
+	if !ok {
+		return
+	}
+	item, err := h.service.DeletePhoto(c.Request.Context(), id, actorFromContext(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Foto evidence berhasil dihapus.", item)
 }
 
 func (h Handler) Photos(c *gin.Context) {

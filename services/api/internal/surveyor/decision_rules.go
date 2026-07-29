@@ -76,6 +76,12 @@ func (r Repository) PreviewDamageDecision(ctx context.Context, surveyID uuid.UUI
 	if err != nil {
 		return DamageDecisionEvaluation{}, err
 	}
+	if input.LocationSelection != nil && !strings.HasPrefix(strings.TrimSpace(fmt.Sprint(base["container_size"])), input.LocationSelection.ContainerSize) {
+		return DamageDecisionEvaluation{}, validationError("LOCATION_SELECTION_CONTAINER_SIZE_MISMATCH", "Ukuran template Survey Sheet tidak sesuai Container Type pekerjaan.")
+	}
+	if err := r.validateSelectionMappingTx(ctx, tx, customerID, locationID, input.LocationSelection); err != nil {
+		return DamageDecisionEvaluation{}, err
+	}
 	materialID, err := parseOptionalReferenceID(input.MaterialID, "MATERIAL_INVALID", "Material code tidak valid.")
 	if err != nil {
 		return DamageDecisionEvaluation{}, err
@@ -108,8 +114,8 @@ func (r Repository) evaluateDamageDecisionTx(
 		DefaultActionID:              uuidString(defaults.DefaultActionID),
 		DefaultInspectionReferenceID: uuidString(defaults.DefaultInspectionReferenceID),
 	}
-	if defaults.RequiresDimension && (input.Length == nil || input.Width == nil || input.Depth == nil || input.Quantity == nil || strings.TrimSpace(input.Unit) == "") {
-		return evaluation, validationError("DAMAGE_DIMENSION_REQUIRED", "Length, Width, Depth, Quantity, dan Unit wajib diisi untuk Damage ini.")
+	if err := validateDimensionProfile(input, defaults.RequiresDimension); err != nil {
+		return evaluation, err
 	}
 
 	containerTypeID := nullableUUID(base["container_type_id"])
@@ -186,6 +192,7 @@ func (r Repository) evaluateDamageDecisionTx(
 			return evaluation, err
 		}
 	}
+	evaluation.DecisionResult = "manual_review"
 	evaluation.DecisionReason = "Tidak ada Decision Rule aktif yang cocok dengan scope dan pengukuran finding ini."
 	return evaluation, nil
 }

@@ -194,6 +194,9 @@ func (r Repository) GetJob(ctx context.Context, jobID uuid.UUID, actor Actor) (m
 		return nil, err
 	}
 	item["containers"] = containers
+	if err := r.recordAudit(ctx, actor, "surveyor_jobs.open", "job_orders", jobID, map[string]any{"job_order_no": item["job_order_no"]}); err != nil {
+		return nil, err
+	}
 	return item, nil
 }
 
@@ -325,6 +328,9 @@ func (r Repository) GetSurvey(ctx context.Context, surveyID uuid.UUID, actor Act
 	base["checklist"] = checklist
 	base["damages"] = damages
 	base["photos"] = photos
+	if err := r.recordAudit(ctx, actor, "surveys.open", "surveys", surveyID, map[string]any{"survey_no": base["survey_no"]}); err != nil {
+		return nil, err
+	}
 	return base, nil
 }
 
@@ -547,7 +553,8 @@ func (r Repository) Damages(ctx context.Context, surveyID uuid.UUID, actor Actor
 		       cm.id AS material_code_id, cm.code AS material_code, cm.material_name,
 		       rc.id AS responsibility_code_id, rc.code AS responsibility_code, rc.name AS responsibility_name,
 		       sd.decision_rule_id, sd.decision_result, sd.decision_reason, sd.tolerance_snapshot,
-		       sd.finding_description, ir.id AS inspection_reference_id,
+		       sd.finding_description, sd.dimension_profile, sd.location_selection_snapshot,
+		       ir.id AS inspection_reference_id,
 		       ir.code AS inspection_reference_code, ir.parameter_name AS inspection_reference_name,
 		       ir.standard_reference AS inspection_standard_reference, ir.clause_section AS inspection_reference_clause,
 		       sd.severity, sd.quantity, sd.quantity_unit, sd.length_value AS length, sd.width_value AS width, sd.depth_value AS depth,
@@ -561,8 +568,8 @@ func (r Repository) Damages(ctx context.Context, surveyID uuid.UUID, actor Actor
 		LEFT JOIN cedex_materials cm ON cm.id=sd.material_id
 		LEFT JOIN responsibility_codes rc ON rc.id=sd.responsibility_id
 		LEFT JOIN survey_photos sp ON sp.damage_id=sd.id AND sp.deleted_at IS NULL
-		WHERE sd.survey_id=$1 AND sd.deleted_at IS NULL
 		LEFT JOIN inspection_test_parameters ir ON ir.id=sd.inspection_reference_id
+		WHERE sd.survey_id=$1 AND sd.deleted_at IS NULL
 		GROUP BY sd.id, cl.id, cc.id, cd.id, cr.id, cm.id, rc.id, ir.id
 		ORDER BY sd.damage_no
 	`, surveyID)
@@ -736,6 +743,33 @@ func (r Repository) Photos(ctx context.Context, surveyID uuid.UUID, actor Actor)
 	return items, nil
 }
 
+func (r Repository) DeletePhoto(ctx context.Context, photoID uuid.UUID, actor Actor) (map[string]any, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+	item, err := scanRow(tx.QueryRow(ctx, `
+		SELECT id, survey_id, damage_id, photo_category, caption
+		FROM survey_photos WHERE id=$1 AND deleted_at IS NULL FOR UPDATE
+	`, photoID), []string{"id", "survey_id", "damage_id", "photo_category", "caption"})
+	if err != nil {
+		return nil, err
+	}
+	base, err := r.surveyBaseTx(ctx, tx, parseUUIDString(item["survey_id"]), actor)
+	if err != nil {
+		return nil, err
+	}
+	if !editableStatus(fmt.Sprint(base["status"])) {
+		return nil, ErrInvalidStatus
+	}
+	if _, err := tx.Exec(ctx, `UPDATE survey_photos SET deleted_at=now() WHERE id=$1`, photoID); err != nil {
+		return nil, err
+	}
+	_ = r.insertAudit(ctx, tx, actor, "survey_photos.delete", "survey_photos", &photoID, item, nil)
+	return item, tx.Commit(ctx)
+}
+
 func (r Repository) PhotoFile(ctx context.Context, photoID uuid.UUID, variant string, actor Actor) (PhotoFile, error) {
 	fileReference := "COALESCE(sp.watermarked_file_id, sp.file_id)"
 	if strings.EqualFold(strings.TrimSpace(variant), "original") {
@@ -837,7 +871,17 @@ func (r Repository) saveDamage(ctx context.Context, damageID uuid.UUID, surveyID
 	}
 	customerID := parseUUIDString(base["customer_id"])
 	surveyTypeID := parseUUIDString(base["survey_type_id"])
+	if input.LocationSelection != nil && !strings.HasPrefix(strings.TrimSpace(fmt.Sprint(base["container_size"])), input.LocationSelection.ContainerSize) {
+		return nil, validationError("LOCATION_SELECTION_CONTAINER_SIZE_MISMATCH", "Ukuran template Survey Sheet tidak sesuai Container Type pekerjaan.")
+	}
 	cedexLocationID, face, internalLocation, err := r.resolveCEDEXLocation(ctx, tx, customerID, input)
+	if err != nil {
+		return nil, err
+	}
+	if err := r.validateSelectionMappingTx(ctx, tx, customerID, cedexLocationID, input.LocationSelection); err != nil {
+		return nil, err
+	}
+	locationSelectionSnapshot, err := locationSelectionJSON(input.LocationSelection)
 	if err != nil {
 		return nil, err
 	}
@@ -932,24 +976,30 @@ func (r Repository) saveDamage(ctx context.Context, damageID uuid.UUID, surveyID
 			  decision_rule_id, inspection_reference_id, recommended_action_id,
 			  decision_result, decision_reason, tolerance_snapshot, finding_description,
 			  severity, quantity, quantity_unit, length_value, width_value, depth_value, unit,
-			  is_repair_required, is_cargo_worthy_impact, is_photo_only, remark, created_by, updated_by
+			  is_repair_required, is_cargo_worthy_impact, is_photo_only, remark,
+			  dimension_profile, location_selection_snapshot, created_by, updated_by
 			)
 			VALUES ($1,$2,$3,$4,$5,NULLIF($6,''),$7,$8,$9,$10,$11,$12,$13,$14,
 			  NULLIF($15,''),NULLIF($16,''),NULLIF($17,''),NULLIF($18,''),
-			  $19,$20,NULLIF($21,''),$22,$23,$24,$25,$26,$27,$28,NULLIF($29,''),$30,$30)
-			RETURNING id, damage_no, face, internal_location, severity, decision_result, finding_description
+			  $19,$20,NULLIF($21,''),$22,$23,$24,$25,$26,$27,$28,NULLIF($29,''),
+			  NULLIF($30,''),NULLIF($31,''),$32,$32)
+			RETURNING id, damage_no, face, internal_location, severity, decision_result, finding_description, dimension_profile, location_selection_snapshot
 		`, surveyID, damageNo, face, internalLocation, cedexLocationID, input.ManualLocationReason,
 			componentID, damageCodeID, repairID, materialID, responsibilityID,
 			decisionRuleID, inspectionReferenceID, effectiveActionID,
 			evaluation.DecisionResult, evaluation.DecisionReason, toleranceSnapshot, findingDescription,
 			severity, input.Quantity, defaultString(input.QuantityUnit, "pc"), input.Length, input.Width, input.Depth, defaultString(input.Unit, "cm"),
-			isRepairRequired, isCargoWorthyImpact, input.IsPhotoOnly, input.Remark, actor.UserID,
-		), []string{"id", "damage_no", "face", "internal_location", "severity", "decision_result", "finding_description"})
+			isRepairRequired, isCargoWorthyImpact, input.IsPhotoOnly, input.Remark,
+			strings.ToLower(strings.TrimSpace(input.DimensionProfile)), locationSelectionSnapshot, actor.UserID,
+		), []string{"id", "damage_no", "face", "internal_location", "severity", "decision_result", "finding_description", "dimension_profile", "location_selection_snapshot"})
 		if err != nil {
 			return nil, err
 		}
 		newID := parseUUIDString(item["id"])
 		_ = r.insertAudit(ctx, tx, actor, "survey_damages.create", "survey_damages", &newID, nil, item)
+		if input.LocationSelection != nil {
+			_ = r.insertAudit(ctx, tx, actor, "survey_sheet.location.select", "survey_damages", &newID, nil, input.LocationSelection)
+		}
 		if decisionRuleID != nil {
 			if err := r.insertAudit(ctx, tx, actor, "cedex_damage_decision_rules.apply", "cedex_damage_decision_rules", decisionRuleID, nil, map[string]any{"survey_damage_id": newID.String(), "snapshot": toleranceSnapshot}); err != nil {
 				return nil, err
@@ -966,20 +1016,25 @@ func (r Repository) saveDamage(ctx context.Context, damageID uuid.UUID, surveyID
 		  tolerance_snapshot=NULLIF($16,''), finding_description=NULLIF($17,''),
 		  severity=$18, quantity=$19, quantity_unit=NULLIF($20,''), length_value=$21, width_value=$22, depth_value=$23, unit=$24,
 		  is_repair_required=$25, is_cargo_worthy_impact=$26, is_photo_only=$27,
-		  remark=NULLIF($28,''), updated_by=$29, updated_at=now()
+		  remark=NULLIF($28,''), dimension_profile=NULLIF($29,''),
+		  location_selection_snapshot=NULLIF($30,''), updated_by=$31, updated_at=now()
 		WHERE id=$1 AND deleted_at IS NULL
-		RETURNING id, damage_no, face, internal_location, severity, decision_result, finding_description
+		RETURNING id, damage_no, face, internal_location, severity, decision_result, finding_description, dimension_profile, location_selection_snapshot
 	`, damageID, face, internalLocation, cedexLocationID, input.ManualLocationReason,
 		componentID, damageCodeID, repairID, materialID, responsibilityID,
 		decisionRuleID, inspectionReferenceID, effectiveActionID,
 		evaluation.DecisionResult, evaluation.DecisionReason, toleranceSnapshot, findingDescription,
 		severity, input.Quantity, defaultString(input.QuantityUnit, "pc"), input.Length, input.Width, input.Depth, defaultString(input.Unit, "cm"),
-		isRepairRequired, isCargoWorthyImpact, input.IsPhotoOnly, input.Remark, actor.UserID,
-	), []string{"id", "damage_no", "face", "internal_location", "severity", "decision_result", "finding_description"})
+		isRepairRequired, isCargoWorthyImpact, input.IsPhotoOnly, input.Remark,
+		strings.ToLower(strings.TrimSpace(input.DimensionProfile)), locationSelectionSnapshot, actor.UserID,
+	), []string{"id", "damage_no", "face", "internal_location", "severity", "decision_result", "finding_description", "dimension_profile", "location_selection_snapshot"})
 	if err != nil {
 		return nil, err
 	}
 	_ = r.insertAudit(ctx, tx, actor, "survey_damages.update", "survey_damages", &damageID, nil, item)
+	if input.LocationSelection != nil {
+		_ = r.insertAudit(ctx, tx, actor, "survey_sheet.location.select", "survey_damages", &damageID, nil, input.LocationSelection)
+	}
 	if decisionRuleID != nil {
 		if err := r.insertAudit(ctx, tx, actor, "cedex_damage_decision_rules.apply", "cedex_damage_decision_rules", decisionRuleID, nil, map[string]any{"survey_damage_id": damageID.String(), "snapshot": toleranceSnapshot}); err != nil {
 			return nil, err

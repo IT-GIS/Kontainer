@@ -90,8 +90,12 @@ func surveyBaseQuery() string {
 	return `
 		SELECT s.id, s.survey_no, s.status, s.job_order_id, s.job_container_id, s.surveyor_id,
 		       s.survey_type_id, s.checklist_template_id, s.started_at, s.submitted_at, s.final_remark,
-		       jo.job_order_no, jo.customer_id, jo.location_id, jo.instruction AS job_instruction,
+		       jo.job_order_no, jo.spk_no, jo.spk_date,
+		       jo.pic_customer_name, jo.pic_customer_phone, jo.pic_customer_email,
+		       jo.customer_id, jo.location_id, jo.instruction AS job_instruction,
 		       jo.deadline AS job_deadline, jc.container_no, jc.container_type_id, jc.iso_type_code,
+		       jc.owner_code, jc.serial_number, jc.check_digit, jc.check_digit_status,
+		       jc.manufacture_date, jc.csc_plate_status,
 		       c.customer_code, c.customer_name, l.location_code, l.location_name,
 		       st.code AS survey_type_code, st.name AS survey_type_name,
 		       ct.code AS container_type_code, ct.type_name AS container_type_name, ct.size AS container_size,
@@ -185,6 +189,18 @@ func (r Repository) insertAudit(ctx context.Context, tx database.Tx, actor Actor
 	newJSON, _ := json.Marshal(newValue)
 	_, err := tx.Exec(ctx, `INSERT INTO audit_logs (user_id,active_role,action,entity_type,entity_id,old_value,new_value,request_id,ip_address,user_agent) VALUES ($1,$2,$3,$4,$5,NULLIF($6,'null'),NULLIF($7,'null'),NULLIF($8,''),NULLIF($9,''),NULLIF($10,''))`, actor.UserID, actor.ActiveRole, action, entityType, entityID, string(oldJSON), string(newJSON), actor.RequestID, actor.IPAddress, actor.UserAgent)
 	return err
+}
+
+func (r Repository) recordAudit(ctx context.Context, actor Actor, action, entityType string, entityID uuid.UUID, value any) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	if err := r.insertAudit(ctx, tx, actor, action, entityType, &entityID, nil, value); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 func (r Repository) count(ctx context.Context, from string, where string, args []any, distinctJob bool) (int, error) {
@@ -361,8 +377,8 @@ func editableStatus(status string) bool {
 }
 
 func validateDamageInput(input DamageInput) error {
-	if strings.TrimSpace(input.ComponentID) == "" || strings.TrimSpace(input.DamageID) == "" {
-		return validationError("DAMAGE_REFERENCE_REQUIRED", "Component dan damage type wajib dipilih.")
+	if strings.TrimSpace(input.ComponentID) == "" || strings.TrimSpace(input.DamageID) == "" || strings.TrimSpace(input.RepairID) == "" {
+		return validationError("DAMAGE_REFERENCE_REQUIRED", "Component, damage type, dan action repair wajib dipilih.")
 	}
 	if strings.TrimSpace(input.CEDEXLocationID) == "" && strings.TrimSpace(input.CEDEXLocationCode) == "" && strings.TrimSpace(input.ManualLocationReason) == "" {
 		return validationError("DAMAGE_LOCATION_REQUIRED", "Lokasi CEDEX wajib dipilih atau gunakan fallback manual dengan alasan.")
@@ -370,9 +386,19 @@ func validateDamageInput(input DamageInput) error {
 	if strings.TrimSpace(input.Severity) == "" {
 		return validationError("DAMAGE_SEVERITY_REQUIRED", "Severity wajib dipilih.")
 	}
-	severity := strings.ToLower(strings.TrimSpace(input.Severity))
-	if (severity == "major" || severity == "critical") && (input.Length == nil || input.Width == nil) {
-		return validationError("DAMAGE_SIZE_REQUIRED", "Damage major atau critical wajib memiliki ukuran panjang dan lebar.")
+	if input.Quantity != nil && *input.Quantity < 0 {
+		return validationError("DAMAGE_QUANTITY_INVALID", "Quantity tidak boleh negatif.")
+	}
+	for _, measurement := range []*float64{input.Length, input.Width, input.Depth} {
+		if measurement != nil && *measurement < 0 {
+			return validationError("DAMAGE_MEASUREMENT_INVALID", "Nilai pengukuran tidak boleh negatif.")
+		}
+	}
+	if err := validateDimensionProfile(input, false); err != nil {
+		return err
+	}
+	if err := validateLocationSelection(input.LocationSelection); err != nil {
+		return err
 	}
 	return nil
 }
@@ -431,14 +457,8 @@ func (r Repository) validateSurvey(survey map[string]any) []ValidationWarning {
 		if strings.TrimSpace(fmt.Sprint(damage["internal_location"])) == "" {
 			warnings = append(warnings, ValidationWarning{Code: "DAMAGE_LOCATION_REQUIRED", Message: "Damage " + damageNo + " wajib memiliki location."})
 		}
-		severity := fmt.Sprint(damage["severity"])
-		if severity == "major" || severity == "critical" {
-			if damage["length"] == nil || damage["width"] == nil {
-				warnings = append(warnings, ValidationWarning{Code: "DAMAGE_SIZE_REQUIRED", Message: "Damage " + damageNo + " major/critical wajib memiliki ukuran."})
-			}
-		}
-		if fmt.Sprint(damage["photo_count"]) == "0" {
-			warnings = append(warnings, ValidationWarning{Code: "DAMAGE_PHOTO_REQUIRED", Message: "Damage " + damageNo + " belum memiliki foto."})
+		if strings.TrimSpace(fmt.Sprint(damage["repair_code"])) == "" {
+			warnings = append(warnings, ValidationWarning{Code: "DAMAGE_ACTION_REQUIRED", Message: "Damage " + damageNo + " wajib memiliki Action Repair Code."})
 		}
 	}
 	return warnings

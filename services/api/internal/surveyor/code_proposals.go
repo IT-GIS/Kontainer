@@ -7,6 +7,26 @@ import (
 	"github.com/google/uuid"
 )
 
+func (r Repository) ListCodeProposals(ctx context.Context, actor Actor) ([]map[string]any, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT proposal.id, proposal.survey_id, survey.survey_no, container.container_no,
+		       customer.customer_name, proposal.code_type, proposal.code, proposal.description,
+		       proposal.reason, proposal.notes, proposal.status, proposal.review_note,
+		       proposal.created_at, proposal.reviewed_at
+		FROM cedex_code_proposals proposal
+		JOIN surveys survey ON survey.id=proposal.survey_id AND survey.deleted_at IS NULL
+		JOIN job_containers container ON container.id=survey.job_container_id
+		JOIN customers customer ON customer.id=proposal.customer_id
+		WHERE proposal.proposed_by=$1
+		ORDER BY proposal.created_at DESC
+	`, actor.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return rowsToMaps(rows)
+}
+
 func (r Repository) CreateCodeProposal(ctx context.Context, surveyID uuid.UUID, input CodeProposalInput, actor Actor) (map[string]any, error) {
 	codeType := strings.ToLower(strings.TrimSpace(input.CodeType))
 	code := strings.ToUpper(strings.TrimSpace(input.Code))

@@ -90,27 +90,39 @@ type ChecklistItemInput struct {
 }
 
 type DamageInput struct {
-	Face                 string   `json:"face"`
-	InternalLocation     string   `json:"internal_location"`
-	CEDEXLocationID      string   `json:"cedex_location_id"`
-	CEDEXLocationCode    string   `json:"cedex_location_code"`
-	ManualLocationReason string   `json:"manual_location_reason"`
-	ComponentID          string   `json:"component_code_id"`
-	DamageID             string   `json:"damage_code_id"`
-	RepairID             string   `json:"repair_code_id"`
-	MaterialID           string   `json:"material_code_id"`
-	ResponsibilityID     string   `json:"responsibility_code_id"`
-	Severity             string   `json:"severity"`
-	Quantity             *int     `json:"quantity"`
-	QuantityUnit         string   `json:"quantity_unit"`
-	Length               *float64 `json:"length"`
-	Width                *float64 `json:"width"`
-	Depth                *float64 `json:"depth"`
-	Unit                 string   `json:"unit"`
-	IsRepairRequired     bool     `json:"is_repair_required"`
-	IsCargoWorthyImpact  bool     `json:"is_cargo_worthy_impact"`
-	IsPhotoOnly          bool     `json:"is_photo_only"`
-	Remark               string   `json:"remark"`
+	Face                 string                     `json:"face"`
+	InternalLocation     string                     `json:"internal_location"`
+	CEDEXLocationID      string                     `json:"cedex_location_id"`
+	CEDEXLocationCode    string                     `json:"cedex_location_code"`
+	ManualLocationReason string                     `json:"manual_location_reason"`
+	ComponentID          string                     `json:"component_code_id"`
+	DamageID             string                     `json:"damage_code_id"`
+	RepairID             string                     `json:"repair_code_id"`
+	MaterialID           string                     `json:"material_code_id"`
+	ResponsibilityID     string                     `json:"responsibility_code_id"`
+	Severity             string                     `json:"severity"`
+	Quantity             *int                       `json:"quantity"`
+	QuantityUnit         string                     `json:"quantity_unit"`
+	Length               *float64                   `json:"length"`
+	Width                *float64                   `json:"width"`
+	Depth                *float64                   `json:"depth"`
+	Unit                 string                     `json:"unit"`
+	IsRepairRequired     bool                       `json:"is_repair_required"`
+	IsCargoWorthyImpact  bool                       `json:"is_cargo_worthy_impact"`
+	IsPhotoOnly          bool                       `json:"is_photo_only"`
+	Remark               string                     `json:"remark"`
+	DimensionProfile     string                     `json:"dimension_profile"`
+	LocationSelection    *LocationSelectionSnapshot `json:"location_selection_snapshot"`
+}
+
+type LocationSelectionSnapshot struct {
+	ContainerSize      string `json:"container_size"`
+	Face               string `json:"face"`
+	VerticalPosition   string `json:"vertical_position"`
+	SectionStart       string `json:"section_start"`
+	SectionEnd         string `json:"section_end"`
+	TransversePosition string `json:"transverse_position"`
+	ViewDirection      string `json:"view_direction"`
 }
 
 type CodeProposalInput struct {

@@ -35,8 +35,8 @@ func TestDamageValidationAcceptsCedexMaterialAndResponsibility(t *testing.T) {
 	length, width := 12.0, 6.0
 	input := DamageInput{
 		CEDEXLocationID: uuid.NewString(), ComponentID: uuid.NewString(),
-		DamageID: uuid.NewString(), MaterialID: uuid.NewString(), ResponsibilityID: uuid.NewString(),
-		Severity: "major", Length: &length, Width: &width,
+		DamageID: uuid.NewString(), RepairID: uuid.NewString(), MaterialID: uuid.NewString(), ResponsibilityID: uuid.NewString(),
+		Severity: "major", Length: &length, Width: &width, Unit: "cm",
 	}
 	if err := validateDamageInput(input); err != nil {
 		t.Fatalf("expected complete CEDEX damage valid: %v", err)
