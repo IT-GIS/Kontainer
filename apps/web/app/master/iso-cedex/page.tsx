@@ -10,7 +10,8 @@ const canonicalTabs: IsoCedexTab[] = ["location", "component", "damage", "action
 
 export default async function IsoCedexPage({ searchParams }: { searchParams: Query }) {
   const query = await searchParams;
-  const requestedTab = first(query.tab);
+  const requestedSection = first(query.section);
+  const requestedTab = requestedSection ?? first(query.tab);
   const customerId = first(query.customerId);
   const requestedLegacy = first(query.legacy);
 
@@ -61,7 +62,7 @@ export default async function IsoCedexPage({ searchParams }: { searchParams: Que
 }
 
 function canonicalHref(tab: IsoCedexTab) {
-  return `/master/iso-cedex?tab=${tab}`;
+  return `/master/iso-cedex?section=${tab}`;
 }
 
 function legacyHref(customerId: string | undefined) {
