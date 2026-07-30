@@ -23,6 +23,7 @@ type Tab = (typeof tabs)[number];
 
 type DamageForm = {
   id?: string;
+  checklist_response_id: string;
   cedex_location_id: string;
   face: string;
   internal_location: string;
@@ -47,6 +48,7 @@ type DamageForm = {
 };
 
 const emptyDamage: DamageForm = {
+  checklist_response_id: "",
   cedex_location_id: "",
   face: "",
   internal_location: "",
@@ -110,6 +112,7 @@ function SurveyDetailContent() {
   const [decisionPreview, setDecisionPreview] = useState<DamageDecisionPreview | null>(null);
   const [decisionLoading, setDecisionLoading] = useState(false);
   const [photoDamage, setPhotoDamage] = useState<SurveyDamage | null>(null);
+  const [pendingChecklistItem, setPendingChecklistItem] = useState<ChecklistItem | null>(null);
   const [damagePhotoFile, setDamagePhotoFile] = useState<File | null>(null);
   const [damagePhotoCaption, setDamagePhotoCaption] = useState("");
   const [damagePhotoCategory, setDamagePhotoCategory] = useState("");
@@ -151,7 +154,7 @@ function SurveyDetailContent() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [damageBaseline, damageDialog, damageForm]);
   useEffect(() => {
-    const hasLocation = Boolean(damageForm.cedex_location_id || (damageForm.face && damageForm.internal_location && damageForm.manual_location_reason));
+    const hasLocation = Boolean(damageForm.cedex_location_id);
     const canPreview = Boolean(accessToken && params.id && damageDialog && hasLocation && damageForm.component_code_id && damageForm.damage_code_id);
     let activeRequest = true;
     const timer = window.setTimeout(() => {
@@ -199,6 +202,7 @@ function SurveyDetailContent() {
   function openNewDamage(selection?: LocationSelectionSnapshot, location?: SurveyMasterOption) {
     const nextDamage = {
       ...emptyDamage,
+      checklist_response_id: pendingChecklistItem?.id ?? "",
       cedex_location_id: location?.id ?? "",
       face: location?.face ?? "",
       internal_location: location?.grid_code ?? location?.code ?? "",
@@ -210,6 +214,7 @@ function SurveyDetailContent() {
     setDamagePhotoCategory(photoCategories[0]?.code ?? "");
     setDamageForm(nextDamage);
     setDamageBaseline(JSON.stringify(nextDamage));
+    setPendingChecklistItem(null);
     setDamageDialog(true);
   }
 
@@ -228,6 +233,7 @@ function SurveyDetailContent() {
     const nextDamage = {
       ...emptyDamage,
       id: row.id,
+      checklist_response_id: row.checklist_response_id ?? "",
       cedex_location_id: row.cedex_location_id ?? "",
       face: row.face,
       internal_location: row.internal_location,
@@ -262,6 +268,7 @@ function SurveyDetailContent() {
     if (!force && JSON.stringify(damageForm) !== damageBaseline && !window.confirm("Perubahan temuan belum disimpan. Tutup form?")) return;
     setDamageDialog(false);
     setDamageForm(emptyDamage);
+    setPendingChecklistItem(null);
     setDecisionPreview(null);
     setDecisionLoading(false);
     setDamageBaseline("");
@@ -278,23 +285,38 @@ function SurveyDetailContent() {
     });
   }
 
+  async function persistChecklist() {
+    if (!accessToken) throw new Error("Sesi tidak tersedia.");
+    await apiData(`/surveys/${params.id}/checklist`, {
+      method: "PUT",
+      accessToken,
+      body: JSON.stringify({
+        items: checklist.map((item) => ({
+          item_key: item.item_key,
+          value: item.value ?? "",
+          numeric_value: item.numeric_value ?? null,
+          note: item.note ?? "",
+          attachment_file_id: item.attachment_file_id ?? ""
+        }))
+      })
+    });
+  }
+
   async function saveChecklist() {
     if (!accessToken) return;
     await runSave(async () => {
-      await apiData(`/surveys/${params.id}/checklist`, {
-        method: "PUT",
-        accessToken,
-        body: JSON.stringify({
-          items: checklist.map((item) => ({
-            item_key: item.item_key,
-            value: item.value ?? "",
-            numeric_value: item.numeric_value ?? null,
-            note: item.note ?? "",
-            attachment_file_id: item.attachment_file_id ?? ""
-          }))
-        })
-      });
+      await persistChecklist();
       setMessage("Checklist tersimpan.");
+    });
+  }
+
+  async function openChecklistFinding(item: ChecklistItem) {
+    if (!accessToken) return;
+    await runSave(async () => {
+      await persistChecklist();
+      setPendingChecklistItem(item);
+      setActiveTab("Survey Sheet Interaktif");
+      setMessage("Checklist tersimpan. Pilih area untuk membuat Temuan CEDEX terkait.");
     });
   }
 
@@ -386,7 +408,8 @@ function SurveyDetailContent() {
     if (!accessToken) return;
     await runSave(async () => {
       await apiData(`/surveys/${params.id}/submit`, { method: "POST", accessToken, body: JSON.stringify({ final_remark: general.general_remark ?? "" }) });
-      setMessage("Survey berhasil disubmit.");
+      const isResubmit = survey?.status === "need_revision";
+      setMessage(isResubmit ? "Survey berhasil disubmit ulang ke Reviewer." : "Survey berhasil disubmit ke Reviewer.");
       setActiveTab("Pratinjau & Submit");
     });
   }
@@ -397,7 +420,7 @@ function SurveyDetailContent() {
     <div className="page-stack">
       <PageHeader title={`Survei: ${survey.survey_no}`} description={`Peti kemas: ${survey.container_no} - ${survey.customer_name} - ${survey.location_name}`} />
       <div className="survey-strip">
-        <StatusBadge tone={survey.status === "draft" ? "warning" : survey.status === "submitted" ? "neutral" : survey.status === "need_revision" ? "danger" : "success"}>{survey.status.toUpperCase()}</StatusBadge>
+        <StatusBadge tone={survey.status === "approved" ? "success" : survey.status === "need_revision" || survey.status === "rejected" ? "danger" : "warning"}>{survey.status.replaceAll("_", " ").toUpperCase()}</StatusBadge>
         <span>{survey.survey_type_name}</span><span>{survey.container_type_code ?? "-"} / {survey.iso_type_code ?? "-"}</span>
         <span>{survey.surveyor_name}</span><strong>{readonly ? "Hanya baca" : "Draf dapat diedit"}</strong>
       </div>
@@ -406,13 +429,13 @@ function SurveyDetailContent() {
       <div className="tab-list">{tabs.map((tab) => <button className={activeTab === tab ? "tab-active" : ""} key={tab} onClick={() => setActiveTab(tab)}>{tab}</button>)}</div>
       {activeTab === "Ringkasan Pekerjaan" ? <JobSummaryTab survey={survey} /> : null}
       {activeTab === "Identitas Peti Kemas" ? <IdentityTab survey={survey} general={general} readonly={readonly} isSaving={isSaving} onChange={setGeneral} onSave={saveGeneral} /> : null}
-      {activeTab === "Checklist" ? <ChecklistTab items={checklist} readonly={readonly} isSaving={isSaving} onChange={setChecklist} onSave={saveChecklist} onFinding={() => setActiveTab("Survey Sheet Interaktif")} /> : null}
+      {activeTab === "Checklist" ? <ChecklistTab items={checklist} readonly={readonly} isSaving={isSaving} onChange={setChecklist} onSave={saveChecklist} onFinding={(item) => void openChecklistFinding(item)} /> : null}
       {activeTab === "Survey Sheet Interaktif" ? <InteractiveSurveySheet containerSize={survey.container_size} activeFace={activeFace} locations={cedexLocations} damages={survey.damages ?? []} readonly={readonly} onFace={setActiveFace} onUseLocation={openNewDamage} onProposeLocation={openLocationProposal} onEditDamage={openEditDamage} /> : null}
-      {activeTab === "Daftar Temuan" ? <DamageList rows={survey.damages ?? []} readonly={readonly} onAdd={() => openNewDamage()} onEdit={openEditDamage} onDelete={deleteDamage} onPhoto={setPhotoDamage} /> : null}
+      {activeTab === "Daftar Temuan" ? <DamageList rows={survey.damages ?? []} readonly={readonly} onAdd={() => { setPendingChecklistItem(null); setActiveTab("Survey Sheet Interaktif"); }} onEdit={openEditDamage} onDelete={deleteDamage} onPhoto={setPhotoDamage} /> : null}
       {activeTab === "Foto" ? <PhotosTab damages={survey.damages ?? []} photos={survey.photos ?? []} readonly={readonly} onPhoto={setPhotoDamage} onDeletePhoto={deletePhoto} /> : null}
       {activeTab === "Pratinjau & Submit" ? <PreviewAndSubmitTab survey={survey} activeFace={activeFace} locations={cedexLocations} readonly={readonly} isSaving={isSaving} onFace={setActiveFace} onSubmit={submitSurvey} onBack={() => setActiveTab("Survey Sheet Interaktif")} onSaveDraft={() => setMessage("Draf yang sudah diisi tetap tersimpan.")} /> : null}
       <FormDialog title={damageForm.id ? "Edit Temuan CEDEX" : "Tambah Temuan CEDEX"} open={damageDialog} onClose={closeDamageDialog} onSubmit={saveDamage} isSubmitting={isSaving} submitLabel="Simpan Temuan" size="large">
-        <DamageFormFields form={damageForm} setForm={setDamageForm} locations={cedexLocations} components={components} damageCodes={damageCodes} damageMasters={damageMasters} repairs={repairs} materials={materials} responsibilities={responsibilities} severities={severities} photoCategories={photoCategories} photoFile={damagePhotoFile} photoCaption={damagePhotoCaption} photoCategory={damagePhotoCategory} decisionPreview={decisionPreview} decisionLoading={decisionLoading} onPhotoFile={setDamagePhotoFile} onPhotoCaption={setDamagePhotoCaption} onPhotoCategory={setDamagePhotoCategory} onPropose={() => setProposalDialog(true)} />
+        <DamageFormFields form={damageForm} setForm={setDamageForm} checklistItems={checklist.filter((item) => item.value === "no")} locations={cedexLocations} components={components} damageCodes={damageCodes} damageMasters={damageMasters} repairs={repairs} materials={materials} responsibilities={responsibilities} severities={severities} photoCategories={photoCategories} photoFile={damagePhotoFile} photoCaption={damagePhotoCaption} photoCategory={damagePhotoCategory} decisionPreview={decisionPreview} decisionLoading={decisionLoading} onPhotoFile={setDamagePhotoFile} onPhotoCaption={setDamagePhotoCaption} onPhotoCategory={setDamagePhotoCategory} onPropose={() => setProposalDialog(true)} />
       </FormDialog>
       <FormDialog title="Ajukan Kode Baru" open={proposalDialog} onClose={() => setProposalDialog(false)} onSubmit={submitCodeProposal} isSubmitting={isSaving} submitLabel="Kirim Pengajuan" size="large">
         <div className="alert alert-info">Pengajuan tidak langsung mengubah master aktif. Admin akan memeriksa kode, alasan, dan bukti sebelum menyetujui atau menolak.</div>
@@ -473,13 +496,14 @@ function IdentityTab({ survey, general, readonly, isSaving, onChange, onSave }: 
 }
 
 function ChecklistTab({ items, readonly, isSaving, onChange, onSave, onFinding }: { items: ChecklistItem[]; readonly: boolean; isSaving: boolean; onChange: (value: ChecklistItem[]) => void; onSave: () => void; onFinding: (item: ChecklistItem) => void }) {
-  return <section className="workspace-panel checklist-list"><div className="alert alert-info">Referensi inspeksi aktif disimpan bersama snapshot checklist saat survei dibuat.</div>{items.map((item, index) => <div className="check-row" key={item.item_key}><div><strong>{item.item_label ?? item.item_key}</strong>{item.is_critical ? <span>Kritis</span> : null}{item.standard_reference ? <small>{item.standard_reference}</small> : null}{item.value === "no" ? <button className="secondary-button checklist-finding-button" disabled={readonly} onClick={() => onFinding(item)} type="button"><Plus size={16} /><span>Buat Temuan CEDEX</span></button> : null}</div>{item.response_type === "numeric" ? <label className="field"><span>Hasil {item.unit ? `(${item.unit})` : ""}</span><input disabled={readonly} type="number" value={item.numeric_value ?? ""} onChange={(event) => onChange(items.map((row, rowIndex) => rowIndex === index ? { ...row, numeric_value: event.target.value === "" ? null : Number(event.target.value) } : row))} /></label> : item.response_type === "text" ? <input disabled={readonly} value={item.value ?? ""} onChange={(event) => onChange(items.map((row, rowIndex) => rowIndex === index ? { ...row, value: event.target.value } : row))} /> : <div className="segmented-control">{["yes", "no", "na"].map((value) => <button disabled={readonly} className={item.value === value ? "selected" : ""} key={value} onClick={() => onChange(items.map((row, rowIndex) => rowIndex === index ? { ...row, value } : row))}>{value.toUpperCase()}</button>)}</div>}</div>)}<StickyActions><button className="primary-button" disabled={readonly || isSaving} onClick={onSave}><Check size={17} /><span>Simpan Checklist</span></button></StickyActions></section>;
+  return <section className="workspace-panel checklist-list"><div className="alert alert-info">Referensi inspeksi aktif disimpan bersama snapshot checklist saat survei dibuat.</div>{items.map((item, index) => <div className="check-row" key={item.item_key}><div><strong>{item.item_label ?? item.item_key}</strong>{item.is_critical ? <span>Kritis</span> : null}{item.standard_reference ? <small>{item.standard_reference}</small> : null}{item.value === "no" ? <button className="secondary-button checklist-finding-button" disabled={readonly || isSaving} onClick={() => onFinding(item)} type="button"><Plus size={16} /><span>Buat Temuan CEDEX</span></button> : null}</div>{item.response_type === "numeric" ? <label className="field"><span>Hasil {item.unit ? `(${item.unit})` : ""}</span><input disabled={readonly} type="number" value={item.numeric_value ?? ""} onChange={(event) => onChange(items.map((row, rowIndex) => rowIndex === index ? { ...row, numeric_value: event.target.value === "" ? null : Number(event.target.value) } : row))} /></label> : item.response_type === "text" ? <input disabled={readonly} value={item.value ?? ""} onChange={(event) => onChange(items.map((row, rowIndex) => rowIndex === index ? { ...row, value: event.target.value } : row))} /> : <div className="segmented-control">{["yes", "no", "na"].map((value) => <button disabled={readonly || isSaving} className={item.value === value ? "selected" : ""} key={value} onClick={() => onChange(items.map((row, rowIndex) => rowIndex === index ? { ...row, value } : row))}>{value.toUpperCase()}</button>)}</div>}</div>)}<StickyActions><button className="primary-button" disabled={readonly || isSaving} onClick={onSave}><Check size={17} /><span>Simpan Checklist</span></button></StickyActions></section>;
 }
 
 function DamageList({ rows, readonly, onAdd, onEdit, onDelete, onPhoto }: { rows: SurveyDamage[]; readonly: boolean; onAdd: () => void; onEdit: (row: SurveyDamage) => void; onDelete: (row: SurveyDamage) => void; onPhoto: (row: SurveyDamage) => void }) {
   return <section className="workspace-panel"><div className="section-title-row"><div><h2>Daftar Temuan</h2><p className="muted-text">Format CEDEX tidak menampilkan separator untuk bagian yang kosong.</p></div><button className="primary-button" disabled={readonly} onClick={onAdd}><Plus size={17} /><span>Tambah Temuan</span></button></div><DataTable responsiveCards rows={rows} columns={[
     { key: "damage_no", header: "No.", render: (row) => row.damage_no },
     { key: "cedex_format", header: "CEDEX Format", render: (row) => <strong>{formatCedexDamage(row)}</strong> },
+    { key: "checklist", header: "Checklist terkait", render: (row) => row.checklist_item_label ?? "-" },
     { key: "location", header: "Location", render: (row) => row.cedex_location_code ?? row.internal_location },
     { key: "component", header: "Component", render: (row) => row.component_name ?? row.component_code ?? "-" },
     { key: "damage", header: "Damage", render: (row) => row.damage_name ?? row.damage_code ?? "-" },
@@ -499,7 +523,7 @@ function PhotosTab({ damages, photos, readonly, onPhoto, onDeletePhoto }: { dama
     {damages.length === 0 ? <p className="muted-text">Belum ada temuan yang dapat diberi Foto Evidence.</p> : null}
     {damages.map((damage) => {
       const damagePhotos = photos.filter((photo) => photo.damage_id === damage.id);
-      return <div className="photo-section" key={damage.id}><div className="section-title-row"><div><h3>{damage.damage_no} - {damage.cedex_location_code ?? damage.internal_location}</h3><p className="muted-text">{damage.damage_name ?? damage.damage_code}</p></div><button className="secondary-button" disabled={readonly} onClick={() => onPhoto(damage)}><ImagePlus size={17} /><span>Tambah Foto</span></button></div>{damagePhotos.length === 0 ? <div className="alert alert-info">Belum ada Foto Evidence. Tambahkan hanya jika rule atau kategori aktif mewajibkan, atau bila diperlukan sebagai bukti.</div> : <div className="photo-grid">{damagePhotos.map((photo) => <div className="photo-card" key={photo.id}><PhotoEvidence id={photo.id} name={photo.original_file_name} caption={photo.caption} /><div className="photo-card-actions"><span>{photo.photo_category ?? "damage_finding"}</span><button className="icon-button" disabled={readonly} onClick={() => onDeletePhoto(photo)} title="Hapus foto draft"><Trash2 size={16} /></button></div></div>)}</div>}</div>;
+      return <div className="photo-section" key={damage.id}><div className="section-title-row"><div><h3>{damage.damage_no} - {damage.cedex_location_code ?? damage.internal_location}</h3><p className="muted-text">{damage.damage_name ?? damage.damage_code}</p></div><button className="secondary-button" disabled={readonly} onClick={() => onPhoto(damage)}><ImagePlus size={17} /><span>Tambah Foto</span></button></div>{damagePhotos.length === 0 ? <div className="alert alert-info">Belum ada Foto Evidence. Kategori yang diwajibkan oleh konfigurasi aktif akan ditampilkan pada Validasi Submit.</div> : <div className="photo-grid">{damagePhotos.map((photo) => <div className="photo-card" key={photo.id}><PhotoEvidence id={photo.id} name={photo.original_file_name} caption={photo.caption} /><div className="photo-card-actions"><span>{photo.photo_category ?? "damage_finding"}</span><button className="icon-button" disabled={readonly} onClick={() => onDeletePhoto(photo)} title="Hapus foto draft"><Trash2 size={16} /></button></div></div>)}</div>}</div>;
     })}
   </section>;
 }
@@ -507,9 +531,9 @@ function PhotosTab({ damages, photos, readonly, onPhoto, onDeletePhoto }: { dama
 function PreviewAndSubmitTab({ survey, activeFace, locations, readonly, isSaving, onFace, onSubmit, onBack, onSaveDraft }: { survey: SurveyDetail; activeFace: string; locations: SurveyMasterOption[]; readonly: boolean; isSaving: boolean; onFace: (face: string) => void; onSubmit: () => void; onBack: () => void; onSaveDraft: () => void }) {
   const warnings = survey.warnings ?? [];
   return <div className="preview-stack">
-    <section className="workspace-panel"><div className="section-title-row"><div><h2>Pratinjau &amp; Submit</h2><p className="muted-text">Periksa identitas, marker, format CEDEX, deskripsi, foto, dan hasil keputusan sebelum mengirim.</p></div><StatusBadge tone={warnings.length === 0 ? "success" : "danger"}>{warnings.length === 0 ? "LENGKAP" : `${warnings.length} KEKURANGAN`}</StatusBadge></div><div className="detail-grid"><div><span>Nomor Job/SPK</span><strong>{survey.job_order_no}</strong></div><div><span>Survey No</span><strong>{survey.survey_no}</strong></div><div><span>Customer</span><strong>{survey.customer_name}</strong></div><div><span>Container</span><strong>{survey.container_no} / {survey.container_size ?? "-"} feet</strong></div><div><span>Jumlah temuan</span><strong>{survey.damages?.length ?? 0}</strong></div><div><span>Jumlah foto</span><strong>{survey.photos?.length ?? 0}</strong></div><div><span>Decision Result</span><strong>{survey.survey_result_recommendation ?? "Manual Review"}</strong></div><div><span>Status kelengkapan</span><strong>{warnings.length === 0 ? "Lengkap" : "Perlu diperbaiki"}</strong></div></div></section>
+    <section className="workspace-panel"><div className="section-title-row"><div><h2>Pratinjau &amp; Submit</h2><p className="muted-text">Periksa identitas, marker, format CEDEX, deskripsi, foto, dan rekomendasi sistem sebelum mengirim.</p></div><StatusBadge tone={warnings.length === 0 ? "success" : "danger"}>{warnings.length === 0 ? "LENGKAP" : `${warnings.length} KEKURANGAN`}</StatusBadge></div><div className="detail-grid"><div><span>Nomor Job/SPK</span><strong>{survey.job_order_no}</strong></div><div><span>Survey No</span><strong>{survey.survey_no}</strong></div><div><span>Customer</span><strong>{survey.customer_name}</strong></div><div><span>Container</span><strong>{survey.container_no} / {survey.container_size ?? "-"} feet</strong></div><div><span>Jumlah temuan</span><strong>{survey.damages?.length ?? 0}</strong></div><div><span>Jumlah foto</span><strong>{survey.photos?.length ?? 0}</strong></div><div><span>Rekomendasi Sistem</span><strong>{survey.survey_result_recommendation ?? "Manual Review"}</strong></div><div><span>Status kelengkapan</span><strong>{warnings.length === 0 ? "Lengkap" : "Perlu diperbaiki"}</strong></div></div></section>
     <InteractiveSurveySheet containerSize={survey.container_size} activeFace={activeFace} locations={locations} damages={survey.damages ?? []} readonly preview onFace={onFace} />
-    <section className="workspace-panel"><h3>Format CEDEX dan Deskripsi Otomatis</h3><DataTable responsiveCards rows={survey.damages ?? []} columns={[{ key: "no", header: "No.", render: (row) => row.damage_no }, { key: "cedex", header: "CEDEX Format", render: (row) => formatCedexDamage(row) }, { key: "description", header: "Deskripsi otomatis", render: (row) => row.finding_description || "-" }, { key: "decision", header: "Decision Result", render: (row) => decisionResultText(row.decision_result) }, { key: "photo", header: "Foto", render: (row) => row.photo_count ?? 0 }]} /></section>
+    <section className="workspace-panel"><h3>Format CEDEX dan Deskripsi Otomatis</h3><DataTable responsiveCards rows={survey.damages ?? []} columns={[{ key: "no", header: "No.", render: (row) => row.damage_no }, { key: "cedex", header: "CEDEX Format", render: (row) => formatCedexDamage(row) }, { key: "description", header: "Deskripsi otomatis", render: (row) => row.finding_description || "-" }, { key: "decision", header: "Rekomendasi Sistem", render: (row) => decisionResultText(row.decision_result) }, { key: "photo", header: "Foto", render: (row) => row.photo_count ?? 0 }]} /></section>
     <section className="workspace-panel submit-panel"><h3>Validasi Submit</h3>{warnings.length > 0 ? warnings.map((warning) => <div className="alert alert-danger" key={warning.code}><TriangleAlert size={16} />{warning.message}</div>) : <div className="alert alert-success">Survey siap dikirim ke Reviewer.</div>}<div className="preview-submit-actions"><button className="secondary-button" disabled={readonly || isSaving} onClick={onSaveDraft}><Save size={17} /><span>Simpan Draft</span></button><button className="secondary-button" disabled={isSaving} onClick={onBack}>Kembali Perbaiki</button><button className="primary-button" disabled={readonly || isSaving || warnings.length > 0} onClick={onSubmit}><Send size={17} /><span>Submit ke Reviewer</span></button></div></section>
   </div>;
 }
@@ -517,6 +541,7 @@ function PreviewAndSubmitTab({ survey, activeFace, locations, readonly, isSaving
 function DamageFormFields({
   form,
   setForm,
+  checklistItems,
   locations,
   components,
   damageCodes,
@@ -538,6 +563,7 @@ function DamageFormFields({
 }: {
   form: DamageForm;
   setForm: Dispatch<SetStateAction<DamageForm>>;
+  checklistItems: ChecklistItem[];
   locations: SurveyMasterOption[];
   components: OptionItem[];
   damageCodes: OptionItem[];
@@ -583,6 +609,7 @@ function DamageFormFields({
     quantityUnit: form.quantity_unit
   });
   return <>
+    {checklistItems.length > 0 ? <Field label="Checklist Tidak Baik terkait"><select value={form.checklist_response_id} onChange={(event) => setDamageValue(setForm, "checklist_response_id", event.target.value)}><option value="">Tidak ditautkan</option>{checklistItems.map((item) => <option key={item.id} value={item.id}>{item.item_label ?? item.item_key}</option>)}</select></Field> : null}
     <div className="section-title-row form-span-2"><div><strong>Temuan ISO CEDEX</strong><p className="muted-text">Pilih kode aktif. Jika kode belum tersedia, kirim pengajuan untuk direview Admin.</p></div><button className="secondary-button" onClick={onPropose} type="button"><FilePlus2 size={16} /><span>Ajukan Kode Baru</span></button></div>
     <DamageBaseFields
       form={form}
@@ -607,7 +634,7 @@ function DamageFormFields({
         <small className="muted-text">Deskripsi dibuat sistem dan disimpan sebagai snapshot. Remark di bawah hanya untuk catatan khusus Surveyor.</small>
       </div>
       <label className="field form-span-2"><span>Remark khusus</span><textarea rows={4} value={form.remark} onChange={(event) => setDamageValue(setForm, "remark", event.target.value)} /></label>
-      <div className="damage-photo-fields form-span-2"><strong>Foto Evidence</strong><p className="muted-text">Simpan bersama temuan sekarang atau tambahkan foto lain dari tab Foto. Minimal satu foto hanya wajib bila rule atau kategori aktif mewajibkan.</p><div className="form-grid"><Field label="Kategori Foto"><select value={photoCategory} onChange={(event) => onPhotoCategory(event.target.value)}><option value="">Pilih kategori aktif</option>{photoCategories.map((item) => <option key={item.id} value={item.code}>{item.code} - {item.label}</option>)}</select></Field><label className="field"><span>Ambil Foto</span><input accept="image/jpeg,image/png,image/webp" capture="environment" type="file" onChange={(event) => onPhotoFile(event.target.files?.[0] ?? null)} /></label><label className="field"><span>Pilih dari Galeri</span><input accept="image/jpeg,image/png,image/webp" type="file" onChange={(event) => onPhotoFile(event.target.files?.[0] ?? null)} /></label><label className="field form-span-2"><span>Caption</span><textarea rows={2} value={photoCaption} onChange={(event) => onPhotoCaption(event.target.value)} /></label></div>{photoFile ? <div className="alert alert-success">Foto siap diunggah: {photoFile.name}</div> : null}</div>
+      <div className="damage-photo-fields form-span-2"><strong>Foto Evidence</strong><p className="muted-text">Unggah foto sesuai kategori aktif. Kategori wajib divalidasi sistem sebelum Submit.</p><div className="form-grid"><Field label="Kategori Foto"><select value={photoCategory} onChange={(event) => onPhotoCategory(event.target.value)}><option value="">Pilih kategori aktif</option>{photoCategories.map((item) => <option key={item.id} value={item.code}>{item.code} - {item.label}</option>)}</select></Field><label className="field"><span>Ambil Foto</span><input accept="image/jpeg,image/png,image/webp" capture="environment" type="file" onChange={(event) => onPhotoFile(event.target.files?.[0] ?? null)} /></label><label className="field"><span>Pilih dari Galeri</span><input accept="image/jpeg,image/png,image/webp" type="file" onChange={(event) => onPhotoFile(event.target.files?.[0] ?? null)} /></label><label className="field form-span-2"><span>Caption</span><textarea rows={2} value={photoCaption} onChange={(event) => onPhotoCaption(event.target.value)} /></label></div>{photoFile ? <div className="alert alert-success">Foto siap diunggah: {photoFile.name}</div> : null}</div>
     </div>
   </>;
 }
@@ -631,7 +658,7 @@ function DamageBaseFields({ form, setForm, locations, components, damageCodes, d
   const hasStructuredSelection = Boolean(form.location_selection_snapshot);
   function selectLocation(value: string) {
     const selected = locations.find((item) => item.id === value);
-    setForm((current) => ({ ...current, cedex_location_id: value, face: selected?.face ?? "", internal_location: selected?.grid_code ?? selected?.code ?? "", manual_location_reason: value ? "" : current.manual_location_reason, location_selection_snapshot: null }));
+    setForm((current) => ({ ...current, cedex_location_id: value, face: selected?.face ?? "", internal_location: selected?.grid_code ?? selected?.code ?? "", manual_location_reason: "", location_selection_snapshot: null }));
   }
   function selectDamage(value: string) {
     const selected = damageMasters.find((item) => item.id === value);
@@ -659,7 +686,7 @@ function DamageBaseFields({ form, setForm, locations, components, damageCodes, d
     });
   }
   return <div className="form-grid">
-    {hasStructuredSelection ? <div className="selected-location-summary form-span-2"><strong>Lokasi CEDEX terpilih</strong><div className="detail-grid"><div><span>Location Code</span><b>{locations.find((item) => item.id === form.cedex_location_id)?.code ?? "Belum terpetakan"}</b></div><div><span>Face / Vertical</span><b>{form.location_selection_snapshot?.face} / {form.location_selection_snapshot?.vertical_position}</b></div><div><span>Section</span><b>{form.location_selection_snapshot?.section_start === form.location_selection_snapshot?.section_end ? form.location_selection_snapshot?.section_start : `${form.location_selection_snapshot?.section_start}-${form.location_selection_snapshot?.section_end}`}</b></div><div><span>Container Size</span><b>{form.location_selection_snapshot?.container_size} feet</b></div></div></div> : <><Field label="Location Code"><select value={form.cedex_location_id} onChange={(event) => selectLocation(event.target.value)}><option value="">Lokasi manual (fallback)</option>{locations.map((item) => <option key={item.id} value={item.id}>{item.code} - {item.description ?? item.grid_code ?? item.name}</option>)}</select></Field>{!form.cedex_location_id ? <><Field label="Face Manual"><select value={form.face} onChange={(event) => setDamageValue(setForm, "face", event.target.value)}><option value="">Pilih face</option>{["left", "right", "front", "door", "roof", "floor", "understructure"].map((item) => <option key={item} value={item}>{item}</option>)}</select></Field><Field label="Lokasi Internal Manual"><input value={form.internal_location} onChange={(event) => setDamageValue(setForm, "internal_location", event.target.value.toUpperCase())} /></Field><label className="field form-span-2"><span>Alasan Lokasi Manual</span><textarea rows={2} value={form.manual_location_reason} onChange={(event) => setDamageValue(setForm, "manual_location_reason", event.target.value)} /></label></> : null}</>}
+    {hasStructuredSelection ? <div className="selected-location-summary form-span-2"><strong>Lokasi CEDEX terpilih</strong><div className="detail-grid"><div><span>Location Code</span><b>{locations.find((item) => item.id === form.cedex_location_id)?.code ?? "Belum terpetakan"}</b></div><div><span>Face / Vertical</span><b>{form.location_selection_snapshot?.face} / {form.location_selection_snapshot?.vertical_position}</b></div><div><span>Section</span><b>{form.location_selection_snapshot?.section_start === form.location_selection_snapshot?.section_end ? form.location_selection_snapshot?.section_start : `${form.location_selection_snapshot?.section_start}-${form.location_selection_snapshot?.section_end}`}</b></div><div><span>Container Size</span><b>{form.location_selection_snapshot?.container_size} feet</b></div></div></div> : <Field label="Location Code *"><select value={form.cedex_location_id} onChange={(event) => selectLocation(event.target.value)}><option value="">Pilih Location Code aktif</option>{locations.map((item) => <option key={item.id} value={item.id}>{item.code} - {item.description ?? item.grid_code ?? item.name}</option>)}</select></Field>}
     <Field label="Component Code *"><Select value={form.component_code_id} options={components} onChange={(value) => setDamageValue(setForm, "component_code_id", value)} /></Field>
     <Field label="Damage Code *"><Select value={form.damage_code_id} options={damageCodes} onChange={selectDamage} /></Field>
     <Field label="Dimension Profile"><select value={form.dimension_profile} onChange={(event) => selectDimensionProfile(event.target.value as DimensionProfile | "")}><option value="">Pilih jika dimensi diperlukan</option><option value="length_width">Panjang &times; Lebar</option><option value="length_width_depth">Panjang &times; Lebar &times; Kedalaman</option><option value="depth_only">Kedalaman saja</option><option value="quantity_only">Quantity saja</option><option value="linear_length">Panjang linear</option><option value="area">Area</option><option value="none">Tanpa dimensi</option><option value="manual_review">Manual Review</option></select></Field>
@@ -688,8 +715,8 @@ function DecisionRuleCard({ preview, loading }: { preview: DamageDecisionPreview
       <div><span>Inspection Reference</span><b>{[preview.inspection_reference_code, preview.inspection_reference_name].filter(Boolean).join(" - ") || "-"}</b></div>
       <div><span>Tolerance</span><b>{preview.tolerance || "-"}</b></div>
       <div><span>Measurement</span><b>{preview.measurement_value == null ? "-" : `${preview.measurement_value} ${preview.unit || ""}`.trim()}</b></div>
-      <div><span>Decision Result</span><b>{decisionResultText(preview.decision_result)}</b></div>
-      <div><span>Recommended Action</span><b>{preview.recommended_action_name || "-"}</b></div>
+      <div><span>Rekomendasi Sistem</span><b>{decisionResultText(preview.decision_result)}</b></div>
+      <div><span>Rekomendasi Tindakan</span><b>{preview.recommended_action_name || "-"}</b></div>
     </div>
     {preview.inspection_standard_reference ? <p>{preview.inspection_standard_reference}{preview.inspection_reference_clause ? ` - ${preview.inspection_reference_clause}` : ""}</p> : null}
     {preview.decision_reason ? <small>{preview.decision_reason}</small> : null}
@@ -737,6 +764,7 @@ function setDamageValue<K extends keyof DamageForm>(setter: Dispatch<SetStateAct
 
 function toDamagePayload(form: DamageForm) {
   return {
+    checklist_response_id: form.checklist_response_id || undefined,
     face: form.face,
     internal_location: form.internal_location,
     cedex_location_id: form.cedex_location_id || undefined,
@@ -764,7 +792,7 @@ function toDamagePayload(form: DamageForm) {
 function validateDamageForm(form: DamageForm, requiresDimension: boolean) {
   const snapshot = form.location_selection_snapshot;
   if (snapshot && !form.cedex_location_id) return "Lokasi interaktif belum memiliki mapping CEDEX aktif. Ajukan kode baru atau pilih area yang sudah terpetakan.";
-  if (!form.cedex_location_id && (!form.face || !form.internal_location.trim() || !form.manual_location_reason.trim())) return "Pilih Lokasi CEDEX atau isi Face, lokasi internal, dan alasan fallback manual.";
+  if (!form.cedex_location_id) return "Pilih Location Code CEDEX aktif atau ajukan kode baru.";
   if (!form.component_code_id || !form.damage_code_id || !form.repair_code_id) return "Component Code, Damage Code, dan Action Repair Code wajib dipilih.";
   if (!form.severity) return "Severity wajib dipilih dari mapping Customer dan Survey Type.";
   if (requiresDimension && !form.dimension_profile) return "Pilih Dimension Profile untuk jenis kerusakan ini.";

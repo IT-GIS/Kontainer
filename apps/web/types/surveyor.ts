@@ -20,6 +20,8 @@ export type SurveyorSurveyListItem = {
   status: string;
   started_at?: string | null;
   submitted_at?: string | null;
+  review_started_at?: string | null;
+  resubmitted_at?: string | null;
   approved_at?: string | null;
   created_at?: string | null;
 };
@@ -74,6 +76,7 @@ export type SurveyGeneralInfo = {
 };
 
 export type ChecklistItem = {
+  id: string;
   item_key: string;
   item_label?: string;
   value?: string;
@@ -91,6 +94,9 @@ export type ChecklistItem = {
 export type SurveyDamage = {
   id: string;
   damage_no: string;
+  checklist_response_id?: string | null;
+  checklist_item_code?: string | null;
+  checklist_item_label?: string | null;
   face: string;
   internal_location: string;
   cedex_location_id?: string | null;

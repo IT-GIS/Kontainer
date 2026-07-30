@@ -111,17 +111,27 @@ func (r Repository) validateSelectionMappingTx(
 	var matched int
 	err := tx.QueryRow(ctx, `
 		SELECT COUNT(*)
-		FROM cedex_locations
-		WHERE id=$1 AND status='active' AND input_mode='structured'
-		  AND (customer_id=$2 OR customer_id IS NULL)
-		  AND UPPER(COALESCE(sector_code,''))=$3
-		  AND UPPER(COALESCE(vertical_code,''))=$4
-		  AND UPPER(COALESCE(start_section,''))=$5
-		  AND (($7='RANGE' AND UPPER(COALESCE(end_section,''))=$6)
-		    OR ($7='N' AND UPPER(COALESCE(end_section,'')) IN ('',$5)))
-		  AND UPPER(COALESCE(transverse_span,''))=$7
-		  AND container_size=$8
-		  AND LOWER(COALESCE(face,''))=$9
+		FROM cedex_locations location
+		WHERE location.id=$1 AND location.status='active' AND location.input_mode='structured'
+		  AND (
+		    location.customer_id=$2 OR (
+		      location.customer_id IS NULL AND NOT EXISTS (
+		        SELECT 1
+		        FROM cedex_locations override
+		        WHERE override.customer_id=$2
+		          AND override.status='active'
+		          AND LOWER(override.code)=LOWER(location.code)
+		      )
+		    )
+		  )
+		  AND UPPER(COALESCE(location.sector_code,''))=$3
+		  AND UPPER(COALESCE(location.vertical_code,''))=$4
+		  AND UPPER(COALESCE(location.start_section,''))=$5
+		  AND (($7='RANGE' AND UPPER(COALESCE(location.end_section,''))=$6)
+		    OR ($7='N' AND UPPER(COALESCE(location.end_section,'')) IN ('',$5)))
+		  AND UPPER(COALESCE(location.transverse_span,''))=$7
+		  AND location.container_size=$8
+		  AND LOWER(COALESCE(location.face,''))=$9
 	`, *locationID, customerID, selection.Face, selection.VerticalPosition, selection.SectionStart, end, span, selection.ContainerSize, faceName(selection.Face)).Scan(&matched)
 	if err != nil {
 		if errors.Is(err, database.ErrNoRows) {

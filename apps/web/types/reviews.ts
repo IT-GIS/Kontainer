@@ -7,6 +7,8 @@ export type PendingReview = {
   surveyor_name: string;
   survey_type_name: string;
   submitted_at?: string | null;
+  review_started_at?: string | null;
+  resubmitted_at?: string | null;
   status: string;
 };
 
@@ -20,6 +22,22 @@ export type ReviewDetail = PendingReview & {
   damages?: Array<Record<string, unknown>>;
   photos?: Array<Record<string, unknown>>;
   approval_history?: Array<Record<string, unknown>>;
+  revision_history?: SurveyRevision[];
+};
+
+export type SurveyRevision = {
+  id: string;
+  survey_id: string;
+  revision_no: number;
+  revision_reason: string;
+  requested_by: string;
+  requested_at: string;
+  resubmitted_by?: string | null;
+  resubmitted_at?: string | null;
+  reviewer_note?: string | null;
+  status: string;
+  snapshot_before: Record<string, unknown> | string;
+  snapshot_after?: Record<string, unknown> | string | null;
 };
 
 export type ReportSummary = {

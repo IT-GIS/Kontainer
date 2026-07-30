@@ -39,7 +39,7 @@ func (s *Service) Reviews(ctx context.Context, params ListParams) (ListResult, e
 
 func validMonitoringStatus(status string) bool {
 	switch status {
-	case "", "in_progress", "draft", "submitted", "need_revision", "approved", "rejected":
+	case "", "in_progress", "draft", "submitted", "under_review", "need_revision", "resubmitted", "approved", "rejected":
 		return true
 	default:
 		return false
@@ -72,6 +72,13 @@ func parseFilterDate(value string) (*time.Time, bool) {
 
 func (s *Service) Detail(ctx context.Context, surveyID uuid.UUID) (map[string]any, error) {
 	return s.repo.Detail(ctx, surveyID)
+}
+
+func (s *Service) StartReview(ctx context.Context, surveyID uuid.UUID, actor Actor) (map[string]any, error) {
+	if !reviewerRole(actor.ActiveRole) {
+		return nil, ErrForbidden
+	}
+	return s.repo.StartReview(ctx, surveyID, actor)
 }
 
 func (s *Service) NeedRevision(ctx context.Context, surveyID uuid.UUID, input NeedRevisionInput, actor Actor) (map[string]any, error) {

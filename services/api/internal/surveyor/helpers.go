@@ -89,7 +89,7 @@ func (r Repository) surveyBaseTx(ctx context.Context, tx database.Tx, surveyID u
 func surveyBaseQuery() string {
 	return `
 		SELECT s.id, s.survey_no, s.status, s.job_order_id, s.job_container_id, s.surveyor_id,
-		       s.survey_type_id, s.checklist_template_id, s.started_at, s.submitted_at, s.final_remark,
+		       s.survey_type_id, s.checklist_template_id, s.current_revision_no, s.started_at, s.submitted_at, s.resubmitted_at, s.final_remark,
 		       jo.job_order_no, jo.spk_no, jo.spk_date,
 		       jo.pic_customer_name, jo.pic_customer_phone, jo.pic_customer_email,
 		       jo.customer_id, jo.location_id, jo.instruction AS job_instruction,
@@ -128,7 +128,24 @@ func (r Repository) damageSurveyID(ctx context.Context, damageID uuid.UUID) (uui
 }
 
 func (r Repository) resolveCEDEXLocation(ctx context.Context, tx database.Tx, customerID uuid.UUID, input DamageInput) (*uuid.UUID, string, string, error) {
-	query := `SELECT id, face, COALESCE(NULLIF(grid_code,''), code) FROM cedex_locations WHERE %s AND (customer_id=$2 OR customer_id IS NULL) AND status='active' ORDER BY customer_id IS NULL LIMIT 1`
+	query := `
+		SELECT location.id, location.face, COALESCE(NULLIF(location.grid_code,''), location.code)
+		FROM cedex_locations location
+		WHERE %s
+		  AND location.status='active'
+		  AND (
+		    location.customer_id=$2 OR (
+		      location.customer_id IS NULL AND NOT EXISTS (
+		        SELECT 1
+		        FROM cedex_locations override
+		        WHERE override.customer_id=$2
+		          AND override.status='active'
+		          AND LOWER(override.code)=LOWER(location.code)
+		      )
+		    )
+		  )
+		ORDER BY location.customer_id IS NULL
+		LIMIT 1`
 	var id uuid.UUID
 	var face, internalLocation string
 	if input.CEDEXLocationID != "" {
@@ -136,7 +153,7 @@ func (r Repository) resolveCEDEXLocation(ctx context.Context, tx database.Tx, cu
 		if err != nil {
 			return nil, "", "", validationError("CEDEX_LOCATION_INVALID", "Lokasi CEDEX tidak valid.")
 		}
-		err = tx.QueryRow(ctx, fmt.Sprintf(query, "id=$1"), parsed, customerID).Scan(&id, &face, &internalLocation)
+		err = tx.QueryRow(ctx, fmt.Sprintf(query, "location.id=$1"), parsed, customerID).Scan(&id, &face, &internalLocation)
 		if errors.Is(err, database.ErrNoRows) {
 			return nil, "", "", validationError("CEDEX_LOCATION_SCOPE", "Lokasi CEDEX tidak aktif atau bukan milik Customer survei.")
 		}
@@ -146,7 +163,7 @@ func (r Repository) resolveCEDEXLocation(ctx context.Context, tx database.Tx, cu
 		return &id, face, internalLocation, nil
 	}
 	if strings.TrimSpace(input.CEDEXLocationCode) != "" {
-		err := tx.QueryRow(ctx, fmt.Sprintf(query, "LOWER(code)=LOWER($1)"), input.CEDEXLocationCode, customerID).Scan(&id, &face, &internalLocation)
+		err := tx.QueryRow(ctx, fmt.Sprintf(query, "LOWER(location.code)=LOWER($1)"), input.CEDEXLocationCode, customerID).Scan(&id, &face, &internalLocation)
 		if errors.Is(err, database.ErrNoRows) {
 			return nil, "", "", validationError("CEDEX_LOCATION_SCOPE", "Lokasi CEDEX tidak aktif atau bukan milik Customer survei.")
 		}
@@ -155,10 +172,10 @@ func (r Repository) resolveCEDEXLocation(ctx context.Context, tx database.Tx, cu
 		}
 		return &id, face, internalLocation, nil
 	}
-	if strings.TrimSpace(input.ManualLocationReason) == "" || strings.TrimSpace(input.Face) == "" || strings.TrimSpace(input.InternalLocation) == "" {
-		return nil, "", "", validationError("MANUAL_LOCATION_REASON_REQUIRED", "Alasan lokasi manual, face, dan internal location wajib diisi saat lokasi CEDEX tidak tersedia.")
-	}
-	return nil, strings.TrimSpace(input.Face), strings.TrimSpace(input.InternalLocation), nil
+	return nil, "", "", validationError(
+		"DAMAGE_LOCATION_MASTER_REQUIRED",
+		"Location Code untuk area ini belum tersedia. Silakan ajukan kode atau hubungi Admin.",
+	)
 }
 
 func (r Repository) nextDamageNo(ctx context.Context, tx database.Tx, surveyID uuid.UUID) (string, error) {
@@ -248,6 +265,63 @@ func rowsToMaps(rows database.Rows) ([]map[string]any, error) {
 	return items, rows.Err()
 }
 
+func queryRowsTx(ctx context.Context, tx database.Tx, query string, args ...any) ([]map[string]any, error) {
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return rowsToMaps(rows)
+}
+
+func (r Repository) revisionSnapshotTx(ctx context.Context, tx database.Tx, surveyID uuid.UUID) (string, error) {
+	surveyRows, err := queryRowsTx(ctx, tx, `SELECT * FROM surveys WHERE id=$1`, surveyID)
+	if err != nil {
+		return "", err
+	}
+	generalRows, err := queryRowsTx(ctx, tx, `SELECT * FROM survey_general_infos WHERE survey_id=$1`, surveyID)
+	if err != nil {
+		return "", err
+	}
+	checklist, err := queryRowsTx(ctx, tx, `
+		SELECT * FROM survey_checklist_responses
+		WHERE survey_id=$1 ORDER BY display_order, item_code
+	`, surveyID)
+	if err != nil {
+		return "", err
+	}
+	damages, err := queryRowsTx(ctx, tx, `
+		SELECT * FROM survey_damages
+		WHERE survey_id=$1 AND deleted_at IS NULL ORDER BY damage_no
+	`, surveyID)
+	if err != nil {
+		return "", err
+	}
+	photos, err := queryRowsTx(ctx, tx, `
+		SELECT * FROM survey_photos
+		WHERE survey_id=$1 AND deleted_at IS NULL ORDER BY created_at, id
+	`, surveyID)
+	if err != nil {
+		return "", err
+	}
+	var survey any
+	if len(surveyRows) > 0 {
+		survey = surveyRows[0]
+	}
+	var general any
+	if len(generalRows) > 0 {
+		general = generalRows[0]
+	}
+	payload, err := json.Marshal(map[string]any{
+		"survey": survey, "general_info": general, "checklist": checklist,
+		"damages": damages, "photos": photos,
+	})
+	if err != nil {
+		return "", err
+	}
+	return string(payload), nil
+}
+
 func scanRow(row database.Row, keys []string) (map[string]any, error) {
 	values := make([]any, len(keys))
 	ptrs := make([]any, len(keys))
@@ -302,8 +376,12 @@ func assignedSurveyWhere(params ListParams, surveyorID uuid.UUID) (string, []any
 	args := []any{surveyorID}
 	clauses := []string{"s.deleted_at IS NULL", "s.surveyor_id=$1"}
 	if params.Status != "" {
-		args = append(args, params.Status)
-		clauses = append(clauses, fmt.Sprintf("s.status=$%d", len(args)))
+		if params.Status == "submitted" {
+			clauses = append(clauses, "s.status IN ('submitted','under_review','resubmitted')")
+		} else {
+			args = append(args, params.Status)
+			clauses = append(clauses, fmt.Sprintf("s.status=$%d", len(args)))
+		}
 	}
 	if strings.TrimSpace(params.Search) != "" {
 		args = append(args, "%"+strings.TrimSpace(params.Search)+"%")
@@ -380,8 +458,8 @@ func validateDamageInput(input DamageInput) error {
 	if strings.TrimSpace(input.ComponentID) == "" || strings.TrimSpace(input.DamageID) == "" || strings.TrimSpace(input.RepairID) == "" {
 		return validationError("DAMAGE_REFERENCE_REQUIRED", "Component, damage type, dan action repair wajib dipilih.")
 	}
-	if strings.TrimSpace(input.CEDEXLocationID) == "" && strings.TrimSpace(input.CEDEXLocationCode) == "" && strings.TrimSpace(input.ManualLocationReason) == "" {
-		return validationError("DAMAGE_LOCATION_REQUIRED", "Lokasi CEDEX wajib dipilih atau gunakan fallback manual dengan alasan.")
+	if strings.TrimSpace(input.CEDEXLocationID) == "" && strings.TrimSpace(input.CEDEXLocationCode) == "" {
+		return validationError("DAMAGE_LOCATION_REQUIRED", "Location Code aktif dari Master ISO CEDEX wajib dipilih.")
 	}
 	if strings.TrimSpace(input.Severity) == "" {
 		return validationError("DAMAGE_SEVERITY_REQUIRED", "Severity wajib dipilih.")
@@ -449,8 +527,24 @@ func (r Repository) validateSurvey(survey map[string]any) []ValidationWarning {
 		}
 	}
 	damages, _ := survey["damages"].([]map[string]any)
+	photos, _ := survey["photos"].([]map[string]any)
+	photoCountByCategory := map[string]int{}
+	photoCountByDamageCategory := map[string]int{}
+	for _, photo := range photos {
+		category := strings.ToLower(strings.TrimSpace(fmt.Sprint(photo["photo_category"])))
+		damageID := strings.TrimSpace(fmt.Sprint(photo["damage_id"]))
+		if category != "" && category != "<nil>" {
+			photoCountByCategory[category]++
+			photoCountByDamageCategory[damageID+"|"+category]++
+		}
+	}
+	findingsByChecklist := map[string]int{}
 	for _, damage := range damages {
 		damageNo := fmt.Sprint(damage["damage_no"])
+		checklistID := strings.TrimSpace(fmt.Sprint(damage["checklist_response_id"]))
+		if checklistID != "" && checklistID != "<nil>" {
+			findingsByChecklist[checklistID]++
+		}
 		if strings.TrimSpace(fmt.Sprint(damage["component_code"])) == "" || strings.TrimSpace(fmt.Sprint(damage["damage_code"])) == "" {
 			warnings = append(warnings, ValidationWarning{Code: "DAMAGE_CODE_REQUIRED", Message: "Damage " + damageNo + " wajib memiliki component dan damage type."})
 		}
@@ -461,7 +555,44 @@ func (r Repository) validateSurvey(survey map[string]any) []ValidationWarning {
 			warnings = append(warnings, ValidationWarning{Code: "DAMAGE_ACTION_REQUIRED", Message: "Damage " + damageNo + " wajib memiliki Action Repair Code."})
 		}
 	}
+	for _, item := range checklist {
+		if strings.EqualFold(strings.TrimSpace(fmt.Sprint(item["value"])), "no") {
+			itemID := strings.TrimSpace(fmt.Sprint(item["id"]))
+			if findingsByChecklist[itemID] == 0 {
+				warnings = append(warnings, ValidationWarning{
+					Code:    "CHECKLIST_FINDING_REQUIRED",
+					Message: "Checklist Tidak Baik " + fmt.Sprint(item["item_label"]) + " wajib memiliki Temuan CEDEX.",
+				})
+			}
+		}
+	}
+	requiredPhotoCategories, _ := survey["required_photo_categories"].([]map[string]any)
+	for _, category := range requiredPhotoCategories {
+		code := strings.ToLower(strings.TrimSpace(fmt.Sprint(category["code"])))
+		name := defaultString(category["name"], code)
+		if strings.EqualFold(strings.TrimSpace(fmt.Sprint(category["applies_to"])), "finding") {
+			for _, damage := range damages {
+				damageID := strings.TrimSpace(fmt.Sprint(damage["id"]))
+				if photoCountByDamageCategory[damageID+"|"+code] == 0 {
+					warnings = append(warnings, ValidationWarning{
+						Code:    "DAMAGE_PHOTO_CATEGORY_REQUIRED",
+						Message: "Damage " + fmt.Sprint(damage["damage_no"]) + " wajib memiliki Foto Evidence kategori " + name + ".",
+					})
+				}
+			}
+		} else if photoCountByCategory[code] == 0 {
+			warnings = append(warnings, ValidationWarning{
+				Code: "PHOTO_CATEGORY_REQUIRED", Message: "Foto Evidence wajib kategori " + name + " belum tersedia.",
+			})
+		}
+	}
 	return warnings
+}
+
+func intFromValue(value any) int {
+	var result int
+	_, _ = fmt.Sscan(fmt.Sprint(value), &result)
+	return result
 }
 
 func truthy(value any) bool {

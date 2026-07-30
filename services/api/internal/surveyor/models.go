@@ -90,6 +90,7 @@ type ChecklistItemInput struct {
 }
 
 type DamageInput struct {
+	ChecklistResponseID  string                     `json:"checklist_response_id"`
 	Face                 string                     `json:"face"`
 	InternalLocation     string                     `json:"internal_location"`
 	CEDEXLocationID      string                     `json:"cedex_location_id"`

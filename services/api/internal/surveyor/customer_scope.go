@@ -222,9 +222,21 @@ func (r Repository) validateScopedReferenceTx(ctx context.Context, tx database.T
 		return fmt.Errorf("unsupported scoped reference table %q", table)
 	}
 	var found uuid.UUID
+	scopeClause := "item.customer_id=$2"
+	if table != "responsibility_codes" {
+		scopeClause = fmt.Sprintf(`(item.customer_id=$2 OR (
+			item.customer_id IS NULL AND NOT EXISTS (
+				SELECT 1
+				FROM %s override
+				WHERE override.customer_id=$2
+				  AND override.status='active'
+				  AND LOWER(override.code)=LOWER(item.code)
+			)
+		))`, table)
+	}
 	err := tx.QueryRow(ctx, fmt.Sprintf(
-		"SELECT id FROM %s WHERE id=$1 AND (customer_id=$2 OR customer_id IS NULL) AND status='active' LIMIT 1",
-		table,
+		"SELECT item.id FROM %s item WHERE item.id=$1 AND %s AND item.status='active' LIMIT 1",
+		table, scopeClause,
 	), id, customerID).Scan(&found)
 	if errors.Is(err, database.ErrNoRows) {
 		return validationError(code, "Referensi tidak aktif atau bukan milik Customer survei.")

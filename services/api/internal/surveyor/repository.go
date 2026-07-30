@@ -30,7 +30,7 @@ func (r Repository) Dashboard(ctx context.Context, actor Actor) (Dashboard, erro
 		SELECT COUNT(DISTINCT jo.id),
 		       COUNT(DISTINCT CASE WHEN s.id IS NULL THEN jc.id END),
 		       COUNT(DISTINCT CASE WHEN s.status='draft' THEN s.id END),
-		       COUNT(DISTINCT CASE WHEN s.status='submitted' THEN s.id END),
+		       COUNT(DISTINCT CASE WHEN s.status IN ('submitted','under_review','resubmitted') THEN s.id END),
 		       COUNT(DISTINCT CASE WHEN s.status='need_revision' THEN s.id END),
 		       COUNT(DISTINCT CASE WHEN s.status='approved' THEN s.id END)
 		FROM assignments a
@@ -324,10 +324,23 @@ func (r Repository) GetSurvey(ctx context.Context, surveyID uuid.UUID, actor Act
 	checklist, _ := r.Checklist(ctx, surveyID, actor)
 	damages, _ := r.Damages(ctx, surveyID, actor)
 	photos, _ := r.Photos(ctx, surveyID, actor)
+	requiredPhotoCategories, err := r.optionRows(ctx, `
+		SELECT category.code, category.name, category.applies_to
+		FROM customer_survey_type_photo_categories mapping
+		JOIN evidence_photo_categories category
+		  ON category.id=mapping.photo_category_id AND category.status='active'
+		WHERE mapping.customer_id=$1 AND mapping.survey_type_id=$2
+		  AND mapping.is_active=1 AND category.is_required_default=1
+		ORDER BY category.display_order, category.code
+	`, parseUUIDString(base["customer_id"]), parseUUIDString(base["survey_type_id"]))
+	if err != nil {
+		return nil, err
+	}
 	base["general_info"] = general
 	base["checklist"] = checklist
 	base["damages"] = damages
 	base["photos"] = photos
+	base["required_photo_categories"] = requiredPhotoCategories
 	if err := r.recordAudit(ctx, actor, "surveys.open", "surveys", surveyID, map[string]any{"survey_no": base["survey_no"]}); err != nil {
 		return nil, err
 	}
@@ -376,7 +389,6 @@ func (r Repository) UpdateGeneralInfo(ctx context.Context, surveyID uuid.UUID, i
 	if err != nil {
 		return nil, err
 	}
-	_, _ = tx.Exec(ctx, `UPDATE surveys SET status=CASE WHEN status='need_revision' THEN 'draft' ELSE status END, updated_at=now() WHERE id=$1`, surveyID)
 	_ = r.insertAudit(ctx, tx, actor, "surveys.update_general", "surveys", &surveyID, base, item)
 	return item, tx.Commit(ctx)
 }
@@ -465,7 +477,6 @@ func (r Repository) UpdateChecklist(ctx context.Context, surveyID uuid.UUID, inp
 			return nil, err
 		}
 	}
-	_, _ = tx.Exec(ctx, `UPDATE surveys SET status=CASE WHEN status='need_revision' THEN 'draft' ELSE status END, updated_at=now() WHERE id=$1`, surveyID)
 	result := map[string]any{"survey_id": surveyID.String(), "total_items": len(input.Items), "completed_items": completed}
 	_ = r.insertAudit(ctx, tx, actor, "surveys.update_checklist", "surveys", &surveyID, base, result)
 	return result, tx.Commit(ctx)
@@ -546,6 +557,8 @@ func (r Repository) Damages(ctx context.Context, surveyID uuid.UUID, actor Actor
 	}
 	rows, err := r.pool.Query(ctx, `
 		SELECT sd.id, sd.damage_no, sd.face, sd.internal_location, sd.manual_location_reason,
+		       sd.checklist_response_id, checklist.item_code AS checklist_item_code,
+		       checklist.item_label AS checklist_item_label,
 		       cl.id AS cedex_location_id, cl.code AS cedex_location_code,
 		       cc.id AS component_id, cc.code AS component_code, cc.component_name AS component_name,
 		       cd.id AS damage_code_id, cd.code AS damage_code, cd.damage_name AS damage_name,
@@ -561,6 +574,7 @@ func (r Repository) Damages(ctx context.Context, surveyID uuid.UUID, actor Actor
 		       sd.unit, sd.is_repair_required, sd.is_cargo_worthy_impact, sd.remark,
 		       COUNT(sp.id) AS photo_count
 		FROM survey_damages sd
+		LEFT JOIN survey_checklist_responses checklist ON checklist.id=sd.checklist_response_id
 		LEFT JOIN cedex_locations cl ON cl.id=sd.cedex_location_id
 		JOIN cedex_components cc ON cc.id=sd.component_id
 		JOIN cedex_damages cd ON cd.id=sd.damage_id
@@ -570,7 +584,7 @@ func (r Repository) Damages(ctx context.Context, surveyID uuid.UUID, actor Actor
 		LEFT JOIN survey_photos sp ON sp.damage_id=sd.id AND sp.deleted_at IS NULL
 		LEFT JOIN inspection_test_parameters ir ON ir.id=sd.inspection_reference_id
 		WHERE sd.survey_id=$1 AND sd.deleted_at IS NULL
-		GROUP BY sd.id, cl.id, cc.id, cd.id, cr.id, cm.id, rc.id, ir.id
+		GROUP BY sd.id, checklist.id, cl.id, cc.id, cd.id, cr.id, cm.id, rc.id, ir.id
 		ORDER BY sd.damage_no
 	`, surveyID)
 	if err != nil {
@@ -830,13 +844,51 @@ func (r Repository) Submit(ctx context.Context, surveyID uuid.UUID, input Submit
 	if err != nil {
 		return nil, err
 	}
+	nextStatus := "submitted"
+	auditAction := "surveys.submit"
+	eventType := "survey_submitted"
+	eventTitle := "Survey disubmit."
+	if fmt.Sprint(base["status"]) == "need_revision" {
+		nextStatus = "resubmitted"
+		auditAction = "surveys.resubmit"
+		eventType = "survey_resubmitted"
+		eventTitle = "Survey disubmit ulang."
+	}
 	item, err := scanRow(tx.QueryRow(ctx, `
-		UPDATE surveys SET status='submitted', submitted_at=now(), final_remark=NULLIF($2,''), survey_result=$3, updated_at=now()
+		UPDATE surveys
+		SET status=$2,
+		    submitted_at=CASE WHEN $2='submitted' THEN now() ELSE submitted_at END,
+		    resubmitted_at=CASE WHEN $2='resubmitted' THEN now() ELSE resubmitted_at END,
+		    review_started_by=NULL, review_started_at=NULL,
+		    final_remark=NULLIF($3,''), survey_result=$4, updated_at=now()
 		WHERE id=$1 AND status IN ('draft','need_revision')
-		RETURNING id, survey_no, status, submitted_at
-	`, surveyID, input.FinalRemark, recommendedResult(preview)), []string{"id", "survey_no", "status", "submitted_at"})
+		RETURNING id, survey_no, status, submitted_at, resubmitted_at
+	`, surveyID, nextStatus, input.FinalRemark, recommendedResult(preview)), []string{"id", "survey_no", "status", "submitted_at", "resubmitted_at"})
 	if err != nil {
 		return nil, err
+	}
+	if nextStatus == "resubmitted" {
+		snapshotAfter, snapshotErr := r.revisionSnapshotTx(ctx, tx, surveyID)
+		if snapshotErr != nil {
+			return nil, snapshotErr
+		}
+		result, updateErr := tx.Exec(ctx, `
+			UPDATE survey_revisions
+			SET status='resubmitted', resubmitted_by=$3, resubmitted_at=now(),
+			    snapshot_after=$4, updated_at=now()
+			WHERE survey_id=$1 AND revision_no=$2 AND status='requested'
+		`, surveyID, intFromValue(base["current_revision_no"]), actor.UserID, snapshotAfter)
+		if updateErr != nil {
+			return nil, updateErr
+		}
+		if result.RowsAffected() != 1 {
+			return nil, validationError("SURVEY_REVISION_HISTORY_MISSING", "Histori revisi aktif tidak ditemukan.")
+		}
+		_, _ = tx.Exec(ctx, `
+			UPDATE survey_revision_items
+			SET is_resolved=1, resolved_by=$2, resolved_at=now()
+			WHERE survey_id=$1 AND is_resolved=0
+		`, surveyID, actor.UserID)
 	}
 	jobID := parseUUIDString(base["job_order_id"])
 	containerID := parseUUIDString(base["job_container_id"])
@@ -848,8 +900,8 @@ func (r Repository) Submit(ctx context.Context, surveyID uuid.UUID, input Submit
 		  WHERE jc.job_order_id=$1 AND jc.deleted_at IS NULL AND jc.status NOT IN ('submitted','approved','report_generated','cancelled')
 		)
 	`, jobID, actor.UserID)
-	_ = r.insertJobEvent(ctx, tx, jobID, "survey_submitted", "Survey disubmit.", fmt.Sprint(base["container_no"]), actor.UserID, item)
-	_ = r.insertAudit(ctx, tx, actor, "surveys.submit", "surveys", &surveyID, base, item)
+	_ = r.insertJobEvent(ctx, tx, jobID, eventType, eventTitle, fmt.Sprint(base["container_no"]), actor.UserID, item)
+	_ = r.insertAudit(ctx, tx, actor, auditAction, "surveys", &surveyID, base, item)
 	return item, tx.Commit(ctx)
 }
 
@@ -868,6 +920,28 @@ func (r Repository) saveDamage(ctx context.Context, damageID uuid.UUID, surveyID
 	}
 	if !editableStatus(fmt.Sprint(base["status"])) {
 		return nil, ErrInvalidStatus
+	}
+	checklistResponseID, err := parseOptionalReferenceID(
+		input.ChecklistResponseID,
+		"CHECKLIST_RESPONSE_INVALID",
+		"Referensi checklist tidak valid.",
+	)
+	if err != nil {
+		return nil, err
+	}
+	if checklistResponseID != nil {
+		var found uuid.UUID
+		err := tx.QueryRow(ctx, `
+			SELECT id FROM survey_checklist_responses
+			WHERE id=$1 AND survey_id=$2 AND response_value='no'
+			LIMIT 1
+		`, *checklistResponseID, surveyID).Scan(&found)
+		if errors.Is(err, database.ErrNoRows) {
+			return nil, validationError("CHECKLIST_RESPONSE_SCOPE", "Temuan hanya dapat ditautkan ke checklist Tidak Baik pada survey yang sama.")
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 	customerID := parseUUIDString(base["customer_id"])
 	surveyTypeID := parseUUIDString(base["survey_type_id"])
@@ -977,21 +1051,21 @@ func (r Repository) saveDamage(ctx context.Context, damageID uuid.UUID, surveyID
 			  decision_result, decision_reason, tolerance_snapshot, finding_description,
 			  severity, quantity, quantity_unit, length_value, width_value, depth_value, unit,
 			  is_repair_required, is_cargo_worthy_impact, is_photo_only, remark,
-			  dimension_profile, location_selection_snapshot, created_by, updated_by
+			  dimension_profile, location_selection_snapshot, created_by, updated_by, checklist_response_id
 			)
 			VALUES ($1,$2,$3,$4,$5,NULLIF($6,''),$7,$8,$9,$10,$11,$12,$13,$14,
 			  NULLIF($15,''),NULLIF($16,''),NULLIF($17,''),NULLIF($18,''),
 			  $19,$20,NULLIF($21,''),$22,$23,$24,$25,$26,$27,$28,NULLIF($29,''),
-			  NULLIF($30,''),NULLIF($31,''),$32,$32)
-			RETURNING id, damage_no, face, internal_location, severity, decision_result, finding_description, dimension_profile, location_selection_snapshot
+			  NULLIF($30,''),NULLIF($31,''),$32,$32,$33)
+			RETURNING id, damage_no, face, internal_location, severity, decision_result, finding_description, dimension_profile, location_selection_snapshot, checklist_response_id
 		`, surveyID, damageNo, face, internalLocation, cedexLocationID, input.ManualLocationReason,
 			componentID, damageCodeID, repairID, materialID, responsibilityID,
 			decisionRuleID, inspectionReferenceID, effectiveActionID,
 			evaluation.DecisionResult, evaluation.DecisionReason, toleranceSnapshot, findingDescription,
 			severity, input.Quantity, defaultString(input.QuantityUnit, "pc"), input.Length, input.Width, input.Depth, defaultString(input.Unit, "cm"),
 			isRepairRequired, isCargoWorthyImpact, input.IsPhotoOnly, input.Remark,
-			strings.ToLower(strings.TrimSpace(input.DimensionProfile)), locationSelectionSnapshot, actor.UserID,
-		), []string{"id", "damage_no", "face", "internal_location", "severity", "decision_result", "finding_description", "dimension_profile", "location_selection_snapshot"})
+			strings.ToLower(strings.TrimSpace(input.DimensionProfile)), locationSelectionSnapshot, actor.UserID, checklistResponseID,
+		), []string{"id", "damage_no", "face", "internal_location", "severity", "decision_result", "finding_description", "dimension_profile", "location_selection_snapshot", "checklist_response_id"})
 		if err != nil {
 			return nil, err
 		}
@@ -1017,17 +1091,17 @@ func (r Repository) saveDamage(ctx context.Context, damageID uuid.UUID, surveyID
 		  severity=$18, quantity=$19, quantity_unit=NULLIF($20,''), length_value=$21, width_value=$22, depth_value=$23, unit=$24,
 		  is_repair_required=$25, is_cargo_worthy_impact=$26, is_photo_only=$27,
 		  remark=NULLIF($28,''), dimension_profile=NULLIF($29,''),
-		  location_selection_snapshot=NULLIF($30,''), updated_by=$31, updated_at=now()
+		  location_selection_snapshot=NULLIF($30,''), updated_by=$31, checklist_response_id=$32, updated_at=now()
 		WHERE id=$1 AND deleted_at IS NULL
-		RETURNING id, damage_no, face, internal_location, severity, decision_result, finding_description, dimension_profile, location_selection_snapshot
+		RETURNING id, damage_no, face, internal_location, severity, decision_result, finding_description, dimension_profile, location_selection_snapshot, checklist_response_id
 	`, damageID, face, internalLocation, cedexLocationID, input.ManualLocationReason,
 		componentID, damageCodeID, repairID, materialID, responsibilityID,
 		decisionRuleID, inspectionReferenceID, effectiveActionID,
 		evaluation.DecisionResult, evaluation.DecisionReason, toleranceSnapshot, findingDescription,
 		severity, input.Quantity, defaultString(input.QuantityUnit, "pc"), input.Length, input.Width, input.Depth, defaultString(input.Unit, "cm"),
 		isRepairRequired, isCargoWorthyImpact, input.IsPhotoOnly, input.Remark,
-		strings.ToLower(strings.TrimSpace(input.DimensionProfile)), locationSelectionSnapshot, actor.UserID,
-	), []string{"id", "damage_no", "face", "internal_location", "severity", "decision_result", "finding_description", "dimension_profile", "location_selection_snapshot"})
+		strings.ToLower(strings.TrimSpace(input.DimensionProfile)), locationSelectionSnapshot, actor.UserID, checklistResponseID,
+	), []string{"id", "damage_no", "face", "internal_location", "severity", "decision_result", "finding_description", "dimension_profile", "location_selection_snapshot", "checklist_response_id"})
 	if err != nil {
 		return nil, err
 	}

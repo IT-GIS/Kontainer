@@ -36,7 +36,7 @@ func (s *Service) ListSurveys(ctx context.Context, params ListParams, actor Acto
 
 func validSurveyListStatus(status string) bool {
 	switch status {
-	case "", "draft", "need_revision", "submitted", "approved", "rejected":
+	case "", "draft", "need_revision", "submitted", "under_review", "resubmitted", "approved", "rejected":
 		return true
 	default:
 		return false

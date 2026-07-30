@@ -86,6 +86,13 @@ func (h Handler) ReviewAction(c *gin.Context) {
 		return
 	}
 	switch c.Param("action") {
+	case "start-review":
+		item, err := h.service.StartReview(c.Request.Context(), id, actorFromContext(c))
+		if err != nil {
+			h.writeError(c, err)
+			return
+		}
+		apphttp.OK(c, "Review survey dimulai.", item)
 	case "need-revision":
 		var input NeedRevisionInput
 		if !bindJSON(c, &input) {

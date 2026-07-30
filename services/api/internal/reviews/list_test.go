@@ -21,7 +21,7 @@ func TestSurveyWhereNormalizesInProgress(t *testing.T) {
 }
 
 func TestValidMonitoringStatus(t *testing.T) {
-	for _, status := range []string{"", "in_progress", "submitted", "need_revision", "approved", "rejected"} {
+	for _, status := range []string{"", "in_progress", "draft", "submitted", "under_review", "need_revision", "resubmitted", "approved", "rejected"} {
 		if !validMonitoringStatus(status) {
 			t.Fatalf("expected status %q to be valid", status)
 		}
@@ -36,7 +36,9 @@ func TestSurveyDateExpression(t *testing.T) {
 		"":              "s.created_at",
 		"in_progress":   "COALESCE(s.started_at, s.created_at)",
 		"draft":         "COALESCE(s.started_at, s.created_at)",
-		"submitted":     "COALESCE(s.submitted_at, s.created_at)",
+		"under_review":  "COALESCE(s.resubmitted_at, s.review_started_at, s.submitted_at, s.created_at)",
+		"resubmitted":   "COALESCE(s.resubmitted_at, s.review_started_at, s.submitted_at, s.created_at)",
+		"submitted":     "COALESCE(s.resubmitted_at, s.review_started_at, s.submitted_at, s.created_at)",
 		"need_revision": "COALESCE(s.submitted_at, s.created_at)",
 		"rejected":      "COALESCE(s.submitted_at, s.created_at)",
 		"approved":      "COALESCE(s.approved_at, s.created_at)",
@@ -118,6 +120,9 @@ func TestValidateQRQueryIsMySQLCompatible(t *testing.T) {
 func TestReviewerMutationRejectsNonReviewerRolesBeforeRepository(t *testing.T) {
 	service := NewService(Repository{})
 	actor := Actor{ActiveRole: "admin"}
+	if _, err := service.StartReview(context.Background(), uuid.New(), actor); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("StartReview admin error = %v, want ErrForbidden", err)
+	}
 	if _, err := service.Approve(context.Background(), uuid.New(), ApproveInput{FinalResult: "approved"}, actor); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("Approve admin error = %v, want ErrForbidden", err)
 	}
@@ -138,6 +143,24 @@ func TestReviewerRoleAllowsOnlySupervisorAndSuperAdmin(t *testing.T) {
 	for _, role := range []string{"", "admin", "surveyor", "management", "finance"} {
 		if reviewerRole(role) {
 			t.Fatalf("role %q must not be a reviewer", role)
+		}
+	}
+}
+
+func TestSubmittedQueueIncludesActiveReviewStates(t *testing.T) {
+	where, args := surveyWhere(ListParams{}, "submitted")
+	if len(args) != 0 || !strings.Contains(where, "s.status IN ('submitted','under_review','resubmitted')") {
+		t.Fatalf("unexpected submitted queue: where=%s args=%#v", where, args)
+	}
+}
+
+func TestReviewDecisionsRequireUnderReviewStatus(t *testing.T) {
+	if !reviewableStatus("under_review") {
+		t.Fatal("under_review must allow reviewer decisions")
+	}
+	for _, status := range []string{"submitted", "resubmitted", "need_revision", "approved"} {
+		if reviewableStatus(status) {
+			t.Fatalf("status %q must require Start Review first", status)
 		}
 	}
 }

@@ -35,7 +35,7 @@ func (r Repository) surveyForUpdate(ctx context.Context, tx database.Tx, surveyI
 func surveyBaseQuery() string {
 	return `
 		SELECT s.id, s.survey_no, s.status, s.job_order_id, s.job_container_id, s.surveyor_id,
-		       s.survey_type_id, s.current_revision_no, s.survey_result, s.submitted_at, s.approved_at,
+		       s.survey_type_id, s.current_revision_no, s.survey_result, s.submitted_at, s.review_started_at, s.resubmitted_at, s.approved_at,
 		       jo.job_order_no, jo.customer_id, jc.container_no, c.customer_name, l.location_name,
 		       st.name AS survey_type_name, sp.full_name AS surveyor_name
 		FROM surveys s
@@ -56,8 +56,12 @@ func surveyWhere(params ListParams, status string) (string, []any) {
 		status = normalizeSurveyListStatus(params.Status)
 	}
 	if status != "" {
-		args = append(args, status)
-		clauses = append(clauses, fmt.Sprintf("s.status=$%d", len(args)))
+		if status == "submitted" {
+			clauses = append(clauses, "s.status IN ('submitted','under_review','resubmitted')")
+		} else {
+			args = append(args, status)
+			clauses = append(clauses, fmt.Sprintf("s.status=$%d", len(args)))
+		}
 	}
 	if params.CustomerID != "" {
 		args = append(args, params.CustomerID)
@@ -95,7 +99,9 @@ func surveyDateExpression(status string) string {
 	switch normalizeSurveyListStatus(status) {
 	case "draft":
 		return "COALESCE(s.started_at, s.created_at)"
-	case "submitted", "need_revision", "rejected":
+	case "submitted", "under_review", "resubmitted":
+		return "COALESCE(s.resubmitted_at, s.review_started_at, s.submitted_at, s.created_at)"
+	case "need_revision", "rejected":
 		return "COALESCE(s.submitted_at, s.created_at)"
 	case "approved":
 		return "COALESCE(s.approved_at, s.created_at)"
@@ -188,6 +194,67 @@ func rowsToMaps(rows database.Rows) ([]map[string]any, error) {
 		items = append(items, item)
 	}
 	return items, rows.Err()
+}
+
+func queryRowsTx(ctx context.Context, tx database.Tx, query string, args ...any) ([]map[string]any, error) {
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return rowsToMaps(rows)
+}
+
+func (r Repository) revisionSnapshotTx(ctx context.Context, tx database.Tx, surveyID uuid.UUID, _ map[string]any) (string, error) {
+	surveyRows, err := queryRowsTx(ctx, tx, `SELECT * FROM surveys WHERE id=$1`, surveyID)
+	if err != nil {
+		return "", err
+	}
+	generalRows, err := queryRowsTx(ctx, tx, `SELECT * FROM survey_general_infos WHERE survey_id=$1`, surveyID)
+	if err != nil {
+		return "", err
+	}
+	checklist, err := queryRowsTx(ctx, tx, `
+		SELECT * FROM survey_checklist_responses
+		WHERE survey_id=$1 ORDER BY display_order, item_code
+	`, surveyID)
+	if err != nil {
+		return "", err
+	}
+	damages, err := queryRowsTx(ctx, tx, `
+		SELECT * FROM survey_damages
+		WHERE survey_id=$1 AND deleted_at IS NULL ORDER BY damage_no
+	`, surveyID)
+	if err != nil {
+		return "", err
+	}
+	photos, err := queryRowsTx(ctx, tx, `
+		SELECT * FROM survey_photos
+		WHERE survey_id=$1 AND deleted_at IS NULL ORDER BY created_at, id
+	`, surveyID)
+	if err != nil {
+		return "", err
+	}
+	var survey any
+	if len(surveyRows) > 0 {
+		survey = surveyRows[0]
+	}
+	var general any
+	if len(generalRows) > 0 {
+		general = generalRows[0]
+	}
+	payload, err := json.Marshal(map[string]any{
+		"survey": survey, "general_info": general, "checklist": checklist,
+		"damages": damages, "photos": photos,
+	})
+	if err != nil {
+		return "", err
+	}
+	return string(payload), nil
+}
+
+func reviewableStatus(status string) bool {
+	return status == "under_review"
 }
 
 func scanRow(row database.Row, keys []string) (map[string]any, error) {

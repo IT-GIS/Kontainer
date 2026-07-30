@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, RotateCcw, X } from "lucide-react";
+import { Check, Play, RotateCcw, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
@@ -46,6 +46,24 @@ function ReviewDetailContent() {
 
   useEffect(() => { const timer = window.setTimeout(() => void loadReview(), 0); return () => window.clearTimeout(timer); }, [loadReview]);
 
+  async function startReview() {
+    if (!accessToken) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await apiData(`/reviews/${params.id}/start-review`, {
+        method: "POST",
+        accessToken,
+        body: JSON.stringify({})
+      });
+      await loadReview();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memulai review.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function submitAction() {
     if (!accessToken || !dialog) return;
     if ((dialog === "revision" || dialog === "reject") && !note.trim()) {
@@ -78,13 +96,15 @@ function ReviewDetailContent() {
 
   if (!review) return <div className="center-screen">Memuat review...</div>;
   const canManageReview = can(user, "reviews.manage.all") && (hasRole(user, "supervisor") || hasRole(user, "super_admin"));
-  const canDecide = canManageReview && review.status === "submitted";
+  const canStart = canManageReview && ["submitted", "resubmitted"].includes(review.status);
+  const canDecide = canManageReview && review.status === "under_review";
 
   return (
     <div className="page-stack">
       <PageHeader title={`Review & Keputusan: ${review.survey_no}`} description={`Peti kemas: ${review.container_no} - ${review.customer_name}`} />
       {!canManageReview ? <div className="alert alert-warning">Mode read-only. Keputusan teknis hanya tersedia bagi Supervisor/Super Admin yang juga memiliki permission <code>reviews.manage.all</code>.</div> : null}
       {canManageReview ? <div className="job-actions">
+        {canStart ? <button className="primary-button" disabled={isSubmitting} onClick={() => void startReview()}><Play size={17} /><span>Mulai Review</span></button> : null}
         <button className="secondary-button" disabled={!canDecide} onClick={() => setDialog("revision")}><RotateCcw size={17} /><span>Perlu Revisi</span></button>
         <button className="secondary-button" disabled={!canDecide} onClick={() => setDialog("reject")}><X size={17} /><span>Tolak</span></button>
         <button className="primary-button" disabled={!canDecide} onClick={() => setDialog("approve")}><Check size={17} /><span>Setujui</span></button>
@@ -96,7 +116,7 @@ function ReviewDetailContent() {
       {activeTab === "Checklist" ? <Checklist rows={review.checklist ?? []} /> : null}
       {activeTab === "Daftar Kerusakan" ? <Damage rows={review.damages ?? []} /> : null}
       {activeTab === "Foto" ? <Photos rows={review.photos ?? []} /> : null}
-      {activeTab === "Riwayat" ? <Log rows={review.approval_history ?? []} /> : null}
+      {activeTab === "Riwayat" ? <History approvals={review.approval_history ?? []} revisions={review.revision_history ?? []} /> : null}
 
       <FormDialog title={dialogTitle(dialog)} open={canManageReview && dialog !== null} onClose={() => setDialog(null)} onSubmit={submitAction} isSubmitting={isSubmitting} submitLabel={dialog === "approve" ? "Approve" : "Submit"}>
         <div className="form-grid">
@@ -110,7 +130,7 @@ function ReviewDetailContent() {
 
 function Summary({ review }: { review: ReviewDetail }) {
   const rows: Array<[string, React.ReactNode]> = [
-    ["Status", <StatusBadge key="status" tone={review.status === "submitted" ? "warning" : review.status === "approved" ? "success" : "danger"}>{review.status.toUpperCase()}</StatusBadge>],
+    ["Status", <StatusBadge key="status" tone={review.status === "approved" ? "success" : review.status === "need_revision" || review.status === "rejected" ? "danger" : "warning"}>{review.status.replaceAll("_", " ").toUpperCase()}</StatusBadge>],
     ["Job No", review.job_order_no],
     ["Container", review.container_no],
     ["Surveyor", review.surveyor_name],
@@ -138,8 +158,34 @@ function Photos({ rows }: { rows: Array<Record<string, unknown>> }) {
   return <section className="workspace-panel photo-grid">{rows.length === 0 ? <p className="muted-text">Belum ada foto.</p> : rows.map((row, index) => <PhotoEvidence id={String(row.id ?? index)} name={String(row.original_file_name ?? "Photo evidence")} caption={row.caption ? String(row.caption) : null} key={String(row.id ?? index)} />)}</section>;
 }
 
-function Log({ rows }: { rows: Array<Record<string, unknown>> }) {
-  return <DataTable rows={rows} columns={[{ key: "decision", header: "Decision", render: (row) => String(row.decision ?? "-") }, { key: "note", header: "Note", render: (row) => String(row.review_note ?? "-") }, { key: "result", header: "Final Result", render: (row) => String(row.final_result ?? "-") }, { key: "time", header: "Reviewed At", render: (row) => String(row.reviewed_at ?? "-") }]} />;
+function History({ approvals, revisions }: { approvals: Array<Record<string, unknown>>; revisions: NonNullable<ReviewDetail["revision_history"]> }) {
+  return <div className="page-stack">
+    <section className="workspace-panel"><h2>Histori Revisi</h2><DataTable rows={revisions} emptyText="Belum ada siklus revisi." columns={[
+      { key: "revision", header: "Revisi", render: (row) => `#${row.revision_no}` },
+      { key: "reason", header: "Alasan", render: (row) => row.revision_reason },
+      { key: "requested", header: "Diminta", render: (row) => row.requested_at },
+      { key: "resubmitted", header: "Disubmit Ulang", render: (row) => row.resubmitted_at ?? "-" },
+      { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "approved" ? "success" : row.status === "requested" ? "danger" : "warning"}>{row.status.replaceAll("_", " ").toUpperCase()}</StatusBadge> }
+    ]} />
+    {revisions.map((revision) => <details className="revision-comparison" key={revision.id}>
+      <summary>Bandingkan Revision #{revision.revision_no}</summary>
+      <div className="form-grid">
+        <div><strong>Sebelum revisi</strong><pre>{snapshotText(revision.snapshot_before)}</pre></div>
+        <div><strong>Sesudah revisi</strong><pre>{snapshotText(revision.snapshot_after)}</pre></div>
+      </div>
+    </details>)}</section>
+    <section className="workspace-panel"><h2>Histori Keputusan</h2><DataTable rows={approvals} emptyText="Belum ada keputusan reviewer." columns={[{ key: "decision", header: "Decision", render: (row) => String(row.decision ?? "-") }, { key: "note", header: "Note", render: (row) => String(row.review_note ?? "-") }, { key: "result", header: "Final Result", render: (row) => String(row.final_result ?? "-") }, { key: "time", header: "Reviewed At", render: (row) => String(row.reviewed_at ?? "-") }]} /></section>
+  </div>;
+}
+
+function snapshotText(value: Record<string, unknown> | string | null | undefined) {
+  if (value == null) return "Belum disubmit ulang.";
+  if (typeof value !== "string") return JSON.stringify(value, null, 2);
+  try {
+    return JSON.stringify(JSON.parse(value), null, 2);
+  } catch {
+    return value;
+  }
 }
 
 function dialogTitle(dialog: "revision" | "approve" | "reject" | null) {
