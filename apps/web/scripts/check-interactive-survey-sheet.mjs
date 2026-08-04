@@ -3,12 +3,15 @@ import { readFile } from "node:fs/promises";
 import ts from "typescript";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const [source, component, route, navigation, repository, surveyorHelpers, reviewRepository, migration, workflowMigration] = await Promise.all([
+const [source, component, route, styles, dataTable, navigation, repository, surveyorHandler, surveyorHelpers, reviewRepository, migration, workflowMigration] = await Promise.all([
   read("../lib/survey-sheet.ts"),
   read("../components/surveys/interactive-survey-sheet.tsx"),
   read("../app/surveyor/surveys/[id]/page.tsx"),
+  read("../app/globals.css"),
+  read("../components/ui/data-table.tsx"),
   read("../constants/navigation-surveyor.ts"),
   read("../../../services/api/internal/surveyor/repository.go"),
+  read("../../../services/api/internal/surveyor/handler.go"),
   read("../../../services/api/internal/surveyor/helpers.go"),
   read("../../../services/api/internal/reviews/repository.go"),
   read("../../../services/api/migrations/0015_interactive_survey_sheet.up.sql"),
@@ -76,12 +79,23 @@ assert.match(component, /<svg/);
 assert.match(component, /role="button"/);
 assert.match(component, /onKeyDown/);
 assert.match(component, /location_selection_snapshot/);
+assert.match(component, /sidePanel/);
+assert.match(component, /damage\.damage_no/);
 assert.match(route, /Survey Sheet Interaktif/);
 assert.match(route, /Pratinjau &amp; Submit/);
 assert.match(route, /dimension_profile/);
 assert.match(route, /location_selection_snapshot/);
 assert.match(route, /checklist_response_id/);
 assert.match(route, /capture="environment"/);
+assert.match(route, /Informasi Pekerjaan &amp; Identitas Peti Kemas/);
+assert.match(route, /Foto Evidence Umum Survey/);
+assert.match(route, /Rekomendasi Tindakan/);
+assert.match(route, /onRowClick/);
+assert.match(dataTable, /onRowClick/);
+assert.match(styles, /survey-sheet-workspace[\s\S]*grid-template-columns: minmax\(0, 1\.65fr\) minmax\(340px, 1fr\)/);
+assert.match(styles, /@media \(max-width: 960px\)[\s\S]*survey-damage-editor-panel[\s\S]*position: fixed/);
+assert.match(styles, /survey-sheet-workspace[\s\S]*max-width: 100%/);
+assert.match(styles, /survey-sheet-summary-grid/);
 assert.doesNotMatch(route, /Lokasi manual \(fallback\)/);
 assert.doesNotMatch(route, /Alasan Lokasi Manual/);
 
@@ -98,6 +112,11 @@ assert.match(repository, /survey_sheet\.location\.select/);
 assert.match(repository, /location_selection_snapshot/);
 assert.match(repository, /dimension_profile/);
 assert.match(repository, /checklist_response_id/);
+assert.match(repository, /CreateSurveyPhotoMetadata/);
+assert.match(repository, /damageValue/);
+assert.match(repository, /survey_photos\.upload_general/);
+assert.match(surveyorHandler, /POST\("\/surveys\/:id\/photos"/);
+assert.match(surveyorHandler, /survey_photos\.upload\.assigned/);
 assert.match(surveyorHelpers, /CHECKLIST_FINDING_REQUIRED/);
 assert.match(surveyorHelpers, /PHOTO_CATEGORY_REQUIRED/);
 assert.match(surveyorHelpers, /DAMAGE_LOCATION_MASTER_REQUIRED/);

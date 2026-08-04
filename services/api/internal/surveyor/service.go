@@ -141,6 +141,20 @@ func (s *Service) UploadPhoto(ctx context.Context, damageID uuid.UUID, input Pho
 	return s.uploadPhoto(ctx, damageID, input, actor)
 }
 
+func (s *Service) UploadSurveyPhoto(ctx context.Context, surveyID uuid.UUID, input PhotoInput, actor Actor) (map[string]any, error) {
+	if err := requireSurveyorMutationRole(actor); err != nil {
+		return nil, err
+	}
+	if s.store == nil || strings.TrimSpace(s.bucket) == "" || input.Reader == nil || input.Size <= 0 || input.Size > s.maxUploadBytes {
+		return nil, ErrInvalidInput
+	}
+	if strings.TrimSpace(input.FileName) == "" {
+		input.FileName = "photo"
+	}
+	input.PhotoType = "general"
+	return s.uploadSurveyPhoto(ctx, surveyID, input, actor)
+}
+
 func (s *Service) PhotoContent(ctx context.Context, photoID uuid.UUID, variant string, actor Actor) (PhotoContent, error) {
 	if s.store == nil {
 		return PhotoContent{}, ErrNotFound

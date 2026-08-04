@@ -45,6 +45,16 @@ func TestReadPhotoRejectsInvalidAndOversizedFiles(t *testing.T) {
 	}
 }
 
+func TestGeneralSurveyPhotoWatermark(t *testing.T) {
+	text := buildWatermarkText(PhotoContext{
+		ContainerNo: "MSKU1234565", SurveyNo: "GIFT-SVY-2026-000001", DamageNo: "General Evidence",
+		SurveyorName: "Surveyor Demo",
+	}, time.Date(2026, 8, 4, 9, 15, 0, 0, time.UTC))
+	if !strings.Contains(text, "Damage: General Evidence") || !strings.Contains(text, "Surveyor: Surveyor Demo") {
+		t.Fatalf("general photo watermark is incomplete: %s", text)
+	}
+}
+
 func testPNG(t *testing.T) []byte {
 	t.Helper()
 	canvas := image.NewRGBA(image.Rect(0, 0, 320, 240))

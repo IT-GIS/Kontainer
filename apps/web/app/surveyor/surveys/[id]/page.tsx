@@ -1,6 +1,7 @@
 "use client";
 
-import { Camera, Check, FilePlus2, ImagePlus, Plus, Save, Send, Trash2, TriangleAlert } from "lucide-react";
+import { Camera, Check, FilePlus2, ImagePlus, Plus, Save, Send, Trash2, TriangleAlert, X } from "lucide-react";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
@@ -14,7 +15,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/hooks/use-auth";
 import { apiData } from "@/lib/api-client";
-import { buildFindingDescription, formatCedexDamage, parseLocationSnapshot, selectionDescription, type LocationSelectionSnapshot } from "@/lib/survey-sheet";
+import { buildFindingDescription, formatCedexDamage, parseLocationSnapshot, selectionDescription, SURVEY_SHEET_FACES, type LocationSelectionSnapshot } from "@/lib/survey-sheet";
 import type { OptionItem } from "@/types/jobs";
 import type { ChecklistItem, DamageDecisionPreview, DimensionProfile, SurveyDamage, SurveyDetail, SurveyGeneralInfo, SurveyMasterOption, SurveyMasterOptions, SurveyPhoto } from "@/types/surveyor";
 
@@ -112,6 +113,7 @@ function SurveyDetailContent() {
   const [decisionPreview, setDecisionPreview] = useState<DamageDecisionPreview | null>(null);
   const [decisionLoading, setDecisionLoading] = useState(false);
   const [photoDamage, setPhotoDamage] = useState<SurveyDamage | null>(null);
+  const [generalPhotoDialog, setGeneralPhotoDialog] = useState(false);
   const [pendingChecklistItem, setPendingChecklistItem] = useState<ChecklistItem | null>(null);
   const [damagePhotoFile, setDamagePhotoFile] = useState<File | null>(null);
   const [damagePhotoCaption, setDamagePhotoCaption] = useState("");
@@ -230,6 +232,8 @@ function SurveyDetailContent() {
   }
 
   function openEditDamage(row: SurveyDamage) {
+    const snapshot = parseLocationSnapshot(row.location_selection_snapshot);
+    const snapshotFace = SURVEY_SHEET_FACES.find((item) => item.code === snapshot?.face);
     const nextDamage = {
       ...emptyDamage,
       id: row.id,
@@ -245,7 +249,7 @@ function SurveyDetailContent() {
       responsibility_code_id: row.responsibility_code_id ?? "",
       severity: row.severity,
       dimension_profile: row.dimension_profile ?? "manual_review",
-      location_selection_snapshot: parseLocationSnapshot(row.location_selection_snapshot),
+      location_selection_snapshot: snapshot,
       quantity: row.quantity != null ? String(row.quantity) : "",
       quantity_unit: row.quantity_unit ?? "pc",
       length: row.length != null ? String(row.length) : "",
@@ -261,6 +265,8 @@ function SurveyDetailContent() {
     setDamagePhotoCategory(photoCategories[0]?.code ?? "");
     setDamageForm(nextDamage);
     setDamageBaseline(JSON.stringify(nextDamage));
+    if (snapshotFace) setActiveFace(snapshotFace.face);
+    setActiveTab("Survey Sheet Interaktif");
     setDamageDialog(true);
   }
 
@@ -347,7 +353,7 @@ function SurveyDetailContent() {
         await apiData(`/survey-damages/${savedDamageID}/photos`, { method: "POST", accessToken, body: photoForm });
       }
       closeDamageDialog(true);
-      setActiveTab("Daftar Temuan");
+      setActiveTab("Survey Sheet Interaktif");
       setMessage(damagePhotoFile ? "Temuan dan Foto Evidence tersimpan." : "Temuan tersimpan.");
     });
   }
@@ -372,10 +378,10 @@ function SurveyDetailContent() {
   }
 
   async function deleteDamage(row: SurveyDamage) {
-    if (!accessToken) return;
+    if (!accessToken || !window.confirm(`Hapus Temuan ${row.damage_no}? Nomor Temuan tidak akan dipakai ulang.`)) return;
     await runSave(async () => {
       await apiData(`/survey-damages/${row.id}`, { method: "DELETE", accessToken });
-      setMessage("Damage dihapus.");
+      setMessage(`Temuan ${row.damage_no} dihapus secara soft-delete.`);
     });
   }
 
@@ -393,6 +399,23 @@ function SurveyDetailContent() {
       await apiData(`/survey-damages/${photoDamage.id}/photos`, { method: "POST", accessToken, body: form });
       setPhotoDamage(null);
       setMessage("Foto evidence tersimpan.");
+    });
+  }
+
+  async function uploadGeneralPhoto(file: File | null, caption: string, photoCategory: string) {
+    if (!accessToken || !file || !photoCategory) {
+      setError("File dan kategori Foto Evidence umum wajib dipilih.");
+      return;
+    }
+    await runSave(async () => {
+      const form = new FormData();
+      form.set("file", file);
+      form.set("caption", caption);
+      form.set("photo_type", "general");
+      form.set("photo_category", photoCategory);
+      await apiData(`/surveys/${params.id}/photos`, { method: "POST", accessToken, body: form });
+      setGeneralPhotoDialog(false);
+      setMessage("Foto Evidence umum Survey tersimpan.");
     });
   }
 
@@ -430,13 +453,29 @@ function SurveyDetailContent() {
       {activeTab === "Ringkasan Pekerjaan" ? <JobSummaryTab survey={survey} /> : null}
       {activeTab === "Identitas Peti Kemas" ? <IdentityTab survey={survey} general={general} readonly={readonly} isSaving={isSaving} onChange={setGeneral} onSave={saveGeneral} /> : null}
       {activeTab === "Checklist" ? <ChecklistTab items={checklist} readonly={readonly} isSaving={isSaving} onChange={setChecklist} onSave={saveChecklist} onFinding={(item) => void openChecklistFinding(item)} /> : null}
-      {activeTab === "Survey Sheet Interaktif" ? <InteractiveSurveySheet containerSize={survey.container_size} activeFace={activeFace} locations={cedexLocations} damages={survey.damages ?? []} readonly={readonly} onFace={setActiveFace} onUseLocation={openNewDamage} onProposeLocation={openLocationProposal} onEditDamage={openEditDamage} /> : null}
-      {activeTab === "Daftar Temuan" ? <DamageList rows={survey.damages ?? []} readonly={readonly} onAdd={() => { setPendingChecklistItem(null); setActiveTab("Survey Sheet Interaktif"); }} onEdit={openEditDamage} onDelete={deleteDamage} onPhoto={setPhotoDamage} /> : null}
-      {activeTab === "Foto" ? <PhotosTab damages={survey.damages ?? []} photos={survey.photos ?? []} readonly={readonly} onPhoto={setPhotoDamage} onDeletePhoto={deletePhoto} /> : null}
+      {activeTab === "Survey Sheet Interaktif" ? <div className="survey-sheet-workspace">
+        <SurveySheetSummary survey={survey} />
+        <InteractiveSurveySheet
+          key={damageForm.id ?? "survey-sheet"}
+          containerSize={survey.container_size}
+          activeFace={activeFace}
+          locations={cedexLocations}
+          damages={survey.damages ?? []}
+          readonly={readonly}
+          initialSelection={damageDialog ? damageForm.location_selection_snapshot : null}
+          onFace={setActiveFace}
+          onUseLocation={openNewDamage}
+          onProposeLocation={openLocationProposal}
+          onEditDamage={openEditDamage}
+          sidePanel={damageDialog ? <DamageEditorPanel title={damageForm.id ? `Edit ${survey.damages?.find((item) => item.id === damageForm.id)?.damage_no ?? "Temuan"}` : "Temuan Baru"} isSaving={isSaving} onClose={() => closeDamageDialog()} onSave={() => void saveDamage()}>
+            <DamageFormFields form={damageForm} setForm={setDamageForm} checklistItems={checklist.filter((item) => item.value === "no")} locations={cedexLocations} components={components} damageCodes={damageCodes} damageMasters={damageMasters} repairs={repairs} materials={materials} responsibilities={responsibilities} severities={severities} photoCategories={photoCategories} photoFile={damagePhotoFile} photoCaption={damagePhotoCaption} photoCategory={damagePhotoCategory} decisionPreview={decisionPreview} decisionLoading={decisionLoading} onPhotoFile={setDamagePhotoFile} onPhotoCaption={setDamagePhotoCaption} onPhotoCategory={setDamagePhotoCategory} onPropose={() => setProposalDialog(true)} />
+          </DamageEditorPanel> : undefined}
+        />
+        <DamageList rows={survey.damages ?? []} readonly={readonly} embedded onAdd={() => { setPendingChecklistItem(null); setMessage("Pilih area pada diagram untuk membuat Temuan baru."); }} onSelect={openEditDamage} onEdit={openEditDamage} onDelete={deleteDamage} onPhoto={setPhotoDamage} />
+      </div> : null}
+      {activeTab === "Daftar Temuan" ? <DamageList rows={survey.damages ?? []} readonly={readonly} onAdd={() => { setPendingChecklistItem(null); setActiveTab("Survey Sheet Interaktif"); setMessage("Pilih area pada diagram untuk membuat Temuan baru."); }} onSelect={openEditDamage} onEdit={openEditDamage} onDelete={deleteDamage} onPhoto={setPhotoDamage} /> : null}
+      {activeTab === "Foto" ? <PhotosTab damages={survey.damages ?? []} photos={survey.photos ?? []} categories={photoCategories} readonly={readonly} onGeneralPhoto={() => setGeneralPhotoDialog(true)} onPhoto={setPhotoDamage} onDeletePhoto={deletePhoto} /> : null}
       {activeTab === "Pratinjau & Submit" ? <PreviewAndSubmitTab survey={survey} activeFace={activeFace} locations={cedexLocations} readonly={readonly} isSaving={isSaving} onFace={setActiveFace} onSubmit={submitSurvey} onBack={() => setActiveTab("Survey Sheet Interaktif")} onSaveDraft={() => setMessage("Draf yang sudah diisi tetap tersimpan.")} /> : null}
-      <FormDialog title={damageForm.id ? "Edit Temuan CEDEX" : "Tambah Temuan CEDEX"} open={damageDialog} onClose={closeDamageDialog} onSubmit={saveDamage} isSubmitting={isSaving} submitLabel="Simpan Temuan" size="large">
-        <DamageFormFields form={damageForm} setForm={setDamageForm} checklistItems={checklist.filter((item) => item.value === "no")} locations={cedexLocations} components={components} damageCodes={damageCodes} damageMasters={damageMasters} repairs={repairs} materials={materials} responsibilities={responsibilities} severities={severities} photoCategories={photoCategories} photoFile={damagePhotoFile} photoCaption={damagePhotoCaption} photoCategory={damagePhotoCategory} decisionPreview={decisionPreview} decisionLoading={decisionLoading} onPhotoFile={setDamagePhotoFile} onPhotoCaption={setDamagePhotoCaption} onPhotoCategory={setDamagePhotoCategory} onPropose={() => setProposalDialog(true)} />
-      </FormDialog>
       <FormDialog title="Ajukan Kode Baru" open={proposalDialog} onClose={() => setProposalDialog(false)} onSubmit={submitCodeProposal} isSubmitting={isSaving} submitLabel="Kirim Pengajuan" size="large">
         <div className="alert alert-info">Pengajuan tidak langsung mengubah master aktif. Admin akan memeriksa kode, alasan, dan bukti sebelum menyetujui atau menolak.</div>
         <div className="form-grid">
@@ -448,7 +487,8 @@ function SurveyDetailContent() {
           <label className="field form-span-2"><span>Catatan</span><textarea rows={3} value={proposalForm.notes} onChange={(event) => setProposalForm((current) => ({ ...current, notes: event.target.value }))} /></label>
         </div>
       </FormDialog>
-      <PhotoDialog damage={photoDamage} categories={photoCategories} open={Boolean(photoDamage)} onClose={() => setPhotoDamage(null)} onSubmit={uploadDamagePhoto} isSaving={isSaving} />
+      <PhotoDialog title={`Unggah Foto ${photoDamage?.damage_no ?? "Temuan"}`} categories={photoCategories} open={Boolean(photoDamage)} onClose={() => setPhotoDamage(null)} onSubmit={uploadDamagePhoto} isSaving={isSaving} />
+      <PhotoDialog title="Unggah Foto Evidence Umum Survey" categories={photoCategories} open={generalPhotoDialog} onClose={() => setGeneralPhotoDialog(false)} onSubmit={uploadGeneralPhoto} isSaving={isSaving} />
     </div>
   );
 }
@@ -466,6 +506,37 @@ function JobSummaryTab({ survey }: { survey: SurveyDetail }) {
     <div className="form-span-2"><span>Instruksi pekerjaan</span><strong>{survey.job_instruction ?? "-"}</strong></div>
     <div className="form-span-2"><span>Instruksi penugasan</span><strong>{survey.assignment_instruction ?? "-"}</strong></div>
   </div><div className="alert alert-info">Customer, Job/SPK, lokasi, PIC, dan assignment bersifat read-only pada workspace Surveyor.</div></section>;
+}
+
+function SurveySheetSummary({ survey }: { survey: SurveyDetail }) {
+  const rows = [
+    ["Nomor Job/SPK", `${survey.job_order_no}${survey.spk_no ? ` / ${survey.spk_no}` : ""}`],
+    ["Customer", survey.customer_name],
+    ["Jenis Pemeriksaan", survey.survey_type_name || "Inspeksi Kelaikan"],
+    ["Lokasi Pemeriksaan", survey.location_name],
+    ["Tanggal / Due Date", survey.spk_date ?? survey.job_deadline ?? survey.assignment_due_at ?? "-"],
+    ["Nomor Peti Kemas", survey.container_no],
+    ["Container Type", [survey.container_type_code, survey.container_type_name].filter(Boolean).join(" - ") || "-"],
+    ["ISO Type Code", survey.iso_type_code ?? "-"],
+    ["Ukuran", survey.container_size ? `${survey.container_size} feet` : "-"],
+    ["Manufacture Date", survey.manufacture_date ?? "-"],
+    ["CSC Plate", survey.csc_plate_status ?? survey.general_info?.csc_plate_status ?? "-"],
+    ["Surveyor", survey.surveyor_name],
+    ["Instruksi Pekerjaan", survey.job_instruction ?? survey.assignment_instruction ?? "-"],
+    ["Status Survey", survey.status.replaceAll("_", " ").toUpperCase()]
+  ];
+  return <section className="workspace-panel survey-sheet-summary-panel">
+    <div className="section-title-row"><div><span className="eyebrow">Konteks pekerjaan</span><h2>Informasi Pekerjaan &amp; Identitas Peti Kemas</h2></div><StatusBadge tone={survey.status === "need_revision" ? "danger" : survey.status === "approved" ? "success" : "warning"}>{survey.status.replaceAll("_", " ").toUpperCase()}</StatusBadge></div>
+    <div className="survey-sheet-summary-grid">{rows.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
+  </section>;
+}
+
+function DamageEditorPanel({ title, children, isSaving, onClose, onSave }: { title: string; children: React.ReactNode; isSaving: boolean; onClose: () => void; onSave: () => void }) {
+  return <aside className="survey-damage-editor-panel" aria-label={title}>
+    <div className="survey-damage-editor-header"><div><span className="eyebrow">Form Temuan</span><h3>{title}</h3></div><button aria-label="Tutup form Temuan" className="icon-button" onClick={onClose} type="button"><X size={18} /></button></div>
+    <div className="survey-damage-editor-body">{children}</div>
+    <div className="survey-damage-editor-actions"><button className="secondary-button" disabled={isSaving} onClick={onClose} type="button">Batalkan</button><button className="primary-button" disabled={isSaving} onClick={onSave} type="button"><Save size={17} /><span>{isSaving ? "Menyimpan..." : "Simpan Temuan"}</span></button></div>
+  </aside>;
 }
 
 function IdentityTab({ survey, general, readonly, isSaving, onChange, onSave }: { survey: SurveyDetail; general: SurveyGeneralInfo; readonly: boolean; isSaving: boolean; onChange: (value: SurveyGeneralInfo) => void; onSave: () => void }) {
@@ -499,33 +570,41 @@ function ChecklistTab({ items, readonly, isSaving, onChange, onSave, onFinding }
   return <section className="workspace-panel checklist-list"><div className="alert alert-info">Referensi inspeksi aktif disimpan bersama snapshot checklist saat survei dibuat.</div>{items.map((item, index) => <div className="check-row" key={item.item_key}><div><strong>{item.item_label ?? item.item_key}</strong>{item.is_critical ? <span>Kritis</span> : null}{item.standard_reference ? <small>{item.standard_reference}</small> : null}{item.value === "no" ? <button className="secondary-button checklist-finding-button" disabled={readonly || isSaving} onClick={() => onFinding(item)} type="button"><Plus size={16} /><span>Buat Temuan CEDEX</span></button> : null}</div>{item.response_type === "numeric" ? <label className="field"><span>Hasil {item.unit ? `(${item.unit})` : ""}</span><input disabled={readonly} type="number" value={item.numeric_value ?? ""} onChange={(event) => onChange(items.map((row, rowIndex) => rowIndex === index ? { ...row, numeric_value: event.target.value === "" ? null : Number(event.target.value) } : row))} /></label> : item.response_type === "text" ? <input disabled={readonly} value={item.value ?? ""} onChange={(event) => onChange(items.map((row, rowIndex) => rowIndex === index ? { ...row, value: event.target.value } : row))} /> : <div className="segmented-control">{["yes", "no", "na"].map((value) => <button disabled={readonly || isSaving} className={item.value === value ? "selected" : ""} key={value} onClick={() => onChange(items.map((row, rowIndex) => rowIndex === index ? { ...row, value } : row))}>{value.toUpperCase()}</button>)}</div>}</div>)}<StickyActions><button className="primary-button" disabled={readonly || isSaving} onClick={onSave}><Check size={17} /><span>Simpan Checklist</span></button></StickyActions></section>;
 }
 
-function DamageList({ rows, readonly, onAdd, onEdit, onDelete, onPhoto }: { rows: SurveyDamage[]; readonly: boolean; onAdd: () => void; onEdit: (row: SurveyDamage) => void; onDelete: (row: SurveyDamage) => void; onPhoto: (row: SurveyDamage) => void }) {
-  return <section className="workspace-panel"><div className="section-title-row"><div><h2>Daftar Temuan</h2><p className="muted-text">Format CEDEX tidak menampilkan separator untuk bagian yang kosong.</p></div><button className="primary-button" disabled={readonly} onClick={onAdd}><Plus size={17} /><span>Tambah Temuan</span></button></div><DataTable responsiveCards rows={rows} columns={[
-    { key: "damage_no", header: "No.", render: (row) => row.damage_no },
-    { key: "cedex_format", header: "CEDEX Format", render: (row) => <strong>{formatCedexDamage(row)}</strong> },
-    { key: "checklist", header: "Checklist terkait", render: (row) => row.checklist_item_label ?? "-" },
-    { key: "location", header: "Location", render: (row) => row.cedex_location_code ?? row.internal_location },
+function DamageList({ rows, readonly, embedded = false, onAdd, onSelect, onEdit, onDelete, onPhoto }: { rows: SurveyDamage[]; readonly: boolean; embedded?: boolean; onAdd: () => void; onSelect: (row: SurveyDamage) => void; onEdit: (row: SurveyDamage) => void; onDelete: (row: SurveyDamage) => void; onPhoto: (row: SurveyDamage) => void }) {
+  return <section className={`workspace-panel damage-list-panel ${embedded ? "damage-list-embedded" : ""}`}><div className="section-title-row"><div><span className="eyebrow">Tersinkron dengan marker</span><h2>Daftar Temuan</h2><p className="muted-text">Klik baris untuk kembali ke sisi, area, dan form Temuan terkait.</p></div><button className="primary-button" disabled={readonly} onClick={onAdd} type="button"><Plus size={17} /><span>Tambah Temuan</span></button></div><DataTable responsiveCards rows={rows} onRowClick={onSelect} columns={[
+    { key: "damage_no", header: "No. Temuan", render: (row) => <strong>{row.damage_no}</strong> },
+    { key: "location", header: "Lokasi", render: (row) => <span title={formatCedexDamage(row)}>{row.cedex_location_code ?? row.internal_location}</span> },
     { key: "component", header: "Component", render: (row) => row.component_name ?? row.component_code ?? "-" },
     { key: "damage", header: "Damage", render: (row) => row.damage_name ?? row.damage_code ?? "-" },
-    { key: "dimension", header: "Dimension", render: (row) => [row.length, row.width, row.depth].filter((value) => value != null).join(" × ") + ([row.length, row.width, row.depth].some((value) => value != null) ? ` ${row.unit ?? ""}` : "") || "-" },
-    { key: "quantity", header: "Quantity", render: (row) => row.quantity == null ? "-" : `${row.quantity} ${row.quantity_unit ?? ""}` },
-    { key: "repair", header: "Action", render: (row) => row.repair_name ?? row.repair_code ?? "-" },
-    { key: "material", header: "Material", render: (row) => row.material_name ?? row.material_code ?? "-" },
-    { key: "photo", header: "Foto", render: (row) => <button className="secondary-button table-action" disabled={readonly} onClick={() => onPhoto(row)}><Camera size={16} /><span>{row.photo_count ?? 0}</span></button> },
-    { key: "status", header: "Status", render: (row) => <StatusBadge tone={requiresRepair(row) ? "warning" : "neutral"}>{decisionResultText(row.decision_result)}</StatusBadge> },
-    { key: "actions", header: "Action", render: (row) => <div className="table-actions"><button className="secondary-button table-action" disabled={readonly} onClick={() => onEdit(row)}>Edit</button><button className="icon-button" disabled={readonly} onClick={() => void onDelete(row)} title="Delete damage"><Trash2 size={16} /></button></div> }
+    { key: "dimension", header: "Dimensi", render: formatDamageDimensions },
+    { key: "severity", header: "Severity", render: (row) => row.severity || "-" },
+    { key: "responsibility", header: "Responsibility", render: (row) => row.responsibility_name ?? row.responsibility_code ?? "-" },
+    { key: "repair", header: "Rekomendasi Tindakan", render: (row) => row.repair_name ?? row.repair_code ?? "-" },
+    { key: "decision", header: "Decision Result", render: (row) => <StatusBadge tone={requiresRepair(row) ? "warning" : "neutral"}>{decisionResultText(row.decision_result)}</StatusBadge> },
+    { key: "photo", header: "Jumlah Foto", render: (row) => <button aria-label={`Tambah foto ${row.damage_no}`} className="secondary-button table-action" disabled={readonly} onClick={(event) => { event.stopPropagation(); onPhoto(row); }} type="button"><Camera size={16} /><span>{row.photo_count ?? 0}</span></button> },
+    { key: "actions", header: "Aksi", render: (row) => <div className="table-actions"><button className="secondary-button table-action" disabled={readonly} onClick={(event) => { event.stopPropagation(); onEdit(row); }} type="button">Edit</button><button aria-label={`Hapus ${row.damage_no}`} className="icon-button" disabled={readonly} onClick={(event) => { event.stopPropagation(); void onDelete(row); }} title="Hapus Temuan" type="button"><Trash2 size={16} /></button></div> }
   ]} /></section>;
 }
 
-function PhotosTab({ damages, photos, readonly, onPhoto, onDeletePhoto }: { damages: SurveyDamage[]; photos: SurveyPhoto[]; readonly: boolean; onPhoto: (row: SurveyDamage) => void; onDeletePhoto: (photo: SurveyPhoto) => void }) {
+function PhotosTab({ damages, photos, categories, readonly, onGeneralPhoto, onPhoto, onDeletePhoto }: { damages: SurveyDamage[]; photos: SurveyPhoto[]; categories: OptionItem[]; readonly: boolean; onGeneralPhoto: () => void; onPhoto: (row: SurveyDamage) => void; onDeletePhoto: (photo: SurveyPhoto) => void }) {
+  const generalPhotos = photos.filter((photo) => !photo.damage_id);
   return <section className="workspace-panel photo-list">
-    <div className="photo-category-overview">{["Foto Umum", "Foto Identitas", "Foto CSC Plate", "Foto per Temuan", "Foto Setelah Perbaikan", "Foto Reinspection"].map((label) => <span key={label}>{label}</span>)}</div>
+    <div className="section-title-row"><div><span className="eyebrow">damage_id = NULL</span><h2>Foto Evidence Umum Survey</h2><p className="muted-text">Dokumentasikan tampak peti kemas, identitas, CSC Plate, dan kondisi umum memakai kategori master aktif.</p></div><button className="primary-button" disabled={readonly} onClick={onGeneralPhoto} type="button"><ImagePlus size={17} /><span>Tambah Foto Umum</span></button></div>
+    <div className="photo-category-overview" aria-label="Kategori foto aktif">{categories.map((item) => <span key={item.id}>{item.label}</span>)}</div>
+    {generalPhotos.length === 0 ? <div className="alert alert-info">Belum ada Foto Evidence umum pada Survey ini.</div> : <div className="photo-grid">{generalPhotos.map((photo) => <div className="photo-card" key={photo.id}><PhotoEvidence id={photo.id} name={photo.original_file_name} caption={photo.caption} /><div className="photo-card-actions"><span>{photo.photo_category ?? "general"}</span><button className="icon-button" disabled={readonly} onClick={() => onDeletePhoto(photo)} title="Hapus foto umum" type="button"><Trash2 size={16} /></button></div></div>)}</div>}
+    <div className="photo-list-divider"><h2>Foto Evidence per Temuan</h2><p className="muted-text">Setiap foto tetap terhubung ke Temuan dan kategori aktifnya.</p></div>
     {damages.length === 0 ? <p className="muted-text">Belum ada temuan yang dapat diberi Foto Evidence.</p> : null}
     {damages.map((damage) => {
       const damagePhotos = photos.filter((photo) => photo.damage_id === damage.id);
       return <div className="photo-section" key={damage.id}><div className="section-title-row"><div><h3>{damage.damage_no} - {damage.cedex_location_code ?? damage.internal_location}</h3><p className="muted-text">{damage.damage_name ?? damage.damage_code}</p></div><button className="secondary-button" disabled={readonly} onClick={() => onPhoto(damage)}><ImagePlus size={17} /><span>Tambah Foto</span></button></div>{damagePhotos.length === 0 ? <div className="alert alert-info">Belum ada Foto Evidence. Kategori yang diwajibkan oleh konfigurasi aktif akan ditampilkan pada Validasi Submit.</div> : <div className="photo-grid">{damagePhotos.map((photo) => <div className="photo-card" key={photo.id}><PhotoEvidence id={photo.id} name={photo.original_file_name} caption={photo.caption} /><div className="photo-card-actions"><span>{photo.photo_category ?? "damage_finding"}</span><button className="icon-button" disabled={readonly} onClick={() => onDeletePhoto(photo)} title="Hapus foto draft"><Trash2 size={16} /></button></div></div>)}</div>}</div>;
     })}
   </section>;
+}
+
+function formatDamageDimensions(row: SurveyDamage) {
+  const measurements = [row.length, row.width, row.depth].filter((value) => value != null);
+  const dimension = measurements.length > 0 ? `${measurements.join(" × ")} ${row.unit ?? ""}`.trim() : "-";
+  return row.quantity == null ? dimension : `${dimension === "-" ? "" : `${dimension} · `}${row.quantity} ${row.quantity_unit ?? ""}`.trim();
 }
 
 function PreviewAndSubmitTab({ survey, activeFace, locations, readonly, isSaving, onFace, onSubmit, onBack, onSaveDraft }: { survey: SurveyDetail; activeFace: string; locations: SurveyMasterOption[]; readonly: boolean; isSaving: boolean; onFace: (face: string) => void; onSubmit: () => void; onBack: () => void; onSaveDraft: () => void }) {
@@ -583,7 +662,6 @@ function DamageFormFields({
   onPhotoCategory: (value: string) => void;
   onPropose: () => void;
 }) {
-  const legacyResponsibility = responsibilities.find((item) => item.id === form.responsibility_code_id);
   const selectedDamage = damageMasters.find((item) => item.id === form.damage_code_id);
   const selectedLocation = locations.find((item) => item.id === form.cedex_location_id);
   const selectedComponent = components.find((item) => item.id === form.component_code_id);
@@ -620,13 +698,13 @@ function DamageFormFields({
       damageMasters={damageMasters}
       repairs={repairs}
       materials={materials}
+      responsibilities={responsibilities}
       severities={severities}
     />
     {selectedDamage?.requires_dimension ? (
       <div className="alert alert-warning">Damage ini memerlukan dimensi. Pilih Dimension Profile; hanya field yang relevan dengan profil tersebut yang diwajibkan.</div>
     ) : null}
     <div className="form-grid">
-      {form.responsibility_code_id ? <Field label="Responsibility (Legacy - baca-saja)"><input readOnly value={legacyResponsibility ? `${legacyResponsibility.code ?? ""} - ${legacyResponsibility.label}` : "Referensi legacy tidak ditemukan"} /></Field> : null}
       <DecisionRuleCard preview={decisionPreview} loading={decisionLoading} />
       <div className="finding-description-preview form-span-2">
         <strong>Deskripsi temuan otomatis</strong>
@@ -634,12 +712,12 @@ function DamageFormFields({
         <small className="muted-text">Deskripsi dibuat sistem dan disimpan sebagai snapshot. Remark di bawah hanya untuk catatan khusus Surveyor.</small>
       </div>
       <label className="field form-span-2"><span>Remark khusus</span><textarea rows={4} value={form.remark} onChange={(event) => setDamageValue(setForm, "remark", event.target.value)} /></label>
-      <div className="damage-photo-fields form-span-2"><strong>Foto Evidence</strong><p className="muted-text">Unggah foto sesuai kategori aktif. Kategori wajib divalidasi sistem sebelum Submit.</p><div className="form-grid"><Field label="Kategori Foto"><select value={photoCategory} onChange={(event) => onPhotoCategory(event.target.value)}><option value="">Pilih kategori aktif</option>{photoCategories.map((item) => <option key={item.id} value={item.code}>{item.code} - {item.label}</option>)}</select></Field><label className="field"><span>Ambil Foto</span><input accept="image/jpeg,image/png,image/webp" capture="environment" type="file" onChange={(event) => onPhotoFile(event.target.files?.[0] ?? null)} /></label><label className="field"><span>Pilih dari Galeri</span><input accept="image/jpeg,image/png,image/webp" type="file" onChange={(event) => onPhotoFile(event.target.files?.[0] ?? null)} /></label><label className="field form-span-2"><span>Caption</span><textarea rows={2} value={photoCaption} onChange={(event) => onPhotoCaption(event.target.value)} /></label></div>{photoFile ? <div className="alert alert-success">Foto siap diunggah: {photoFile.name}</div> : null}</div>
+      <div className="damage-photo-fields form-span-2"><strong>Foto Evidence</strong><p className="muted-text">Unggah foto sesuai kategori aktif. Kategori wajib divalidasi sistem sebelum Submit.</p><div className="form-grid"><Field label="Kategori Foto"><select value={photoCategory} onChange={(event) => onPhotoCategory(event.target.value)}><option value="">Pilih kategori aktif</option>{photoCategories.map((item) => <option key={item.id} value={item.code}>{item.code} - {item.label}</option>)}</select></Field><label className="field"><span>Ambil Foto</span><input accept="image/jpeg,image/png,image/webp" capture="environment" type="file" onChange={(event) => onPhotoFile(event.target.files?.[0] ?? null)} /></label><label className="field"><span>Pilih dari Galeri</span><input accept="image/jpeg,image/png,image/webp" type="file" onChange={(event) => onPhotoFile(event.target.files?.[0] ?? null)} /></label><label className="field form-span-2"><span>Caption</span><textarea rows={2} value={photoCaption} onChange={(event) => onPhotoCaption(event.target.value)} /></label></div>{photoFile ? <LocalPhotoPreview file={photoFile} key={`${photoFile.name}-${photoFile.lastModified}`} /> : null}</div>
     </div>
   </>;
 }
 
-function DamageBaseFields({ form, setForm, locations, components, damageCodes, damageMasters, repairs, materials, severities }: {
+function DamageBaseFields({ form, setForm, locations, components, damageCodes, damageMasters, repairs, materials, responsibilities, severities }: {
   form: DamageForm;
   setForm: Dispatch<SetStateAction<DamageForm>>;
   locations: SurveyMasterOption[];
@@ -648,6 +726,7 @@ function DamageBaseFields({ form, setForm, locations, components, damageCodes, d
   damageMasters: SurveyMasterOption[];
   repairs: OptionItem[];
   materials: OptionItem[];
+  responsibilities: OptionItem[];
   severities: OptionItem[];
 }) {
   const profile = form.dimension_profile;
@@ -687,8 +766,8 @@ function DamageBaseFields({ form, setForm, locations, components, damageCodes, d
   }
   return <div className="form-grid">
     {hasStructuredSelection ? <div className="selected-location-summary form-span-2"><strong>Lokasi CEDEX terpilih</strong><div className="detail-grid"><div><span>Location Code</span><b>{locations.find((item) => item.id === form.cedex_location_id)?.code ?? "Belum terpetakan"}</b></div><div><span>Face / Vertical</span><b>{form.location_selection_snapshot?.face} / {form.location_selection_snapshot?.vertical_position}</b></div><div><span>Section</span><b>{form.location_selection_snapshot?.section_start === form.location_selection_snapshot?.section_end ? form.location_selection_snapshot?.section_start : `${form.location_selection_snapshot?.section_start}-${form.location_selection_snapshot?.section_end}`}</b></div><div><span>Container Size</span><b>{form.location_selection_snapshot?.container_size} feet</b></div></div></div> : <Field label="Location Code *"><select value={form.cedex_location_id} onChange={(event) => selectLocation(event.target.value)}><option value="">Pilih Location Code aktif</option>{locations.map((item) => <option key={item.id} value={item.id}>{item.code} - {item.description ?? item.grid_code ?? item.name}</option>)}</select></Field>}
-    <Field label="Component Code *"><Select value={form.component_code_id} options={components} onChange={(value) => setDamageValue(setForm, "component_code_id", value)} /></Field>
-    <Field label="Damage Code *"><Select value={form.damage_code_id} options={damageCodes} onChange={selectDamage} /></Field>
+    <Field label="Component / Part *"><Select value={form.component_code_id} options={components} onChange={(value) => setDamageValue(setForm, "component_code_id", value)} /></Field>
+    <Field label="Damage Type *"><Select value={form.damage_code_id} options={damageCodes} onChange={selectDamage} /></Field>
     <Field label="Dimension Profile"><select value={form.dimension_profile} onChange={(event) => selectDimensionProfile(event.target.value as DimensionProfile | "")}><option value="">Pilih jika dimensi diperlukan</option><option value="length_width">Panjang &times; Lebar</option><option value="length_width_depth">Panjang &times; Lebar &times; Kedalaman</option><option value="depth_only">Kedalaman saja</option><option value="quantity_only">Quantity saja</option><option value="linear_length">Panjang linear</option><option value="area">Area</option><option value="none">Tanpa dimensi</option><option value="manual_review">Manual Review</option></select></Field>
     {showLength ? <Field label="Length *"><input type="number" min="0" value={form.length} onChange={(event) => setDamageValue(setForm, "length", event.target.value)} /></Field> : null}
     {showWidth ? <Field label="Width *"><input type="number" min="0" value={form.width} onChange={(event) => setDamageValue(setForm, "width", event.target.value)} /></Field> : null}
@@ -697,8 +776,9 @@ function DamageBaseFields({ form, setForm, locations, components, damageCodes, d
     {showQuantity ? <><Field label="Quantity *"><input type="number" min="0" value={form.quantity} onChange={(event) => setDamageValue(setForm, "quantity", event.target.value)} /></Field>
     <Field label="Quantity Unit"><select value={form.quantity_unit} onChange={(event) => setDamageValue(setForm, "quantity_unit", event.target.value)}><option value="pc">pc</option><option value="m">m</option><option value="m²">m²</option><option value="set">set</option></select></Field>
     </> : null}
-    <Field label="Action Repair Code *"><Select value={form.repair_code_id} options={repairs} onChange={(value) => setDamageValue(setForm, "repair_code_id", value)} /></Field>
+    <Field label="Rekomendasi Tindakan *"><Select value={form.repair_code_id} options={repairs} onChange={(value) => setDamageValue(setForm, "repair_code_id", value)} /></Field>
     <Field label="Material Code"><Select value={form.material_code_id} options={materials} onChange={(value) => setDamageValue(setForm, "material_code_id", value)} /></Field>
+    <Field label="Responsibility"><Select value={form.responsibility_code_id} options={responsibilities} onChange={(value) => setDamageValue(setForm, "responsibility_code_id", value)} /></Field>
     <Field label="Severity *"><Select value={severities.find((item) => item.code === form.severity)?.id ?? ""} options={severities} onChange={(value) => setDamageValue(setForm, "severity", severities.find((item) => item.id === value)?.code ?? "")} /></Field>
     <label className="field form-check"><input type="checkbox" checked={form.is_repair_required} onChange={(event) => setDamageValue(setForm, "is_repair_required", event.target.checked)} /> Perlu perbaikan</label>
     <label className="field form-check"><input type="checkbox" checked={form.is_cargo_worthy_impact} onChange={(event) => setDamageValue(setForm, "is_cargo_worthy_impact", event.target.checked)} /> Berdampak pada cargo worthy</label>
@@ -738,12 +818,18 @@ function requiresRepair(row: SurveyDamage) {
   return Boolean(row.is_repair_required || row.repair_code_id);
 }
 
-function PhotoDialog({ damage, categories, open, isSaving, onClose, onSubmit }: { damage: SurveyDamage | null; categories: OptionItem[]; open: boolean; isSaving: boolean; onClose: () => void; onSubmit: (file: File | null, caption: string, category: string) => void }) {
+function PhotoDialog({ title, categories, open, isSaving, onClose, onSubmit }: { title: string; categories: OptionItem[]; open: boolean; isSaving: boolean; onClose: () => void; onSubmit: (file: File | null, caption: string, category: string) => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
   const [category, setCategory] = useState("");
   useEffect(() => { if (!open) return; const timer = window.setTimeout(() => { setFile(null); setCaption(""); setCategory(categories[0]?.code ?? ""); }, 0); return () => window.clearTimeout(timer); }, [categories, open]);
-  return <FormDialog title={`Unggah Foto ${damage?.damage_no ?? ""}`} open={open} onClose={onClose} onSubmit={() => onSubmit(file, caption, category)} isSubmitting={isSaving} submitLabel="Unggah"><div className="form-grid"><Field label="Kategori Foto"><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="">Pilih kategori</option>{categories.map((item) => <option key={item.id} value={item.code}>{item.code} - {item.label}</option>)}</select></Field><label className="field"><span>Ambil Foto</span><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label><label className="field"><span>Pilih dari Galeri</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label><label className="field form-span-2"><span>Caption</span><textarea rows={3} value={caption} onChange={(e) => setCaption(e.target.value)} /></label></div></FormDialog>;
+  return <FormDialog title={title} open={open} onClose={onClose} onSubmit={() => onSubmit(file, caption, category)} isSubmitting={isSaving} submitLabel="Unggah"><div className="form-grid"><Field label="Kategori Foto *"><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="">Pilih kategori aktif</option>{categories.map((item) => <option key={item.id} value={item.code}>{item.code} - {item.label}</option>)}</select></Field><label className="field"><span>Ambil Foto</span><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label><label className="field"><span>Pilih dari Galeri</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label><label className="field form-span-2"><span>Caption (opsional)</span><textarea rows={3} value={caption} onChange={(e) => setCaption(e.target.value)} /></label>{file ? <div className="form-span-2"><LocalPhotoPreview file={file} key={`${file.name}-${file.lastModified}`} /></div> : null}{isSaving ? <div className="alert alert-info form-span-2">Mengunggah foto ke penyimpanan private...</div> : null}</div></FormDialog>;
+}
+
+function LocalPhotoPreview({ file }: { file: File }) {
+  const [source] = useState(() => URL.createObjectURL(file));
+  useEffect(() => () => URL.revokeObjectURL(source), [source]);
+  return <div className="local-photo-preview"><Image alt={`Preview ${file.name}`} fill sizes="(max-width: 640px) 100vw, 420px" src={source} unoptimized /><span>{file.name}</span></div>;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

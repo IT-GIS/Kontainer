@@ -79,11 +79,27 @@ type PhotoContent struct {
 }
 
 func (s *Service) uploadPhoto(ctx context.Context, damageID uuid.UUID, input PhotoInput, actor Actor) (map[string]any, error) {
-	original, contentType, err := readPhoto(input.Reader, s.maxUploadBytes)
+	photoContext, err := s.repo.PhotoContext(ctx, damageID, actor)
 	if err != nil {
 		return nil, err
 	}
-	photoContext, err := s.repo.PhotoContext(ctx, damageID, actor)
+	return s.storePhoto(ctx, photoContext, input, func(record PhotoRecordInput) (map[string]any, error) {
+		return s.repo.CreatePhotoMetadata(ctx, damageID, record, actor)
+	})
+}
+
+func (s *Service) uploadSurveyPhoto(ctx context.Context, surveyID uuid.UUID, input PhotoInput, actor Actor) (map[string]any, error) {
+	photoContext, err := s.repo.SurveyPhotoContext(ctx, surveyID, actor)
+	if err != nil {
+		return nil, err
+	}
+	return s.storePhoto(ctx, photoContext, input, func(record PhotoRecordInput) (map[string]any, error) {
+		return s.repo.CreateSurveyPhotoMetadata(ctx, surveyID, record, actor)
+	})
+}
+
+func (s *Service) storePhoto(ctx context.Context, photoContext PhotoContext, input PhotoInput, persist func(PhotoRecordInput) (map[string]any, error)) (map[string]any, error) {
+	original, contentType, err := readPhoto(input.Reader, s.maxUploadBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -122,12 +138,12 @@ func (s *Service) uploadPhoto(ctx context.Context, damageID uuid.UUID, input Pho
 		return nil, err
 	}
 
-	item, err := s.repo.CreatePhotoMetadata(ctx, damageID, PhotoRecordInput{
+	item, err := persist(PhotoRecordInput{
 		Original: originalFile, Watermarked: watermarkedFile, Caption: input.Caption,
 		PhotoType: input.PhotoType, PhotoCategory: input.PhotoCategory, TakenAt: takenAt,
 		GPSLatitude: photoContext.GPSLatitude, GPSLongitude: photoContext.GPSLongitude,
 		WatermarkText: watermarkText,
-	}, actor)
+	})
 	if err != nil {
 		s.cleanupObjects(originalKey, watermarkedKey)
 		return nil, err

@@ -660,23 +660,72 @@ func (r Repository) PhotoContext(ctx context.Context, damageID uuid.UUID, actor 
 	return info, nil
 }
 
+func (r Repository) SurveyPhotoContext(ctx context.Context, surveyID uuid.UUID, actor Actor) (PhotoContext, error) {
+	var info PhotoContext
+	err := r.pool.QueryRow(ctx, `
+		SELECT s.id, s.survey_no, jc.container_no, sp.full_name,
+		       sgi.gps_latitude, sgi.gps_longitude
+		FROM surveys s
+		JOIN job_containers jc ON jc.id=s.job_container_id
+		JOIN surveyor_profiles sp ON sp.id=s.surveyor_id
+		LEFT JOIN survey_general_infos sgi ON sgi.survey_id=s.id
+		WHERE s.id=$1 AND s.deleted_at IS NULL
+	`, surveyID).Scan(&info.SurveyID, &info.SurveyNo, &info.ContainerNo, &info.SurveyorName, &info.GPSLatitude, &info.GPSLongitude)
+	if err != nil {
+		if errors.Is(err, database.ErrNoRows) {
+			return PhotoContext{}, ErrNotFound
+		}
+		return PhotoContext{}, err
+	}
+	base, err := r.surveyBase(ctx, surveyID, actor)
+	if err != nil {
+		return PhotoContext{}, err
+	}
+	if !editableStatus(fmt.Sprint(base["status"])) {
+		return PhotoContext{}, ErrInvalidStatus
+	}
+	info.DamageNo = "General Evidence"
+	return info, nil
+}
+
 func (r Repository) CreatePhotoMetadata(ctx context.Context, damageID uuid.UUID, input PhotoRecordInput, actor Actor) (map[string]any, error) {
+	var surveyID uuid.UUID
+	if err := r.pool.QueryRow(ctx, `SELECT survey_id FROM survey_damages WHERE id=$1 AND deleted_at IS NULL`, damageID).Scan(&surveyID); err != nil {
+		if errors.Is(err, database.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return r.createPhotoMetadata(ctx, surveyID, &damageID, input, actor)
+}
+
+func (r Repository) CreateSurveyPhotoMetadata(ctx context.Context, surveyID uuid.UUID, input PhotoRecordInput, actor Actor) (map[string]any, error) {
+	return r.createPhotoMetadata(ctx, surveyID, nil, input, actor)
+}
+
+func (r Repository) createPhotoMetadata(ctx context.Context, surveyID uuid.UUID, damageID *uuid.UUID, input PhotoRecordInput, actor Actor) (map[string]any, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback(ctx)
-	damage, err := scanRow(tx.QueryRow(ctx, `SELECT id, survey_id, damage_no FROM survey_damages WHERE id=$1 AND deleted_at IS NULL`, damageID), []string{"id", "survey_id", "damage_no"})
-	if err != nil {
-		return nil, err
-	}
-	surveyID := parseUUIDString(damage["survey_id"])
 	base, err := r.surveyBaseTx(ctx, tx, surveyID, actor)
 	if err != nil {
 		return nil, err
 	}
 	if !editableStatus(fmt.Sprint(base["status"])) {
 		return nil, ErrInvalidStatus
+	}
+	var damageValue any
+	if damageID != nil {
+		var found uuid.UUID
+		if err := tx.QueryRow(ctx, `SELECT id FROM survey_damages WHERE id=$1 AND survey_id=$2 AND deleted_at IS NULL`, *damageID, surveyID).Scan(&found); err != nil {
+			if errors.Is(err, database.ErrNoRows) {
+				return nil, ErrNotFound
+			}
+			return nil, err
+		}
+		damageValue = found
 	}
 	if err := r.validatePhotoCategoryTx(
 		ctx,
@@ -710,7 +759,7 @@ func (r Repository) CreatePhotoMetadata(ctx context.Context, damageID uuid.UUID,
 			caption, taken_at, gps_latitude, gps_longitude, watermark_text, uploaded_by
 		) VALUES ($1,$2,$3,$4,$5,NULLIF($6,''),NULLIF($7,''),$8,$9,$10,$11,$12)
 		RETURNING id, survey_id, damage_id, file_id, watermarked_file_id, photo_type, photo_category, caption, created_at
-	`, surveyID, damageID, fileID, watermarkedFileID, photoType, input.PhotoCategory, input.Caption, input.TakenAt, input.GPSLatitude, input.GPSLongitude, input.WatermarkText, actor.UserID), []string{"id", "survey_id", "damage_id", "file_id", "watermarked_file_id", "photo_type", "photo_category", "caption", "created_at"})
+	`, surveyID, damageValue, fileID, watermarkedFileID, photoType, input.PhotoCategory, input.Caption, input.TakenAt, input.GPSLatitude, input.GPSLongitude, input.WatermarkText, actor.UserID), []string{"id", "survey_id", "damage_id", "file_id", "watermarked_file_id", "photo_type", "photo_category", "caption", "created_at"})
 	if err != nil {
 		return nil, err
 	}
@@ -720,7 +769,11 @@ func (r Repository) CreatePhotoMetadata(ctx context.Context, damageID uuid.UUID,
 	item["original_file_name"] = input.Original.FileName
 	item["content_url"] = fmt.Sprintf("/survey-photos/%s/content", photoID)
 	item["original_url"] = fmt.Sprintf("/survey-photos/%s/content?variant=original", photoID)
-	_ = r.insertAudit(ctx, tx, actor, "survey_photos.upload", "survey_photos", &photoID, nil, item)
+	auditAction := "survey_photos.upload"
+	if damageID == nil {
+		auditAction = "survey_photos.upload_general"
+	}
+	_ = r.insertAudit(ctx, tx, actor, auditAction, "survey_photos", &photoID, nil, item)
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}

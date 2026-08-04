@@ -45,6 +45,7 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	v1.GET("/surveys/:id/damages", middleware.RequirePermission(authService, "survey_damages.view.assigned"), h.Damages)
 	v1.POST("/surveys/:id/damages", middleware.RequirePermission(authService, "survey_damages.create.assigned"), h.CreateDamage)
 	v1.GET("/surveys/:id/photos", middleware.RequirePermission(authService, "survey_photos.view.assigned"), h.Photos)
+	v1.POST("/surveys/:id/photos", middleware.RequirePermission(authService, "survey_photos.upload.assigned"), h.UploadSurveyPhoto)
 	v1.GET("/surveys/:id/preview", middleware.RequirePermission(authService, "surveys.view.assigned"), h.Preview)
 	v1.POST("/surveys/:id/submit", middleware.RequirePermission(authService, "surveys.submit.assigned"), h.Submit)
 
@@ -348,6 +349,46 @@ func (h Handler) UploadPhoto(c *gin.Context) {
 		return
 	}
 	apphttp.Created(c, "Foto evidence berhasil disimpan.", item)
+}
+
+func (h Handler) UploadSurveyPhoto(c *gin.Context) {
+	id, ok := parseID(c)
+	if !ok {
+		return
+	}
+	maxBodyBytes := h.service.MaxUploadBytes() + 1024*1024
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBodyBytes)
+	file, err := c.FormFile("file")
+	if err != nil {
+		apphttp.Fail(c, http.StatusUnprocessableEntity, "File foto wajib diisi.", "VALIDATION_ERROR", nil)
+		return
+	}
+	if file.Size <= 0 || file.Size > h.service.MaxUploadBytes() {
+		apphttp.Fail(c, http.StatusUnprocessableEntity, "Ukuran file foto tidak valid.", "VALIDATION_ERROR", nil)
+		return
+	}
+	opened, err := file.Open()
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	defer opened.Close()
+	var takenAt *time.Time
+	if value := c.PostForm("taken_at"); value != "" {
+		parsed, parseErr := time.Parse(time.RFC3339, value)
+		if parseErr != nil {
+			apphttp.Fail(c, http.StatusUnprocessableEntity, "taken_at tidak valid.", "VALIDATION_ERROR", nil)
+			return
+		}
+		takenAt = &parsed
+	}
+	input := PhotoInput{Reader: opened, FileName: file.Filename, ContentType: file.Header.Get("Content-Type"), Size: file.Size, Caption: c.PostForm("caption"), PhotoType: "general", PhotoCategory: c.PostForm("photo_category"), TakenAt: takenAt}
+	item, err := h.service.UploadSurveyPhoto(c.Request.Context(), id, input, actorFromContext(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.Created(c, "Foto Evidence umum Survey berhasil disimpan.", item)
 }
 
 func (h Handler) PhotoContent(c *gin.Context) {

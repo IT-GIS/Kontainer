@@ -27,6 +27,8 @@ type InteractiveSurveySheetProps = {
   damages: SurveyDamage[];
   readonly?: boolean;
   preview?: boolean;
+  sidePanel?: React.ReactNode;
+  initialSelection?: LocationSelectionSnapshot | null;
   onFace: (face: string) => void;
   onUseLocation?: (selection: LocationSelectionSnapshot, location: SurveyMasterOption) => void;
   onProposeLocation?: (selection: LocationSelectionSnapshot) => void;
@@ -49,6 +51,8 @@ export function InteractiveSurveySheet({
   damages,
   readonly = false,
   preview = false,
+  sidePanel,
+  initialSelection = null,
   onFace,
   onUseLocation,
   onProposeLocation,
@@ -58,7 +62,7 @@ export function InteractiveSurveySheet({
   const config = SURVEY_SHEET_FACES.find((item) => item.face === activeFace) ?? SURVEY_SHEET_FACES[0];
   const areas = useMemo(() => size ? buildSheetAreas(config, size) : [], [config, size]);
   const [anchor, setAnchor] = useState<SurveySheetArea | null>(null);
-  const [selection, setSelection] = useState<LocationSelectionSnapshot | null>(null);
+  const [selection, setSelection] = useState<LocationSelectionSnapshot | null>(initialSelection);
   const [zoom, setZoom] = useState(1);
   const mappedLocation = useMemo(
     () => selection ? findStructuredLocation(selection, locations) : undefined,
@@ -147,15 +151,17 @@ export function InteractiveSurveySheet({
         </div>
 
         {!preview ? (
-          <SelectedLocationPanel
-            selection={selection}
-            location={mappedLocation}
-            readonly={readonly}
-            waitingForRange={Boolean(anchor)}
-            onReset={resetSelection}
-            onUse={() => selection && mappedLocation && onUseLocation?.(selection, mappedLocation)}
-            onPropose={() => selection && onProposeLocation?.(selection)}
-          />
+          sidePanel ?? (
+            <SelectedLocationPanel
+              selection={selection}
+              location={mappedLocation}
+              readonly={readonly}
+              waitingForRange={Boolean(anchor)}
+              onReset={resetSelection}
+              onUse={() => selection && mappedLocation && onUseLocation?.(selection, mappedLocation)}
+              onPropose={() => selection && onProposeLocation?.(selection)}
+            />
+          )
         ) : null}
       </div>
 
@@ -296,8 +302,8 @@ function ContainerFaceSvg({
               transform={`translate(${point.x} ${point.y})`}
             >
               <title>Temuan {damage.damage_no}</title>
-              <circle r="17" />
-              <text dominantBaseline="middle" textAnchor="middle">{damage.damage_no.replace(/\D/g, "").slice(-2) || damage.damage_no.slice(-2)}</text>
+              <rect height="34" rx="17" width="64" x="-32" y="-17" />
+              <text dominantBaseline="middle" textAnchor="middle">{damage.damage_no}</text>
             </g>
           );
         })}

@@ -43,7 +43,7 @@ assert.match(masterService, /strings\.ToUpper/);
 assert.match(surveyorScope, /customer_id IS NULL/);
 assert.match(surveyorScope, /WHERE (?:location|component|damage|repair|material)\.status='active'/);
 assert.doesNotMatch(surveyorPage, /label="Perbaikan"/);
-assert.match(surveyorPage, /header: "Action"/);
-assert.match(surveyorPage, /label="Action Repair Code \*"/);
+assert.match(surveyorPage, /header: "Rekomendasi Tindakan"/);
+assert.match(surveyorPage, /label="Rekomendasi Tindakan \*"/);
 
 console.log("ISO CEDEX one-page master contract checks passed.");

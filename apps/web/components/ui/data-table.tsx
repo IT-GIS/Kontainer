@@ -22,6 +22,7 @@ type DataTableProps<T> = {
   sortOrder?: SortOrder;
   onSort?: (key: string, order: SortOrder) => void;
   responsiveCards?: boolean;
+  onRowClick?: (row: T) => void;
 };
 
 export function DataTable<T>({
@@ -36,7 +37,8 @@ export function DataTable<T>({
   sortBy,
   sortOrder = "asc",
   onSort,
-  responsiveCards = false
+  responsiveCards = false,
+  onRowClick
 }: DataTableProps<T>) {
   return (
     <div className={`table-frame${responsiveCards ? " table-frame-responsive-cards" : ""}`}>
@@ -72,7 +74,17 @@ export function DataTable<T>({
               </tr>
             ) : (
               rows.map((row, index) => (
-                <tr key={index}>
+                <tr
+                  className={onRowClick ? "table-row-clickable" : undefined}
+                  key={index}
+                  onClick={() => onRowClick?.(row)}
+                  onKeyDown={(event) => {
+                    if (!onRowClick || (event.key !== 'Enter' && event.key !== ' ')) return;
+                    event.preventDefault();
+                    onRowClick(row);
+                  }}
+                  tabIndex={onRowClick ? 0 : undefined}
+                >
                   {columns.map((column) => (
                     <td data-label={column.header} key={column.key}>{column.render(row)}</td>
                   ))}
