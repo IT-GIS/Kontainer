@@ -37,6 +37,8 @@ for (const label of forbiddenCanonicalLabels) {
 }
 
 assert.match(effectiveAdminSource, /"Referensi Pemeriksaan", "\/master\/inspection-references"/);
+assert.match(effectiveAdminSource, /"Monitoring Survey"/);
+assert.match(effectiveAdminSource, /"\/monitoring\/surveys"/);
 assert.match(effectiveAdminSource, /"ISO CEDEX", "\/master\/iso-cedex"/);
 assert.match(effectiveAdminSource, /"Surveyor GIFT", "\/master\/surveyors"/);
 

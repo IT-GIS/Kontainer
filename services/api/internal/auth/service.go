@@ -71,6 +71,7 @@ func (s *Service) Login(ctx context.Context, input LoginInput) (TokenPair, error
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresIn:    int(s.tokens.AccessTTL().Seconds()),
+		ActiveRole:   activeRole,
 		User:         userContext,
 	}, nil
 }
@@ -137,6 +138,7 @@ func (s *Service) Refresh(ctx context.Context, input RefreshInput) (TokenPair, e
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresIn:    int(s.tokens.AccessTTL().Seconds()),
+		ActiveRole:   activeRole,
 		User:         userContext,
 	}, nil
 }

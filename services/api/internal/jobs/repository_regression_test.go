@@ -26,16 +26,22 @@ func TestJobContainerInsertColumnsAndArgumentsStayAligned(t *testing.T) {
 	}
 	validation := ValidateContainerNumber(input.ContainerNo)
 	containerType := resolvedContainerType{ID: containerTypeID, ISOCode: "22G1"}
+	actorID := uuid.New()
 
-	args := jobContainerInsertArgs(jobID, validation, "override", input, containerType, &manufactureDate, input.CargoStatus)
+	args := jobContainerInsertArgs(jobID, validation, "override", input, containerType, &manufactureDate, nil, nil, input.CargoStatus, actorID)
 	wantArgs := []any{
 		jobID,
 		validation.ContainerNo,
+		input.ContainerNo,
 		validation.OwnerCode + validation.EquipmentIdentifier,
 		validation.SerialNumber,
 		validation.CheckDigit,
+		validation.CalculatedCheckDigit,
+		validation.IsCheckDigitValid,
 		"override",
 		input.CheckDigitOverrideReason,
+		actorID,
+		args[11],
 		containerTypeID,
 		"22G1",
 		input.SealNo,
@@ -45,6 +51,11 @@ func TestJobContainerInsertColumnsAndArgumentsStayAligned(t *testing.T) {
 		&payload,
 		&manufactureDate,
 		input.CSCPlateStatus,
+		input.CSCPlateNumber,
+		input.CSCApprovalReference,
+		(*time.Time)(nil),
+		(*time.Time)(nil),
+		input.CSCProgramType,
 		input.TruckNo,
 		input.DriverName,
 		input.Remark,
@@ -54,9 +65,12 @@ func TestJobContainerInsertColumnsAndArgumentsStayAligned(t *testing.T) {
 	}
 
 	wantColumns := []string{
-		"job_order_id", "container_no", "owner_code", "serial_number", "check_digit", "check_digit_status",
-		"check_digit_override_reason", "container_type_id", "iso_type_code", "seal_no", "cargo_status",
-		"gross_weight", "tare_weight", "payload", "manufacture_date", "csc_plate_status", "truck_no", "driver_name", "remark",
+		"job_order_id", "container_no", "container_number_input", "owner_code", "serial_number", "check_digit",
+		"container_check_digit_calculated", "container_check_digit_valid", "check_digit_status",
+		"check_digit_override_reason", "check_digit_override_by", "check_digit_override_at",
+		"container_type_id", "iso_type_code", "seal_no", "cargo_status", "gross_weight", "tare_weight", "payload",
+		"manufacture_date", "csc_plate_status", "csc_plate_number", "csc_approval_reference", "csc_manufacture_date",
+		"csc_next_examination_date", "csc_program_type", "truck_no", "driver_name", "remark",
 	}
 	if got := insertColumnNames(jobContainerInsertQuery); !reflect.DeepEqual(got, wantColumns) {
 		t.Fatalf("job container insert columns changed:\n got: %#v\nwant: %#v", got, wantColumns)

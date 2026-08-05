@@ -92,6 +92,11 @@ type ContainerInput struct {
 	Payload                  *float64 `json:"payload"`
 	ManufactureDate          *string  `json:"manufacture_date"`
 	CSCPlateStatus           string   `json:"csc_plate_status"`
+	CSCPlateNumber           string   `json:"csc_plate_number"`
+	CSCApprovalReference     string   `json:"csc_approval_reference"`
+	CSCManufactureDate       *string  `json:"csc_manufacture_date"`
+	CSCNextExaminationDate   *string  `json:"csc_next_examination_date"`
+	CSCProgramType           string   `json:"csc_program_type"`
 	TruckNo                  string   `json:"truck_no"`
 	DriverName               string   `json:"driver_name"`
 	Remark                   string   `json:"remark"`
@@ -117,14 +122,15 @@ type CancelInput struct {
 }
 
 type ContainerValidation struct {
-	ContainerNo         string `json:"container_no"`
-	IsFormatValid       bool   `json:"is_format_valid"`
-	IsCheckDigitValid   bool   `json:"is_check_digit_valid"`
-	OwnerCode           string `json:"owner_code"`
-	EquipmentIdentifier string `json:"equipment_identifier"`
-	SerialNumber        string `json:"serial_number"`
-	CheckDigit          string `json:"check_digit"`
-	CheckDigitStatus    string `json:"check_digit_status"`
+	ContainerNo          string `json:"container_no"`
+	IsFormatValid        bool   `json:"is_format_valid"`
+	IsCheckDigitValid    bool   `json:"is_check_digit_valid"`
+	OwnerCode            string `json:"owner_code"`
+	EquipmentIdentifier  string `json:"equipment_identifier"`
+	SerialNumber         string `json:"serial_number"`
+	CheckDigit           string `json:"check_digit"`
+	CalculatedCheckDigit string `json:"calculated_check_digit"`
+	CheckDigitStatus     string `json:"check_digit_status"`
 }
 
 type ImportResult struct {

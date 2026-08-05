@@ -69,6 +69,7 @@ func (h Handler) Login(c *gin.Context) {
 			"email":       result.User.Email,
 			"roles":       result.User.Roles,
 			"permissions": result.User.Permissions,
+			"active_role": result.ActiveRole,
 		},
 	})
 }
@@ -144,6 +145,7 @@ func (h Handler) Me(c *gin.Context) {
 		"email":       user.Email,
 		"roles":       user.Roles,
 		"permissions": user.Permissions,
+		"active_role": principal.ActiveRole,
 		"profile": gin.H{
 			"surveyor_profile_id": user.SurveyorProfileID,
 		},

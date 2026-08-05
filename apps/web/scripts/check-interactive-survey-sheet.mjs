@@ -130,11 +130,12 @@ assert.doesNotMatch(route, /Alasan Lokasi Manual/);
 
 for (const label of [
   "Dashboard", "Pekerjaan Saya", "Belum Dimulai", "Sedang Dikerjakan",
-  "Perlu Revisi", "Menunggu Review", "Riwayat Inspeksi",
+	"Terkirim & Dalam Review", "Perlu Revisi", "Selesai", "Riwayat",
   "Pengajuan Kode CEDEX", "Profil"
 ]) {
   assert.match(navigation, new RegExp(label));
 }
+assert.match(navigation, /state=not_started/);
 assert.doesNotMatch(navigation, /"(?:Master Data|User Management|Role|Permission|Audit Log)"/);
 
 assert.match(repository, /survey_sheet\.location\.select/);

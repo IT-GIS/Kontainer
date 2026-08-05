@@ -2,6 +2,8 @@ package jobs
 
 import (
 	"container-survey/services/api/internal/database"
+	"container-survey/services/api/internal/jobstatus"
+	"container-survey/services/api/internal/masterdata"
 	"container-survey/services/api/internal/numbering"
 	"context"
 	"encoding/json"
@@ -95,6 +97,13 @@ func (r Repository) CreateJob(ctx context.Context, input JobInput, actor Actor) 
 	personnel, err := r.validateJobOwnershipTx(ctx, tx, customerID, surveyTypeID, locationID, personnelID)
 	if err != nil {
 		return nil, err
+	}
+	readiness, err := masterdata.EvaluateReadinessTx(ctx, tx, customerID, surveyTypeID)
+	if err != nil {
+		return nil, err
+	}
+	if !readiness.Ready() {
+		return nil, readinessValidationError(readiness)
 	}
 	deadline, err := parseOptionalTime(input.Deadline)
 	if err != nil {
@@ -295,12 +304,19 @@ func (r Repository) ListContainers(ctx context.Context, jobID uuid.UUID, params 
 	}
 	args = append(args, perPage, (page-1)*perPage)
 	rows, err := r.pool.Query(ctx, fmt.Sprintf(`
-		SELECT jc.id, jc.container_no, jc.check_digit_status, jc.check_digit_override_reason, jc.iso_type_code, jc.seal_no, jc.cargo_status,
+		SELECT jc.id, jc.container_no, jc.container_number_input, jc.check_digit,
+		       jc.container_check_digit_calculated, jc.container_check_digit_valid,
+		       jc.check_digit_status, jc.check_digit_override_reason, jc.check_digit_override_by,
+		       override_user.name AS check_digit_override_by_name, jc.check_digit_override_at,
+		       jc.iso_type_code, jc.seal_no, jc.cargo_status,
 		       jc.gross_weight, jc.tare_weight, jc.payload, jc.manufacture_date, jc.csc_plate_status,
+		       jc.csc_plate_number, jc.csc_approval_reference, jc.csc_manufacture_date,
+		       jc.csc_next_examination_date, jc.csc_program_type,
 		       jc.truck_no, jc.driver_name, jc.remark, jc.status,
 		       ct.id AS container_type_id, ct.code AS container_type_code
 		FROM job_containers jc
 		LEFT JOIN container_types ct ON ct.id = jc.container_type_id
+		LEFT JOIN users override_user ON override_user.id=jc.check_digit_override_by
 		%s ORDER BY jc.created_at ASC LIMIT $%d OFFSET $%d
 	`, where, len(args)-1, len(args)), args...)
 	if err != nil {
@@ -328,7 +344,7 @@ func (r Repository) AddContainer(ctx context.Context, jobID uuid.UUID, input Con
 	if err != nil {
 		return nil, err
 	}
-	item, err := r.addContainerTx(ctx, tx, jobID, jobUUID(job["customer_id"]), input)
+	item, err := r.addContainerTx(ctx, tx, jobID, jobUUID(job["customer_id"]), input, actor.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -337,6 +353,20 @@ func (r Repository) AddContainer(ctx context.Context, jobID uuid.UUID, input Con
 		return nil, err
 	}
 	if err := r.insertAudit(ctx, tx, actor, "job_containers.create", "job_containers", &containerID, nil, item); err != nil {
+		return nil, err
+	}
+	if fmt.Sprint(item["check_digit_status"]) == "override" {
+		validation := ValidateContainerNumber(input.ContainerNo)
+		override := map[string]any{
+			"container_number_input": input.ContainerNo, "container_no": validation.ContainerNo,
+			"calculated_check_digit": validation.CalculatedCheckDigit,
+			"reason":                 input.CheckDigitOverrideReason, "override_by": actor.UserID,
+		}
+		if err := r.insertAudit(ctx, tx, actor, "CONTAINER_CHECK_DIGIT_OVERRIDE", "job_containers", &containerID, nil, override); err != nil {
+			return nil, err
+		}
+	}
+	if _, err := jobstatus.RecalculateJobStatusTx(ctx, tx, jobID, &actor.UserID); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -357,7 +387,7 @@ func (r Repository) ImportContainers(ctx context.Context, jobID uuid.UUID, input
 		return result, err
 	}
 	for index, input := range inputs {
-		item, err := r.addContainerTx(ctx, tx, jobID, jobUUID(job["customer_id"]), input)
+		item, err := r.addContainerTx(ctx, tx, jobID, jobUUID(job["customer_id"]), input, actor.UserID)
 		if err != nil {
 			result.Failed++
 			result.Errors = append(result.Errors, map[string]any{"row": index + 1, "field": "container_no", "message": err.Error()})
@@ -366,6 +396,15 @@ func (r Repository) ImportContainers(ctx context.Context, jobID uuid.UUID, input
 		result.Imported++
 		containerID, _ := uuid.Parse(fmt.Sprint(item["id"]))
 		_ = r.insertAudit(ctx, tx, actor, "job_containers.import", "job_containers", &containerID, nil, item)
+		if fmt.Sprint(item["check_digit_status"]) == "override" {
+			validation := ValidateContainerNumber(input.ContainerNo)
+			override := map[string]any{
+				"container_number_input": input.ContainerNo, "container_no": validation.ContainerNo,
+				"calculated_check_digit": validation.CalculatedCheckDigit,
+				"reason":                 input.CheckDigitOverrideReason, "override_by": actor.UserID,
+			}
+			_ = r.insertAudit(ctx, tx, actor, "CONTAINER_CHECK_DIGIT_OVERRIDE", "job_containers", &containerID, nil, override)
+		}
 	}
 	status := "processed"
 	if result.Failed > 0 && result.Imported > 0 {
@@ -377,6 +416,9 @@ func (r Repository) ImportContainers(ctx context.Context, jobID uuid.UUID, input
 	errorJSON, _ := json.Marshal(result.Errors)
 	_, err = tx.Exec(ctx, `INSERT INTO container_import_batches (job_order_id,total_rows,success_rows,failed_rows,status,error_summary,imported_by) VALUES ($1,$2,$3,$4,$5,$6,$7)`, jobID, result.TotalRows, result.Imported, result.Failed, status, string(errorJSON), actor.UserID)
 	if err != nil {
+		return result, err
+	}
+	if _, err := jobstatus.RecalculateJobStatusTx(ctx, tx, jobID, &actor.UserID); err != nil {
 		return result, err
 	}
 	_ = r.insertJobEvent(ctx, tx, jobID, "containers_imported", "Container diimport.", fmt.Sprintf("%d berhasil, %d gagal", result.Imported, result.Failed), actor.UserID, result)
@@ -413,8 +455,16 @@ func (r Repository) Assign(ctx context.Context, jobID uuid.UUID, input AssignInp
 		return nil, err
 	}
 	defer tx.Rollback(ctx)
-	if _, err := r.getJobForUpdate(ctx, tx, jobID); err != nil {
+	job, err := r.getJobForUpdate(ctx, tx, jobID)
+	if err != nil {
 		return nil, err
+	}
+	readiness, err := masterdata.EvaluateReadinessTx(ctx, tx, jobUUID(job["customer_id"]), jobUUID(job["survey_type_id"]))
+	if err != nil {
+		return nil, err
+	}
+	if !readiness.Ready() {
+		return nil, readinessValidationError(readiness)
 	}
 	surveyorID, err := uuid.Parse(input.SurveyorID)
 	if err != nil {
@@ -460,7 +510,9 @@ func (r Repository) Assign(ctx context.Context, jobID uuid.UUID, input AssignInp
 			return nil, err
 		}
 	}
-	_, _ = tx.Exec(ctx, `UPDATE job_orders SET status='assigned', updated_by=$2, updated_at=now() WHERE id=$1 AND status='draft'`, jobID, actor.UserID)
+	if _, err := jobstatus.RecalculateJobStatusTx(ctx, tx, jobID, &actor.UserID); err != nil {
+		return nil, err
+	}
 	item := map[string]any{"id": assignmentID.String(), "assignment_no": assignmentNo, "status": "assigned", "assigned_containers": len(containerIDs), "start_date": startDate, "due_date": dueDate, "instruction": input.Instruction}
 	_ = r.insertJobEvent(ctx, tx, jobID, "surveyor_assigned", "Surveyor ditugaskan.", fmt.Sprintf("%d container ditugaskan", len(containerIDs)), actor.UserID, item)
 	_ = r.insertAudit(ctx, tx, actor, "assignments.assign", "assignments", &assignmentID, nil, item)
@@ -516,6 +568,9 @@ func (r Repository) Reassign(ctx context.Context, containerID uuid.UUID, input R
 	item := map[string]any{"assignment_no": assignmentNo, "status": "assigned", "container_id": containerID.String()}
 	_ = r.insertJobEvent(ctx, tx, jobID, "container_reassigned", "Container dialihkan.", input.Reason, actor.UserID, item)
 	_ = r.insertAudit(ctx, tx, actor, "job_containers.reassign", "job_containers", &containerID, container, item)
+	if _, err := jobstatus.RecalculateJobStatusTx(ctx, tx, jobID, &actor.UserID); err != nil {
+		return nil, err
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
@@ -551,15 +606,18 @@ func (r Repository) Timeline(ctx context.Context, jobID uuid.UUID) ([]map[string
 
 const jobContainerInsertQuery = `
 	INSERT INTO job_containers (
-		job_order_id,container_no,owner_code,serial_number,check_digit,check_digit_status,
-		check_digit_override_reason,container_type_id,iso_type_code,seal_no,cargo_status,
-		gross_weight,tare_weight,payload,manufacture_date,csc_plate_status,truck_no,driver_name,remark
+		job_order_id,container_no,container_number_input,owner_code,serial_number,check_digit,
+		container_check_digit_calculated,container_check_digit_valid,check_digit_status,
+		check_digit_override_reason,check_digit_override_by,check_digit_override_at,
+		container_type_id,iso_type_code,seal_no,cargo_status,gross_weight,tare_weight,payload,
+		manufacture_date,csc_plate_status,csc_plate_number,csc_approval_reference,
+		csc_manufacture_date,csc_next_examination_date,csc_program_type,truck_no,driver_name,remark
 	)
-	VALUES ($1,$2,$3,$4,$5,$6,NULLIF($7,''),$8,NULLIF($9,''),NULLIF($10,''),$11,$12,$13,$14,$15,NULLIF($16,''),NULLIF($17,''),NULLIF($18,''),NULLIF($19,''))
+	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NULLIF($10,''),$11,$12,$13,NULLIF($14,''),NULLIF($15,''),$16,$17,$18,$19,$20,NULLIF($21,''),NULLIF($22,''),NULLIF($23,''),$24,$25,NULLIF($26,''),NULLIF($27,''),NULLIF($28,''),NULLIF($29,''))
 	RETURNING id, container_no, check_digit_status, status
 `
 
-func (r Repository) addContainerTx(ctx context.Context, tx database.Tx, jobID uuid.UUID, customerID uuid.UUID, input ContainerInput) (map[string]any, error) {
+func (r Repository) addContainerTx(ctx context.Context, tx database.Tx, jobID uuid.UUID, customerID uuid.UUID, input ContainerInput, actorID uuid.UUID) (map[string]any, error) {
 	if err := validateContainerInput(input); err != nil {
 		return nil, err
 	}
@@ -579,11 +637,19 @@ func (r Repository) addContainerTx(ctx context.Context, tx database.Tx, jobID uu
 	if err != nil {
 		return nil, ErrInvalidInput
 	}
+	cscManufactureDate, err := parseOptionalDate(input.CSCManufactureDate)
+	if err != nil {
+		return nil, ErrInvalidInput
+	}
+	cscNextExaminationDate, err := parseOptionalDate(input.CSCNextExaminationDate)
+	if err != nil {
+		return nil, ErrInvalidInput
+	}
 	cargoStatus := input.CargoStatus
 	if cargoStatus == "" {
 		cargoStatus = "unknown"
 	}
-	args := jobContainerInsertArgs(jobID, validation, checkStatus, input, containerType, manufactureDate, cargoStatus)
+	args := jobContainerInsertArgs(jobID, validation, checkStatus, input, containerType, manufactureDate, cscManufactureDate, cscNextExaminationDate, cargoStatus, actorID)
 	item, err := scanRow(tx.QueryRow(ctx, jobContainerInsertQuery, args...), []string{"id", "container_no", "check_digit_status", "status"})
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "duplicate") {
@@ -594,15 +660,26 @@ func (r Repository) addContainerTx(ctx context.Context, tx database.Tx, jobID uu
 	return item, nil
 }
 
-func jobContainerInsertArgs(jobID uuid.UUID, validation ContainerValidation, checkStatus string, input ContainerInput, containerType resolvedContainerType, manufactureDate *time.Time, cargoStatus string) []any {
+func jobContainerInsertArgs(jobID uuid.UUID, validation ContainerValidation, checkStatus string, input ContainerInput, containerType resolvedContainerType, manufactureDate, cscManufactureDate, cscNextExaminationDate *time.Time, cargoStatus string, actorID uuid.UUID) []any {
+	var overrideBy any
+	var overrideAt any
+	if checkStatus == "override" {
+		overrideBy = actorID
+		overrideAt = time.Now().UTC()
+	}
 	return []any{
 		jobID,
 		validation.ContainerNo,
+		input.ContainerNo,
 		validation.OwnerCode + validation.EquipmentIdentifier,
 		validation.SerialNumber,
 		validation.CheckDigit,
+		validation.CalculatedCheckDigit,
+		validation.IsCheckDigitValid,
 		checkStatus,
 		input.CheckDigitOverrideReason,
+		overrideBy,
+		overrideAt,
 		containerType.ID,
 		containerType.ISOCode,
 		input.SealNo,
@@ -612,6 +689,11 @@ func jobContainerInsertArgs(jobID uuid.UUID, validation ContainerValidation, che
 		input.Payload,
 		manufactureDate,
 		input.CSCPlateStatus,
+		input.CSCPlateNumber,
+		input.CSCApprovalReference,
+		cscManufactureDate,
+		cscNextExaminationDate,
+		input.CSCProgramType,
 		input.TruckNo,
 		input.DriverName,
 		input.Remark,
@@ -649,7 +731,7 @@ func (r Repository) resolveContainerType(ctx context.Context, tx database.Tx, cu
 }
 
 func (r Repository) getJobForUpdate(ctx context.Context, tx database.Tx, id uuid.UUID) (map[string]any, error) {
-	item, err := scanRow(tx.QueryRow(ctx, `SELECT id, job_order_no, customer_id, status FROM job_orders WHERE id=$1 AND deleted_at IS NULL FOR UPDATE`, id), []string{"id", "job_order_no", "customer_id", "status"})
+	item, err := scanRow(tx.QueryRow(ctx, `SELECT id, job_order_no, customer_id, survey_type_id, status FROM job_orders WHERE id=$1 AND deleted_at IS NULL FOR UPDATE`, id), []string{"id", "job_order_no", "customer_id", "survey_type_id", "status"})
 	if err != nil {
 		if errors.Is(err, database.ErrNoRows) {
 			return nil, ErrNotFound
@@ -657,6 +739,16 @@ func (r Repository) getJobForUpdate(ctx context.Context, tx database.Tx, id uuid
 		return nil, err
 	}
 	return item, nil
+}
+
+func readinessValidationError(gate masterdata.ReadinessGate) FieldValidationError {
+	labels := make([]string, 0, len(gate.Missing))
+	for _, missing := range gate.Missing {
+		labels = append(labels, missing.Label)
+	}
+	return FieldValidationError{Fields: map[string]string{
+		"customer_readiness": "Master Data Customer belum siap: " + strings.Join(labels, "; "),
+	}}
 }
 
 func (r Repository) validateJobOwnershipTx(ctx context.Context, tx database.Tx, customerID, surveyTypeID, locationID, personnelID uuid.UUID) (map[string]any, error) {

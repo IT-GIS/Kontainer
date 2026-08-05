@@ -12,6 +12,7 @@ export type CurrentUser = {
   email: string;
   roles: RoleCode[];
   permissions: string[];
+	active_role: RoleCode;
   profile?: {
     surveyor_profile_id?: string | null;
   };

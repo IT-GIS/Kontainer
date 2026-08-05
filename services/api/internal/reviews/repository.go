@@ -2,6 +2,7 @@ package reviews
 
 import (
 	"container-survey/services/api/internal/database"
+	"container-survey/services/api/internal/jobstatus"
 	"container-survey/services/api/internal/numbering"
 	"context"
 	"encoding/json"
@@ -9,6 +10,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -44,7 +46,8 @@ func (r Repository) listSurveys(ctx context.Context, params ListParams, defaultS
 	rows, err := r.pool.Query(ctx, fmt.Sprintf(`
 		SELECT s.id AS survey_id, s.survey_no, jo.job_order_no, jc.container_no,
 		       c.customer_name, l.location_name, sp.full_name AS surveyor_name, st.name AS survey_type_name,
-		       s.started_at, s.submitted_at, s.review_started_at, s.resubmitted_at, s.approved_at,
+		       s.current_reviewer_id, reviewer.name AS current_reviewer_name, s.current_revision_no,
+		       s.started_at, s.submitted_at, s.review_started_at, s.resubmitted_at, s.approved_at, s.rejected_at,
 		       CASE WHEN s.status='draft' THEN 'in_progress' ELSE s.status END AS status
 		FROM surveys s
 		JOIN job_orders jo ON jo.id=s.job_order_id
@@ -53,6 +56,7 @@ func (r Repository) listSurveys(ctx context.Context, params ListParams, defaultS
 		JOIN locations l ON l.id=jo.location_id
 		JOIN survey_types st ON st.id=s.survey_type_id
 		JOIN surveyor_profiles sp ON sp.id=s.surveyor_id
+		LEFT JOIN users reviewer ON reviewer.id=s.current_reviewer_id
 		%s
 		ORDER BY COALESCE(s.approved_at, s.resubmitted_at, s.review_started_at, s.submitted_at, s.started_at, s.updated_at) DESC
 		LIMIT $%d OFFSET $%d
@@ -111,12 +115,25 @@ func (r Repository) Detail(ctx context.Context, surveyID uuid.UUID) (map[string]
 	`, surveyID)
 	approvals, _ := r.queryRows(ctx, `SELECT id, decision, review_note, final_result, revision_no, reviewed_at FROM survey_approvals WHERE survey_id=$1 ORDER BY reviewed_at DESC`, surveyID)
 	revisions, _ := r.queryRows(ctx, `
-		SELECT id, survey_id, revision_no, revision_reason, requested_by, requested_at,
-		       resubmitted_by, resubmitted_at, reviewer_note, status,
-		       snapshot_before, snapshot_after, created_at, updated_at
-		FROM survey_revisions
-		WHERE survey_id=$1
-		ORDER BY revision_no DESC
+		SELECT revision.id, revision.survey_id, revision.revision_no, revision.revision_reason,
+		       revision.requested_by, requester.name AS requested_by_name, revision.requested_at,
+		       revision.resubmitted_by, resubmitter.name AS resubmitted_by_name, revision.resubmitted_at,
+		       revision.reviewer_note, revision.status,
+		       revision.snapshot_before, revision.snapshot_after, revision.created_at, revision.updated_at
+		FROM survey_revisions revision
+		LEFT JOIN users requester ON requester.id=revision.requested_by
+		LEFT JOIN users resubmitter ON resubmitter.id=revision.resubmitted_by
+		WHERE revision.survey_id=$1
+		ORDER BY revision.revision_no DESC
+	`, surveyID)
+	revisionItems, _ := r.queryRows(ctx, `
+		SELECT item.id, item.target_type, item.target_id, item.category, item.target_snapshot,
+		       item.note, item.due_at, item.is_resolved, item.resolved_by, resolver.name AS resolved_by_name,
+		       item.resolved_at, item.created_at
+		FROM survey_revision_items item
+		LEFT JOIN users resolver ON resolver.id=item.resolved_by
+		WHERE item.survey_id=$1
+		ORDER BY item.is_resolved, item.created_at DESC
 	`, surveyID)
 	base["general_info"] = general
 	base["checklist"] = checklist
@@ -124,6 +141,7 @@ func (r Repository) Detail(ctx context.Context, surveyID uuid.UUID) (map[string]
 	base["photos"] = photos
 	base["approval_history"] = approvals
 	base["revision_history"] = revisions
+	base["revision_items"] = revisionItems
 	base["survey_result_recommendation"] = recommendedResult(damages)
 	return base, nil
 }
@@ -139,17 +157,31 @@ func (r Repository) StartReview(ctx context.Context, surveyID uuid.UUID, actor A
 		return nil, err
 	}
 	previousStatus := fmt.Sprint(base["status"])
+	currentReviewerID := parseUUIDString(base["current_reviewer_id"])
+	if previousStatus == "under_review" {
+		if currentReviewerID == actor.UserID {
+			return map[string]any{
+				"survey_id": surveyID.String(), "status": "under_review",
+				"current_reviewer_id": actor.UserID.String(), "idempotent": true,
+			}, tx.Commit(ctx)
+		}
+		return nil, ErrReviewClaimed
+	}
 	if previousStatus != "submitted" && previousStatus != "resubmitted" {
 		return nil, ErrInvalidStatus
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE surveys
-		SET status='under_review', review_started_by=$2, review_started_at=now(), updated_at=now()
+		SET status='under_review', review_started_by=$2, current_reviewer_id=$2,
+		    review_started_at=now(), updated_at=now()
 		WHERE id=$1
 	`, surveyID, actor.UserID); err != nil {
 		return nil, err
 	}
-	item := map[string]any{"survey_id": surveyID.String(), "status": "under_review", "previous_status": previousStatus}
+	if _, err := jobstatus.RecalculateJobStatusTx(ctx, tx, parseUUIDString(base["job_order_id"]), &actor.UserID); err != nil {
+		return nil, err
+	}
+	item := map[string]any{"survey_id": surveyID.String(), "status": "under_review", "previous_status": previousStatus, "current_reviewer_id": actor.UserID.String()}
 	_ = r.insertAudit(ctx, tx, actor, "reviews.start", "surveys", &surveyID, base, item)
 	_ = r.insertJobEvent(ctx, tx, parseUUIDString(base["job_order_id"]), "survey_under_review", "Review survey dimulai.", fmt.Sprint(base["container_no"]), actor.UserID, item)
 	return item, tx.Commit(ctx)
@@ -171,6 +203,9 @@ func (r Repository) NeedRevision(ctx context.Context, surveyID uuid.UUID, input 
 	if !reviewableStatus(fmt.Sprint(base["status"])) {
 		return nil, ErrInvalidStatus
 	}
+	if err := requireCurrentReviewer(base, actor); err != nil {
+		return nil, err
+	}
 	snapshotBefore, err := r.revisionSnapshotTx(ctx, tx, surveyID, base)
 	if err != nil {
 		return nil, err
@@ -180,8 +215,53 @@ func (r Repository) NeedRevision(ctx context.Context, surveyID uuid.UUID, input 
 	if err := tx.QueryRow(ctx, `INSERT INTO survey_approvals (survey_id,reviewer_id,decision,review_note,revision_no) VALUES ($1,$2,'need_revision',$3,$4) RETURNING id`, surveyID, actor.UserID, input.RevisionNote, revisionNo).Scan(&approvalID); err != nil {
 		return nil, err
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO survey_revision_items (approval_id,survey_id,target_type,note) VALUES ($1,$2,'survey',$3)`, approvalID, surveyID, input.RevisionNote); err != nil {
-		return nil, err
+	items := input.Items
+	if len(items) == 0 {
+		items = []RevisionItemInput{{TargetType: "survey", Category: "general", Note: input.RevisionNote}}
+	}
+	for _, revisionItem := range items {
+		targetType := strings.ToLower(strings.TrimSpace(revisionItem.TargetType))
+		if targetType == "" {
+			targetType = "survey"
+		}
+		targetID, err := validateRevisionTargetTx(ctx, tx, surveyID, targetType, revisionItem.TargetID)
+		if err != nil {
+			return nil, err
+		}
+		note := strings.TrimSpace(revisionItem.Note)
+		if note == "" {
+			note = strings.TrimSpace(input.RevisionNote)
+		}
+		if note == "" {
+			return nil, ErrInvalidInput
+		}
+		category := strings.TrimSpace(revisionItem.Category)
+		if category == "" {
+			category = "general"
+		}
+		var dueAt any
+		if revisionItem.DueAt != nil && strings.TrimSpace(*revisionItem.DueAt) != "" {
+			parsed, parseErr := time.Parse(time.RFC3339, strings.TrimSpace(*revisionItem.DueAt))
+			if parseErr != nil {
+				return nil, ErrInvalidInput
+			}
+			dueAt = parsed
+		}
+		var targetSnapshot any
+		if len(revisionItem.TargetSnapshot) > 0 {
+			encoded, encodeErr := json.Marshal(revisionItem.TargetSnapshot)
+			if encodeErr != nil {
+				return nil, ErrInvalidInput
+			}
+			targetSnapshot = string(encoded)
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO survey_revision_items (
+			  approval_id,survey_id,target_type,target_id,category,target_snapshot,due_at,note
+			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+		`, approvalID, surveyID, targetType, targetID, category, targetSnapshot, dueAt, note); err != nil {
+			return nil, err
+		}
 	}
 	_, _ = tx.Exec(ctx, `
 		UPDATE survey_revisions
@@ -195,10 +275,11 @@ func (r Repository) NeedRevision(ctx context.Context, surveyID uuid.UUID, input 
 	`, surveyID, revisionNo, input.RevisionNote, actor.UserID, snapshotBefore); err != nil {
 		return nil, err
 	}
-	_, _ = tx.Exec(ctx, `UPDATE surveys SET status='need_revision', current_revision_no=$2, review_started_by=NULL, review_started_at=NULL, updated_at=now() WHERE id=$1`, surveyID, revisionNo)
-	_, _ = tx.Exec(ctx, `UPDATE job_containers SET status='need_revision', updated_at=now() WHERE id=$1`, parseUUIDString(base["job_container_id"]))
-	_, _ = tx.Exec(ctx, `UPDATE job_orders SET status='in_progress', updated_by=$2, updated_at=now() WHERE id=$1`, parseUUIDString(base["job_order_id"]), actor.UserID)
-	item := map[string]any{"survey_id": surveyID.String(), "status": "need_revision", "revision_note": input.RevisionNote}
+	_, _ = tx.Exec(ctx, `UPDATE surveys SET status='need_revision', current_revision_no=$2, review_started_by=NULL, current_reviewer_id=NULL, review_started_at=NULL, updated_at=now() WHERE id=$1`, surveyID, revisionNo)
+	if _, err := jobstatus.RecalculateJobStatusTx(ctx, tx, parseUUIDString(base["job_order_id"]), &actor.UserID); err != nil {
+		return nil, err
+	}
+	item := map[string]any{"survey_id": surveyID.String(), "status": "need_revision", "revision_note": input.RevisionNote, "revision_items": len(items)}
 	_ = r.insertAudit(ctx, tx, actor, "reviews.need_revision", "surveys", &surveyID, base, item)
 	_ = r.insertJobEvent(ctx, tx, parseUUIDString(base["job_order_id"]), "survey_need_revision", "Survey perlu revisi.", input.RevisionNote, actor.UserID, item)
 	return item, tx.Commit(ctx)
@@ -220,27 +301,32 @@ func (r Repository) Approve(ctx context.Context, surveyID uuid.UUID, input Appro
 	if !reviewableStatus(fmt.Sprint(base["status"])) {
 		return nil, ErrInvalidStatus
 	}
+	if err := requireCurrentReviewer(base, actor); err != nil {
+		return nil, err
+	}
 	if _, err := tx.Exec(ctx, `INSERT INTO survey_approvals (survey_id,reviewer_id,decision,review_note,final_result,revision_no) VALUES ($1,$2,'approved',NULLIF($3,''),$4,$5)`, surveyID, actor.UserID, input.ApprovalNote, input.FinalResult, intFromAny(base["current_revision_no"])); err != nil {
 		return nil, err
 	}
 	_, _ = tx.Exec(ctx, `UPDATE surveys SET status='approved', approved_at=now(), survey_result=$2, updated_at=now() WHERE id=$1`, surveyID, input.FinalResult)
-	containerID := parseUUIDString(base["job_container_id"])
 	jobID := parseUUIDString(base["job_order_id"])
-	_, _ = tx.Exec(ctx, `UPDATE job_containers SET status='approved', updated_at=now() WHERE id=$1`, containerID)
-	_, _ = tx.Exec(ctx, `
-		UPDATE job_orders SET status='all_survey_approved', updated_by=$2, updated_at=now()
-		WHERE id=$1 AND NOT EXISTS (
-		  SELECT 1 FROM job_containers jc
-		  WHERE jc.job_order_id=$1 AND jc.deleted_at IS NULL AND jc.status NOT IN ('approved','report_generated','cancelled')
-		)
-	`, jobID, actor.UserID)
 	_, _ = tx.Exec(ctx, `
 		UPDATE survey_revisions SET status='approved', reviewer_note=NULLIF($3,''), updated_at=now()
 		WHERE survey_id=$1 AND revision_no=$2
 	`, surveyID, intFromAny(base["current_revision_no"]), input.ApprovalNote)
-	item := map[string]any{"survey_id": surveyID.String(), "status": "approved", "report_generation_status": "not_started"}
+	report, err := r.createReportTx(ctx, tx, surveyID, base, actor, "container_inspection_report")
+	if err != nil {
+		return nil, err
+	}
+	if _, err := jobstatus.RecalculateJobStatusTx(ctx, tx, jobID, &actor.UserID); err != nil {
+		return nil, err
+	}
+	item := map[string]any{
+		"survey_id": surveyID.String(), "status": "approved",
+		"report_id": report["id"], "report_no": report["report_no"],
+		"report_generation_status": "metadata_ready",
+	}
 	_ = r.insertAudit(ctx, tx, actor, "reviews.approve", "surveys", &surveyID, base, item)
-	_ = r.insertJobEvent(ctx, tx, jobID, "survey_approved", "Survey disetujui.", "Metadata laporan belum dibentuk.", actor.UserID, item)
+	_ = r.insertJobEvent(ctx, tx, jobID, "survey_approved", "Survey disetujui.", "Metadata laporan internal dibentuk.", actor.UserID, item)
 	return item, tx.Commit(ctx)
 }
 
@@ -260,15 +346,20 @@ func (r Repository) Reject(ctx context.Context, surveyID uuid.UUID, input Reject
 	if !reviewableStatus(fmt.Sprint(base["status"])) {
 		return nil, ErrInvalidStatus
 	}
+	if err := requireCurrentReviewer(base, actor); err != nil {
+		return nil, err
+	}
 	if _, err := tx.Exec(ctx, `INSERT INTO survey_approvals (survey_id,reviewer_id,decision,review_note,revision_no) VALUES ($1,$2,'rejected',$3,$4)`, surveyID, actor.UserID, input.RejectionReason, intFromAny(base["current_revision_no"])); err != nil {
 		return nil, err
 	}
 	_, _ = tx.Exec(ctx, `UPDATE surveys SET status='rejected', rejected_at=now(), updated_at=now() WHERE id=$1`, surveyID)
-	_, _ = tx.Exec(ctx, `UPDATE job_containers SET status='rejected', updated_at=now() WHERE id=$1`, parseUUIDString(base["job_container_id"]))
 	_, _ = tx.Exec(ctx, `
 		UPDATE survey_revisions SET status='rejected', reviewer_note=$3, updated_at=now()
 		WHERE survey_id=$1 AND revision_no=$2
 	`, surveyID, intFromAny(base["current_revision_no"]), input.RejectionReason)
+	if _, err := jobstatus.RecalculateJobStatusTx(ctx, tx, parseUUIDString(base["job_order_id"]), &actor.UserID); err != nil {
+		return nil, err
+	}
 	item := map[string]any{"survey_id": surveyID.String(), "status": "rejected", "rejection_reason": input.RejectionReason}
 	_ = r.insertAudit(ctx, tx, actor, "reviews.reject", "surveys", &surveyID, base, item)
 	_ = r.insertJobEvent(ctx, tx, parseUUIDString(base["job_order_id"]), "survey_rejected", "Survey ditolak.", input.RejectionReason, actor.UserID, item)
@@ -393,22 +484,25 @@ func (r Repository) createReportTx(ctx context.Context, tx database.Tx, surveyID
 		return nil, err
 	}
 	reportID := uuid.Nil
-	qrToken := uuid.NewString()
 	err = tx.QueryRow(ctx, `
-		INSERT INTO reports (report_no, report_type, job_order_id, survey_id, customer_id, status, current_version_no, qr_token, generated_by)
-		VALUES ($1,$2,$3,$4,$5,'pending_generation',0,$6,$7)
+		INSERT INTO reports (
+		  report_no, report_type, job_order_id, job_container_id, survey_id, customer_id,
+		  status, current_version_no, qr_token, validated_publicly,
+		  generated_by, created_by, approved_by, approved_at
+		)
+		VALUES ($1,$2,$3,$4,$5,$6,'pending_generation',1,NULL,0,$7,$7,$7,now())
 		RETURNING id
-	`, reportNo, reportType, parseUUIDString(base["job_order_id"]), surveyID, parseUUIDString(base["customer_id"]), qrToken, actor.UserID).Scan(&reportID)
+	`, reportNo, reportType, parseUUIDString(base["job_order_id"]), parseUUIDString(base["job_container_id"]), surveyID, parseUUIDString(base["customer_id"]), actor.UserID).Scan(&reportID)
 	if err != nil {
 		return nil, err
 	}
 	versionID := uuid.Nil
-	if err := tx.QueryRow(ctx, `INSERT INTO report_versions (report_id,version_no,status,created_by) VALUES ($1,0,'draft',$2) RETURNING id`, reportID, actor.UserID).Scan(&versionID); err != nil {
+	if err := tx.QueryRow(ctx, `INSERT INTO report_versions (report_id,version_no,status,created_by) VALUES ($1,1,'draft',$2) RETURNING id`, reportID, actor.UserID).Scan(&versionID); err != nil {
 		return nil, err
 	}
 	snapshot, _ := json.Marshal(base)
 	if _, err := tx.Exec(ctx, `INSERT INTO report_snapshots (report_version_id,snapshot_data) VALUES ($1,$2)`, versionID, string(snapshot)); err != nil {
 		return nil, err
 	}
-	return map[string]any{"id": reportID.String(), "report_no": reportNo, "status": "pending_generation", "qr_token": qrToken}, nil
+	return map[string]any{"id": reportID.String(), "report_no": reportNo, "status": "pending_generation", "current_version_no": 1}, nil
 }

@@ -35,7 +35,9 @@ func (r Repository) surveyForUpdate(ctx context.Context, tx database.Tx, surveyI
 func surveyBaseQuery() string {
 	return `
 		SELECT s.id, s.survey_no, s.status, s.job_order_id, s.job_container_id, s.surveyor_id,
-		       s.survey_type_id, s.current_revision_no, s.survey_result, s.submitted_at, s.review_started_at, s.resubmitted_at, s.approved_at,
+		       s.survey_type_id, s.current_revision_no, s.current_reviewer_id,
+		       reviewer.name AS current_reviewer_name, s.survey_result, s.submitted_at,
+		       s.review_started_at, s.resubmitted_at, s.approved_at, s.rejected_at,
 		       jo.job_order_no, jo.customer_id, jc.container_no, c.customer_name, l.location_name,
 		       st.name AS survey_type_name, sp.full_name AS surveyor_name
 		FROM surveys s
@@ -45,6 +47,7 @@ func surveyBaseQuery() string {
 		JOIN locations l ON l.id=jo.location_id
 		JOIN survey_types st ON st.id=s.survey_type_id
 		JOIN surveyor_profiles sp ON sp.id=s.surveyor_id
+		LEFT JOIN users reviewer ON reviewer.id=s.current_reviewer_id
 		WHERE s.id=$1 AND s.deleted_at IS NULL
 	`
 }
@@ -255,6 +258,47 @@ func (r Repository) revisionSnapshotTx(ctx context.Context, tx database.Tx, surv
 
 func reviewableStatus(status string) bool {
 	return status == "under_review"
+}
+
+func requireCurrentReviewer(base map[string]any, actor Actor) error {
+	if parseUUIDString(base["current_reviewer_id"]) != actor.UserID {
+		return ErrReviewClaimed
+	}
+	return nil
+}
+
+func validateRevisionTargetTx(ctx context.Context, tx database.Tx, surveyID uuid.UUID, targetType, rawTargetID string) (any, error) {
+	if targetType == "survey" {
+		if strings.TrimSpace(rawTargetID) != "" {
+			return nil, ErrInvalidInput
+		}
+		return nil, nil
+	}
+	tables := map[string]string{
+		"finding":   "survey_damages",
+		"checklist": "survey_checklist_responses",
+		"photo":     "survey_photos",
+	}
+	table, ok := tables[targetType]
+	if !ok {
+		return nil, ErrInvalidInput
+	}
+	targetID, err := uuid.Parse(strings.TrimSpace(rawTargetID))
+	if err != nil {
+		return nil, ErrInvalidInput
+	}
+	var count int
+	query := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE id=$1 AND survey_id=$2", table)
+	if targetType == "finding" || targetType == "photo" {
+		query += " AND deleted_at IS NULL"
+	}
+	if err := tx.QueryRow(ctx, query, targetID, surveyID).Scan(&count); err != nil {
+		return nil, err
+	}
+	if count != 1 {
+		return nil, ErrInvalidInput
+	}
+	return targetID, nil
 }
 
 func scanRow(row database.Row, keys []string) (map[string]any, error) {

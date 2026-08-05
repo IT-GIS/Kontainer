@@ -99,6 +99,7 @@ function SurveyDetailContent() {
   const [focusedDamageId, setFocusedDamageId] = useState<string | null>(null);
   const [focusRequestKey, setFocusRequestKey] = useState(0);
   const focusRequestRef = useRef(0);
+	const deepLinkAppliedRef = useRef(false);
   const [general, setGeneral] = useState<SurveyGeneralInfo>({});
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [components, setComponents] = useState<OptionItem[]>([]);
@@ -156,6 +157,19 @@ function SurveyDetailContent() {
   }, [accessToken, params.id]);
 
   useEffect(() => { const timer = window.setTimeout(() => void loadSurvey(), 0); return () => window.clearTimeout(timer); }, [loadSurvey]);
+	useEffect(() => {
+		if (!survey || deepLinkAppliedRef.current) return;
+		deepLinkAppliedRef.current = true;
+		const timer = window.setTimeout(() => {
+			const query = new URLSearchParams(window.location.search);
+			const tab = query.get("tab");
+			const targetID = query.get("target_id");
+			const tabMap: Record<string, Tab> = { summary: "Ringkasan Pekerjaan", checklist: "Checklist", findings: "Daftar Temuan", photos: "Foto" };
+			if (tab && tabMap[tab]) setActiveTab(tabMap[tab]);
+			if (tab === "findings" && targetID) setFocusedDamageId(targetID);
+		}, 0);
+		return () => window.clearTimeout(timer);
+	}, [survey]);
   useEffect(() => {
     if (!damageDialog || JSON.stringify(damageForm) === damageBaseline) return;
     const handleBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
@@ -417,6 +431,22 @@ function SurveyDetailContent() {
     });
   }
 
+	function openRevisionTarget(targetType: string, targetID?: string | null) {
+		const tabByTarget: Record<string, { tab: Tab; query: string }> = {
+			survey: { tab: "Ringkasan Pekerjaan", query: "summary" },
+			checklist: { tab: "Checklist", query: "checklist" },
+			finding: { tab: "Daftar Temuan", query: "findings" },
+			photo: { tab: "Foto", query: "photos" },
+		};
+		const target = tabByTarget[targetType] ?? tabByTarget.survey;
+		setActiveTab(target.tab);
+		if (targetType === "finding" && targetID) setFocusedDamageId(targetID);
+		const query = new URLSearchParams(window.location.search);
+		query.set("tab", target.query);
+		if (targetID) query.set("target_id", targetID); else query.delete("target_id");
+		window.history.replaceState(null, "", `${window.location.pathname}?${query.toString()}`);
+	}
+
   async function uploadGeneralPhoto(file: File | null, caption: string, photoCategory: string) {
     if (!accessToken || !file || !photoCategory) {
       setError("File dan kategori Foto Evidence umum wajib dipilih.");
@@ -464,6 +494,10 @@ function SurveyDetailContent() {
       </div>
       {error ? <div className="alert alert-danger">{error}</div> : null}
       {message ? <div className="alert alert-success" aria-live="polite">{message}</div> : null}
+	  {survey.status === "need_revision" && (survey.revision_items?.filter((item) => !item.is_resolved).length ?? 0) > 0 ? <section className="workspace-panel">
+		<div className="section-title-row"><div><span className="eyebrow">R{survey.current_revision_no ?? 1}</span><h2>Catatan Perbaikan Reviewer</h2><p className="muted-text">Buka target untuk langsung menuju bagian yang perlu diperbaiki.</p></div><StatusBadge tone="danger">PERLU REVISI</StatusBadge></div>
+		<div className="job-tab-stack">{survey.revision_items?.filter((item) => !item.is_resolved).map((item) => <div className="alert alert-warning" key={item.id}><div><strong>{item.category} · {item.target_type}</strong><p>{item.note}</p><small>{item.requested_by_name ? `Reviewer: ${item.requested_by_name}` : ""}{item.due_at ? ` · Batas: ${item.due_at}` : ""}</small></div><button className="secondary-button" type="button" onClick={() => openRevisionTarget(item.target_type, item.target_id)}>Buka Target</button></div>)}</div>
+	  </section> : null}
       <div className="tab-list">{tabs.map((tab) => <button className={activeTab === tab ? "tab-active" : ""} key={tab} onClick={() => setActiveTab(tab)}>{tab}</button>)}</div>
       {activeTab === "Ringkasan Pekerjaan" ? <JobSummaryTab survey={survey} /> : null}
       {activeTab === "Identitas Peti Kemas" ? <IdentityTab survey={survey} general={general} readonly={readonly} isSaving={isSaving} onChange={setGeneral} onSave={saveGeneral} /> : null}

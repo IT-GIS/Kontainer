@@ -41,6 +41,7 @@ type PhotoContext struct {
 	SurveyNo     string
 	ContainerNo  string
 	DamageNo     string
+	LocationName string
 	SurveyorName string
 	GPSLatitude  *float64
 	GPSLongitude *float64
@@ -115,7 +116,7 @@ func (s *Service) storePhoto(ctx context.Context, photoContext PhotoContext, inp
 	if input.TakenAt != nil {
 		takenAt = input.TakenAt.UTC()
 	}
-	watermarkText := buildWatermarkText(photoContext, takenAt)
+	watermarkText := buildWatermarkText(photoContext, input.PhotoCategory, takenAt)
 	watermarked, err := watermarkImage(original, watermarkText)
 	if err != nil {
 		return nil, ErrInvalidInput
@@ -241,11 +242,13 @@ func fixedPoint(x, y int) fixed.Point26_6 {
 	return fixed.P(x, y)
 }
 
-func buildWatermarkText(info PhotoContext, takenAt time.Time) string {
+func buildWatermarkText(info PhotoContext, category string, takenAt time.Time) string {
 	lines := []string{
 		"Container: " + info.ContainerNo,
 		"Survey: " + info.SurveyNo,
 		"Damage: " + info.DamageNo,
+		"Category: " + category,
+		"Location: " + info.LocationName,
 		"Taken: " + takenAt.Format("2006-01-02 15:04:05 MST"),
 		"Surveyor: " + info.SurveyorName,
 	}

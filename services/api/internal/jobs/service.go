@@ -82,6 +82,12 @@ func validateContainerInput(input ContainerInput) error {
 	if _, err := parseOptionalDate(input.ManufactureDate); err != nil {
 		return ErrInvalidInput
 	}
+	if _, err := parseOptionalDate(input.CSCManufactureDate); err != nil {
+		return ErrInvalidInput
+	}
+	if _, err := parseOptionalDate(input.CSCNextExaminationDate); err != nil {
+		return ErrInvalidInput
+	}
 	if !validation.IsCheckDigitValid && strings.TrimSpace(input.CheckDigitOverrideReason) == "" {
 		return ErrInvalidInput
 	}

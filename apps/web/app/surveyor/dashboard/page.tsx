@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { ClipboardList, FileCheck2, RefreshCcw, Send, TriangleAlert } from "lucide-react";
+import { ClipboardList, FileCheck2, RefreshCcw, Send, ShieldCheck, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
@@ -32,12 +32,14 @@ function SurveyorDashboardContent() {
   useEffect(() => { const timer = window.setTimeout(() => void loadData(), 0); return () => window.clearTimeout(timer); }, [loadData]);
 
   const metrics = [
-    { label: "Total Job", value: data?.total_jobs ?? 0, icon: ClipboardList },
-    { label: "Not Started", value: data?.not_started ?? 0, icon: TriangleAlert },
-    { label: "Draft", value: data?.draft ?? 0, icon: RefreshCcw },
-    { label: "Submitted", value: data?.submitted ?? 0, icon: Send },
-    { label: "Need Revision", value: data?.need_revision ?? 0, icon: TriangleAlert },
-    { label: "Approved", value: data?.approved ?? 0, icon: FileCheck2 }
+	{ label: "Total Assignment", value: data?.total_assignments ?? 0, icon: ClipboardList, href: "/surveyor/jobs" },
+	{ label: "Belum Dimulai", value: data?.assigned_not_started ?? data?.not_started ?? 0, icon: TriangleAlert, href: "/surveyor/jobs?state=not_started" },
+	{ label: "Draft / Sedang Dikerjakan", value: data?.draft ?? 0, icon: RefreshCcw, href: "/surveyor/surveys/draft" },
+	{ label: "Terkirim", value: data?.submitted ?? 0, icon: Send, href: "/surveyor/surveys/submitted" },
+	{ label: "Dalam Review", value: data?.under_review ?? 0, icon: ShieldCheck, href: "/surveyor/surveys/submitted" },
+	{ label: "Perlu Revisi", value: data?.need_revision ?? 0, icon: TriangleAlert, href: "/surveyor/surveys/need-revision" },
+	{ label: "Disetujui", value: data?.approved ?? 0, icon: FileCheck2, href: "/surveyor/surveys/approved" },
+	{ label: "Ditolak", value: data?.rejected ?? 0, icon: TriangleAlert, href: "/surveyor/surveys/history" }
   ];
 
   return (
@@ -48,11 +50,11 @@ function SurveyorDashboardContent() {
         {metrics.map((item) => {
           const Icon = item.icon;
           return (
-            <div className="metric-tile metric-rich" key={item.label}>
+			<Link className="metric-tile metric-rich" href={item.href} key={item.label}>
               <Icon size={20} />
               <p>{item.label}</p>
               <strong>{item.value}</strong>
-            </div>
+			</Link>
           );
         })}
       </section>

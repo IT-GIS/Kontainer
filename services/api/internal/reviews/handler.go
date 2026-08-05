@@ -21,7 +21,7 @@ func NewHandler(service *Service) Handler {
 	return Handler{service: service}
 }
 
-func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) {
+func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service, enableFinalPDF bool) {
 	h := NewHandler(service)
 	v1.GET("/surveys/monitoring", middleware.RequirePermission(authService, "surveys.view.all"), h.Monitoring)
 	v1.GET("/reviews", middleware.RequirePermission(authService, "reviews.view.all"), h.ListReviews)
@@ -31,8 +31,10 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	v1.GET("/reports", middleware.RequirePermission(authService, "reports.view.all"), h.ListReports)
 	v1.GET("/reports/:id", middleware.RequirePermission(authService, "reports.view.all"), h.ReportDetail)
 	v1.GET("/reports/:id/versions", middleware.RequirePermission(authService, "reports.view.all"), h.ReportVersions)
-	v1.GET("/reports/:id/download", middleware.RequirePermission(authService, "reports.view.all"), h.DownloadReport)
-	v1.POST("/reports/generate/:id", middleware.RequirePermission(authService, "reports.generate.all"), h.GenerateReport)
+	if enableFinalPDF {
+		v1.GET("/reports/:id/download", middleware.RequirePermission(authService, "reports.view.all"), h.DownloadReport)
+		v1.POST("/reports/generate/:id", middleware.RequirePermission(authService, "reports.generate.all"), h.GenerateReport)
+	}
 }
 
 func (h Handler) Monitoring(c *gin.Context) {
@@ -184,6 +186,8 @@ func (h Handler) writeError(c *gin.Context, err error) {
 		apphttp.Fail(c, http.StatusNotFound, "Data tidak ditemukan.", "NOT_FOUND", nil)
 	case errors.Is(err, ErrInvalidStatus):
 		apphttp.Fail(c, http.StatusConflict, "Status tidak valid untuk aksi ini.", "INVALID_STATUS_TRANSITION", nil)
+	case errors.Is(err, ErrReviewClaimed):
+		apphttp.Fail(c, http.StatusConflict, "Survey sedang direview oleh reviewer lain.", "REVIEW_ALREADY_CLAIMED", nil)
 	case errors.Is(err, ErrInvalidInput):
 		apphttp.Fail(c, http.StatusUnprocessableEntity, "Validasi gagal.", "VALIDATION_ERROR", nil)
 	case errors.Is(err, ErrDuplicate):

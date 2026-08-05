@@ -12,6 +12,7 @@ var (
 	ErrInvalidStatus = errors.New("invalid review status")
 	ErrDuplicate     = errors.New("duplicate review resource")
 	ErrForbidden     = errors.New("review action forbidden")
+	ErrReviewClaimed = errors.New("survey review is claimed by another reviewer")
 )
 
 type Actor struct {
@@ -51,7 +52,17 @@ type ListResult struct {
 }
 
 type NeedRevisionInput struct {
-	RevisionNote string `json:"revision_note"`
+	RevisionNote string              `json:"revision_note"`
+	Items        []RevisionItemInput `json:"items"`
+}
+
+type RevisionItemInput struct {
+	TargetType     string         `json:"target_type"`
+	TargetID       string         `json:"target_id"`
+	Category       string         `json:"category"`
+	TargetSnapshot map[string]any `json:"target_snapshot"`
+	Note           string         `json:"note"`
+	DueAt          *string        `json:"due_at"`
 }
 
 type ApproveInput struct {

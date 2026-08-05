@@ -86,5 +86,6 @@ type TokenPair struct {
 	AccessToken  string
 	RefreshToken string
 	ExpiresIn    int
+	ActiveRole   string
 	User         UserContext
 }

@@ -32,6 +32,14 @@ func (s *Service) ListJobs(ctx context.Context, params ListParams, actor Actor) 
 	return s.repo.ListJobs(ctx, params, actor)
 }
 
+func (s *Service) ListAssignedContainers(ctx context.Context, params ListParams, actor Actor) (ListResult, error) {
+	return s.repo.ListAssignedContainers(ctx, params, actor)
+}
+
+func (s *Service) Profile(ctx context.Context, actor Actor) (map[string]any, error) {
+	return s.repo.Profile(ctx, actor)
+}
+
 func (s *Service) ListSurveys(ctx context.Context, params ListParams, actor Actor) (ListResult, error) {
 	if !validSurveyListStatus(params.Status) {
 		return ListResult{}, ErrInvalidInput
@@ -41,7 +49,7 @@ func (s *Service) ListSurveys(ctx context.Context, params ListParams, actor Acto
 
 func validSurveyListStatus(status string) bool {
 	switch status {
-	case "", "draft", "need_revision", "submitted", "under_review", "resubmitted", "approved", "rejected":
+	case "", "draft", "need_revision", "submitted", "under_review", "resubmitted", "approved", "rejected", "terminal", "history":
 		return true
 	default:
 		return false

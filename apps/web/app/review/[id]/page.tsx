@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Play, RotateCcw, X } from "lucide-react";
+import { Check, Play, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
@@ -12,11 +12,13 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/hooks/use-auth";
 import { apiData } from "@/lib/api-client";
-import { can, hasRole } from "@/lib/permissions";
+import { can } from "@/lib/permissions";
 import type { ReviewDetail } from "@/types/reviews";
 
 const tabs = ["Ringkasan", "Informasi Umum", "Checklist", "Daftar Kerusakan", "Foto", "Riwayat"] as const;
 type Tab = (typeof tabs)[number];
+type RevisionDraft = { target_type: "survey" | "finding" | "checklist" | "photo"; target_id: string; category: string; note: string; due_at: string };
+const emptyRevisionItem: RevisionDraft = { target_type: "survey", target_id: "", category: "general", note: "", due_at: "" };
 
 export default function ReviewDetailPage() {
   return <ProtectedRoute><AppShell title="Review & Keputusan"><ReviewDetailContent /></AppShell></ProtectedRoute>;
@@ -31,6 +33,7 @@ function ReviewDetailContent() {
   const [dialog, setDialog] = useState<"revision" | "approve" | "reject" | null>(null);
   const [note, setNote] = useState("");
   const [finalResult, setFinalResult] = useState("damage");
+	const [revisionItems, setRevisionItems] = useState<RevisionDraft[]>([{ ...emptyRevisionItem }]);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -70,6 +73,10 @@ function ReviewDetailContent() {
       setError(dialog === "revision" ? "Revision Note wajib diisi." : "Rejection Reason wajib diisi.");
       return;
     }
+	if (dialog === "revision" && (revisionItems.length === 0 || revisionItems.some((item) => !item.note.trim() || (item.target_type !== "survey" && !item.target_id)))) {
+		setError("Setiap item revisi wajib memiliki target dan catatan.");
+		return;
+	}
     if (dialog === "approve" && !finalResult) {
       setError("Final Result wajib dipilih.");
       return;
@@ -77,11 +84,15 @@ function ReviewDetailContent() {
     setIsSubmitting(true);
     setError(null);
     const endpoint = dialog === "revision" ? "need-revision" : dialog;
-    const body = dialog === "revision" ? { revision_note: note } : dialog === "approve" ? { final_result: finalResult, approval_note: note, generate_report: false } : { rejection_reason: note };
+	const body = dialog === "revision" ? {
+		revision_note: note,
+		items: revisionItems.map((item) => ({ ...item, target_id: item.target_id || undefined, due_at: item.due_at ? new Date(item.due_at).toISOString() : undefined }))
+	} : dialog === "approve" ? { final_result: finalResult, approval_note: note, generate_report: false } : { rejection_reason: note };
     try {
       await apiData(`/reviews/${params.id}/${endpoint}`, { method: "POST", accessToken, body: JSON.stringify(body) });
       setDialog(null);
       setNote("");
+	  setRevisionItems([{ ...emptyRevisionItem }]);
       if (dialog === "approve") {
         router.push("/review/history");
         return;
@@ -95,17 +106,25 @@ function ReviewDetailContent() {
   }
 
   if (!review) return <div className="center-screen">Memuat review...</div>;
-  const canManageReview = can(user, "reviews.manage.all") && (hasRole(user, "supervisor") || hasRole(user, "super_admin"));
+	const canManageReview = can(user, "reviews.manage.all") && (user?.active_role === "supervisor" || user?.active_role === "super_admin");
   const canStart = canManageReview && ["submitted", "resubmitted"].includes(review.status);
-  const canDecide = canManageReview && review.status === "under_review";
+	const canDecide = canManageReview && review.status === "under_review" && review.current_reviewer_id === user?.id;
+	const revisionTargetOptions = (targetType: RevisionDraft["target_type"]) => {
+		if (targetType === "finding") return (review.damages ?? []).map((item) => ({ id: String(item.id), label: String(item.damage_no ?? item.id) }));
+		if (targetType === "checklist") return (review.checklist ?? []).map((item) => ({ id: String(item.id), label: String(item.item_label ?? item.item_key ?? item.id) }));
+		if (targetType === "photo") return (review.photos ?? []).map((item) => ({ id: String(item.id), label: String(item.original_file_name ?? item.photo_category ?? item.id) }));
+		return [];
+	};
 
   return (
     <div className="page-stack">
       <PageHeader title={`Review & Keputusan: ${review.survey_no}`} description={`Peti kemas: ${review.container_no} - ${review.customer_name}`} />
       {!canManageReview ? <div className="alert alert-warning">Mode read-only. Keputusan teknis hanya tersedia bagi Supervisor/Super Admin yang juga memiliki permission <code>reviews.manage.all</code>.</div> : null}
+	  {review.current_reviewer_name ? <div className="alert alert-info">Reviewer aktif: <strong>{review.current_reviewer_name}</strong></div> : null}
+	  {canManageReview && review.status === "under_review" && !canDecide ? <div className="alert alert-warning">Keputusan dikunci karena review ini sedang diklaim reviewer lain.</div> : null}
       {canManageReview ? <div className="job-actions">
         {canStart ? <button className="primary-button" disabled={isSubmitting} onClick={() => void startReview()}><Play size={17} /><span>Mulai Review</span></button> : null}
-        <button className="secondary-button" disabled={!canDecide} onClick={() => setDialog("revision")}><RotateCcw size={17} /><span>Perlu Revisi</span></button>
+		<button className="secondary-button" disabled={!canDecide} onClick={() => { setRevisionItems([{ ...emptyRevisionItem }]); setDialog("revision"); }}><RotateCcw size={17} /><span>Perlu Revisi</span></button>
         <button className="secondary-button" disabled={!canDecide} onClick={() => setDialog("reject")}><X size={17} /><span>Tolak</span></button>
         <button className="primary-button" disabled={!canDecide} onClick={() => setDialog("approve")}><Check size={17} /><span>Setujui</span></button>
       </div> : null}
@@ -121,6 +140,20 @@ function ReviewDetailContent() {
       <FormDialog title={dialogTitle(dialog)} open={canManageReview && dialog !== null} onClose={() => setDialog(null)} onSubmit={submitAction} isSubmitting={isSubmitting} submitLabel={dialog === "approve" ? "Approve" : "Submit"}>
         <div className="form-grid">
           {dialog === "approve" ? <label className="field"><span>Hasil Akhir</span><select value={finalResult} onChange={(event) => setFinalResult(event.target.value)}><option value="sound">Baik</option><option value="damage">Rusak</option><option value="cargo_worthy">Layak Muat</option><option value="not_cargo_worthy">Tidak Layak Muat</option></select></label> : null}
+		  {dialog === "revision" ? <div className="form-span-2 page-stack">
+			<div className="section-title-row"><div><strong>Item Revisi</strong><p className="muted-text">Tautkan setiap catatan ke survey, temuan, checklist, atau foto tertentu.</p></div><button className="secondary-button" type="button" onClick={() => setRevisionItems((current) => [...current, { ...emptyRevisionItem }])}><Plus size={16} /><span>Tambah Item</span></button></div>
+			{revisionItems.map((item, index) => {
+				const options = revisionTargetOptions(item.target_type);
+				return <section className="workspace-panel" key={`revision-${index}`}><div className="form-grid">
+					<label className="field"><span>Target</span><select value={item.target_type} onChange={(event) => setRevisionItems((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, target_type: event.target.value as RevisionDraft["target_type"], target_id: "" } : row))}><option value="survey">Survey</option><option value="finding">Temuan</option><option value="checklist">Checklist</option><option value="photo">Foto</option></select></label>
+					{item.target_type !== "survey" ? <label className="field"><span>Record Target</span><select value={item.target_id} onChange={(event) => setRevisionItems((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, target_id: event.target.value } : row))}><option value="">Pilih record</option>{options.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label> : null}
+					<label className="field"><span>Kategori</span><select value={item.category} onChange={(event) => setRevisionItems((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, category: event.target.value } : row))}><option value="general">Umum</option><option value="data">Data</option><option value="technical">Teknis</option><option value="photo_quality">Kualitas Foto</option><option value="completeness">Kelengkapan</option></select></label>
+					<label className="field"><span>Batas Perbaikan</span><input type="datetime-local" value={item.due_at} onChange={(event) => setRevisionItems((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, due_at: event.target.value } : row))} /></label>
+					<label className="field form-span-2"><span>Catatan Item *</span><textarea rows={3} value={item.note} onChange={(event) => setRevisionItems((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, note: event.target.value } : row))} /></label>
+					{revisionItems.length > 1 ? <button className="secondary-button" type="button" onClick={() => setRevisionItems((current) => current.filter((_, rowIndex) => rowIndex !== index))}><Trash2 size={16} /><span>Hapus Item</span></button> : null}
+				</div></section>;
+			})}
+		  </div> : null}
           <label className="field form-span-2"><span>{dialog === "revision" ? "Catatan Revisi" : dialog === "reject" ? "Alasan Penolakan" : "Catatan Persetujuan"}</span><textarea rows={4} value={note} onChange={(event) => setNote(event.target.value)} /></label>
         </div>
       </FormDialog>

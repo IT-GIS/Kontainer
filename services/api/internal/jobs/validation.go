@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -24,7 +25,9 @@ func ValidateContainerNumber(raw string) ContainerValidation {
 	if !result.IsFormatValid {
 		return result
 	}
-	result.IsCheckDigitValid = calculateCheckDigit(containerNo[:10]) == int(containerNo[10]-'0')
+	calculated := calculateCheckDigit(containerNo[:10])
+	result.CalculatedCheckDigit = strconv.Itoa(calculated)
+	result.IsCheckDigitValid = calculated == int(containerNo[10]-'0')
 	if result.IsCheckDigitValid {
 		result.CheckDigitStatus = "valid"
 	}

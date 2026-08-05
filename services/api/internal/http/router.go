@@ -69,8 +69,10 @@ func NewRouter(cfg config.Config, logger *slog.Logger, pool *database.Pool) *gin
 
 	reviewRepo := reviews.NewRepository(pool)
 	reviewService := reviews.NewService(reviewRepo)
-	reviews.RegisterPublic(v1.Group("/public"), reviewService)
-	reviews.Register(protected, authService, reviewService)
+	if cfg.EnablePublicVerification && cfg.EnablePublicQR {
+		reviews.RegisterPublic(v1.Group("/public"), reviewService)
+	}
+	reviews.Register(protected, authService, reviewService, cfg.EnableFinalPDF)
 
 	financeRepo := finance.NewRepository(pool)
 	financeService := finance.NewService(financeRepo)

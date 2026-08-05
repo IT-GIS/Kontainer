@@ -35,6 +35,8 @@ func (r Repository) assignedContainerTx(ctx context.Context, tx database.Tx, con
 		JOIN job_containers jc ON jc.id=ac.job_container_id AND jc.deleted_at IS NULL
 		JOIN job_orders jo ON jo.id=jc.job_order_id AND jo.deleted_at IS NULL
 		WHERE ac.job_container_id=$1 AND ac.unassigned_at IS NULL AND a.surveyor_id=$2
+		  AND a.status NOT IN ('cancelled','reassigned')
+		  AND jc.status NOT IN ('cancelled','closed') AND jo.status<>'cancelled'
 		FOR UPDATE
 	`, containerID, surveyorID), []string{"id", "job_order_id", "container_no", "container_type_id", "iso_type_code", "seal_no", "cargo_status", "truck_no", "driver_name", "csc_plate_status", "status", "job_order_no", "customer_id", "location_id", "survey_type_id", "assignment_id"})
 	if err != nil {
@@ -49,7 +51,8 @@ func (r Repository) existingSurveyTx(ctx context.Context, tx database.Tx, contai
 		FROM surveys s
 		JOIN job_orders jo ON jo.id=s.job_order_id
 		JOIN job_containers jc ON jc.id=s.job_container_id
-		WHERE s.job_container_id=$1 AND s.survey_type_id=$2 AND s.deleted_at IS NULL
+		WHERE s.job_container_id=$1 AND s.survey_type_id=$2 AND s.phase='initial'
+		  AND s.survey_round=1 AND s.is_active=1 AND s.deleted_at IS NULL
 		LIMIT 1
 	`, containerID, surveyTypeID), []string{"id", "survey_no", "status", "job_order_no", "container_no"})
 }
@@ -89,7 +92,9 @@ func (r Repository) surveyBaseTx(ctx context.Context, tx database.Tx, surveyID u
 func surveyBaseQuery() string {
 	return `
 		SELECT s.id, s.survey_no, s.status, s.job_order_id, s.job_container_id, s.surveyor_id,
-		       s.survey_type_id, s.checklist_template_id, s.current_revision_no, s.started_at, s.submitted_at, s.resubmitted_at, s.final_remark,
+		       s.survey_type_id, s.phase, s.survey_round, s.is_active, s.checklist_template_id,
+		       s.current_revision_no, s.current_reviewer_id, reviewer.name AS current_reviewer_name,
+		       s.review_started_at, s.started_at, s.submitted_at, s.resubmitted_at, s.approved_at, s.rejected_at, s.final_remark,
 		       jo.job_order_no, jo.spk_no, jo.spk_date,
 		       jo.pic_customer_name, jo.pic_customer_phone, jo.pic_customer_email,
 		       jo.customer_id, jo.location_id, jo.instruction AS job_instruction,
@@ -110,6 +115,7 @@ func surveyBaseQuery() string {
 		LEFT JOIN container_types ct ON ct.id=jc.container_type_id
 		LEFT JOIN assignments a ON a.id=s.assignment_id
 		JOIN surveyor_profiles sp ON sp.id=s.surveyor_id
+		LEFT JOIN users reviewer ON reviewer.id=s.current_reviewer_id
 		WHERE s.id=$1 AND s.deleted_at IS NULL
 		  AND sp.user_id=$2
 	`
@@ -378,6 +384,8 @@ func assignedSurveyWhere(params ListParams, surveyorID uuid.UUID) (string, []any
 	if params.Status != "" {
 		if params.Status == "submitted" {
 			clauses = append(clauses, "s.status IN ('submitted','under_review','resubmitted')")
+		} else if params.Status == "terminal" || params.Status == "history" {
+			clauses = append(clauses, "s.status IN ('approved','rejected','cancelled')")
 		} else {
 			args = append(args, params.Status)
 			clauses = append(clauses, fmt.Sprintf("s.status=$%d", len(args)))

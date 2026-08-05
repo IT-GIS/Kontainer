@@ -28,6 +28,8 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	h := NewHandler(service)
 	v1.GET("/surveyor/dashboard", middleware.RequirePermission(authService, "surveyor_jobs.view.assigned"), h.Dashboard)
 	v1.GET("/surveyor/jobs", middleware.RequirePermission(authService, "surveyor_jobs.view.assigned"), h.ListJobs)
+	v1.GET("/surveyor/assigned-containers", middleware.RequirePermission(authService, "surveyor_jobs.view.assigned"), h.ListAssignedContainers)
+	v1.GET("/surveyor/profile", middleware.RequirePermission(authService, "surveyor_profiles.view.own"), h.Profile)
 	v1.GET("/surveyor/jobs/:id", middleware.RequirePermission(authService, "surveyor_jobs.view.assigned"), h.GetJob)
 	v1.GET("/surveyor/jobs/:id/containers", middleware.RequirePermission(authService, "surveyor_jobs.view.assigned"), h.ListContainers)
 	v1.GET("/surveyor/surveys", middleware.RequirePermission(authService, "surveys.view.assigned"), h.ListSurveys)
@@ -72,6 +74,24 @@ func (h Handler) ListJobs(c *gin.Context) {
 		return
 	}
 	apphttp.Paginated(c, "Job saya berhasil diambil.", result.Rows, apphttp.PaginationMeta{Page: result.Meta.Page, PerPage: result.Meta.PerPage, Total: result.Meta.Total, TotalPages: result.Meta.TotalPages, HasNext: result.Meta.HasNext, HasPrev: result.Meta.HasPrev})
+}
+
+func (h Handler) ListAssignedContainers(c *gin.Context) {
+	result, err := h.service.ListAssignedContainers(c.Request.Context(), listParams(c), actorFromContext(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.Paginated(c, "Container yang belum dimulai berhasil diambil.", result.Rows, apphttp.PaginationMeta{Page: result.Meta.Page, PerPage: result.Meta.PerPage, Total: result.Meta.Total, TotalPages: result.Meta.TotalPages, HasNext: result.Meta.HasNext, HasPrev: result.Meta.HasPrev})
+}
+
+func (h Handler) Profile(c *gin.Context) {
+	item, err := h.service.Profile(c.Request.Context(), actorFromContext(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Profil Surveyor berhasil diambil.", item)
 }
 
 func (h Handler) GetJob(c *gin.Context) {

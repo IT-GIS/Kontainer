@@ -26,7 +26,7 @@ func TestReadPhotoAndWatermark(t *testing.T) {
 	text := buildWatermarkText(PhotoContext{
 		ContainerNo: "MSKU1234565", SurveyNo: "GIFT-SVY-2026-000001", DamageNo: "D-001",
 		SurveyorName: "Surveyor Demo", GPSLatitude: &latitude, GPSLongitude: &longitude,
-	}, time.Date(2026, 7, 1, 10, 30, 0, 0, time.UTC))
+	}, "damage_overview", time.Date(2026, 7, 1, 10, 30, 0, 0, time.UTC))
 	if !strings.Contains(text, "MSKU1234565") || !strings.Contains(text, "GPS: -6.2000000, 106.8000000") {
 		t.Fatalf("watermark text is incomplete: %s", text)
 	}
@@ -54,7 +54,7 @@ func TestGeneralSurveyPhotoWatermark(t *testing.T) {
 	text := buildWatermarkText(PhotoContext{
 		ContainerNo: "MSKU1234565", SurveyNo: "GIFT-SVY-2026-000001", DamageNo: "General Evidence",
 		SurveyorName: "Surveyor Demo",
-	}, time.Date(2026, 8, 4, 9, 15, 0, 0, time.UTC))
+	}, "general", time.Date(2026, 8, 4, 9, 15, 0, 0, time.UTC))
 	if !strings.Contains(text, "Damage: General Evidence") || !strings.Contains(text, "Surveyor: Surveyor Demo") {
 		t.Fatalf("general photo watermark is incomplete: %s", text)
 	}

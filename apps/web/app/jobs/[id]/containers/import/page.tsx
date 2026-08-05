@@ -12,8 +12,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiData } from "@/lib/api-client";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api/v1";
-const sample = `container_no,container_type_code,iso_type_code,seal_no,cargo_status,gross_weight,tare_weight,payload,manufacture_date,csc_plate_status,truck_no,driver_name,remark,check_digit_override_reason
-MSKU1234565,20GP,22G1,ABC123,empty,30480,2200,28280,2020-01-01,valid,B1234ABC,Driver Name,Container masuk yard,`;
+const sample = `container_no,container_type_code,iso_type_code,seal_no,cargo_status,gross_weight,tare_weight,payload,manufacture_date,csc_plate_status,csc_plate_number,csc_approval_reference,csc_manufacture_date,csc_next_examination_date,csc_program_type,truck_no,driver_name,remark,check_digit_override_reason
+MSKU1234565,20GP,22G1,ABC123,empty,30480,2200,28280,2020-01-01,valid,CSC-001,APP-001,2020-01-01,2027-01-01,ACEP,B1234ABC,Driver Name,Container masuk yard,`;
 
 type ContainerInput = {
   container_no: string;
@@ -26,6 +26,11 @@ type ContainerInput = {
   payload?: number;
   manufacture_date?: string;
   csc_plate_status: string;
+  csc_plate_number: string;
+  csc_approval_reference: string;
+  csc_manufacture_date: string;
+  csc_next_examination_date: string;
+  csc_program_type: string;
   truck_no: string;
   driver_name: string;
   remark: string;

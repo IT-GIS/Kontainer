@@ -24,24 +24,20 @@ export const adminWorkspace: NavigationWorkspace = {
         { path: "/jobs" },
         { path: "/jobs/:id", mode: "pattern" },
         { path: "/jobs/import" },
-        { path: "/jobs/assign" },
-        { path: "/surveys/monitoring", mode: "prefix" }
+		{ path: "/jobs/assign" }
       ]),
       n("Buat Job/SPK", "/jobs/create", FilePlus2, admin, ["jobs.create.all", "jobs.manage.all"])
     ]),
+	g("Monitoring Survey", Gauge, shared, [
+		n("Semua Survey", "/monitoring/surveys", Gauge, shared, ["surveys.view.all"], [
+			{ path: "/monitoring/surveys", mode: "prefix" },
+			{ path: "/surveys/monitoring", mode: "prefix" }
+		])
+	]),
     g("Master Data", Database, shared, [
       n("Customer", "/master/customers", UsersRound, admin, ["customers.view.all"], [
         { path: "/master/customers", mode: "prefix" },
         { path: "/master/locations", mode: "prefix" }
-      ]),
-      n("Referensi Pemeriksaan", "/master/inspection-references", ListChecks, shared, [
-        "container_types.view.all", "survey_types.view.all", "fitness_checklist_templates.view.all",
-        "inspection_test_parameters.view.all", "evidence_photo_categories.view.all", "finding_severities.view.all"
-      ], [
-        { path: "/master/inspection-references", mode: "prefix" },
-        { path: "/master/container-types", mode: "prefix" },
-        { path: "/master/survey-types", mode: "prefix" },
-        { path: "/fitness/master-data/checklist-templates", mode: "prefix" }
       ]),
       n("ISO CEDEX", "/master/iso-cedex", BookOpenCheck, shared, [
         "cedex_locations.view.all", "cedex_components.view.all", "cedex_damages.view.all",
@@ -50,7 +46,10 @@ export const adminWorkspace: NavigationWorkspace = {
         { path: "/master/iso-cedex", mode: "prefix" },
         { path: "/master/cedex", mode: "prefix" },
         { path: "/master/responsibility-codes", mode: "prefix" }
-      ])
+		]),
+		n("Referensi Pemeriksaan", "/master/inspection-references", ListChecks, shared, ["inspection_test_parameters.view.all"], [
+			{ path: "/master/inspection-references", mode: "prefix" }
+		])
     ]),
     g("Review & Keputusan", ShieldCheck, shared, [
       n("Menunggu Review", "/review/pending", ShieldCheck, shared, ["reviews.view.all", "reviews.manage.all"], [

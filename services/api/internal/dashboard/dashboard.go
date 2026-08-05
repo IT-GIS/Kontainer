@@ -14,6 +14,20 @@ import (
 )
 
 type AdminMetrics struct {
+	JobsTotal                int             `json:"jobs_total"`
+	ContainersTotal          int             `json:"containers_total"`
+	AssignmentsTotal         int             `json:"assignments_total"`
+	SurveysTotal             int             `json:"surveys_total"`
+	UnassignedContainers     int             `json:"unassigned_containers"`
+	AssignedNotStarted       int             `json:"assigned_not_started"`
+	SurveysDraft             int             `json:"surveys_draft"`
+	SurveysSubmitted         int             `json:"surveys_submitted"`
+	SurveysUnderReview       int             `json:"surveys_under_review"`
+	SurveysNeedRevision      int             `json:"surveys_need_revision"`
+	SurveysResubmitted       int             `json:"surveys_resubmitted"`
+	SurveysApproved          int             `json:"surveys_approved"`
+	SurveysRejected          int             `json:"surveys_rejected"`
+	JobsMixedDecision        int             `json:"jobs_mixed_decision"`
 	NewJobs                  int             `json:"new_jobs"`
 	UnassignedJobs           int             `json:"unassigned_jobs"`
 	SurveyInProgress         int             `json:"survey_in_progress"`
@@ -44,6 +58,20 @@ func (r Repository) Admin(ctx context.Context) (AdminMetrics, error) {
 		target *int
 		query  string
 	}{
+		{&result.JobsTotal, "SELECT COUNT(*) FROM job_orders WHERE deleted_at IS NULL"},
+		{&result.ContainersTotal, "SELECT COUNT(*) FROM job_containers WHERE deleted_at IS NULL"},
+		{&result.AssignmentsTotal, "SELECT COUNT(*) FROM assignments WHERE status NOT IN ('cancelled','reassigned')"},
+		{&result.SurveysTotal, "SELECT COUNT(*) FROM surveys WHERE deleted_at IS NULL"},
+		{&result.UnassignedContainers, `SELECT COUNT(*) FROM job_containers jc JOIN job_orders jo ON jo.id=jc.job_order_id WHERE jc.deleted_at IS NULL AND jo.deleted_at IS NULL AND jo.status<>'cancelled' AND jc.status NOT IN ('cancelled','closed') AND NOT EXISTS (SELECT 1 FROM assignment_containers ac JOIN assignments a ON a.id=ac.assignment_id WHERE ac.job_container_id=jc.id AND ac.unassigned_at IS NULL AND a.status NOT IN ('cancelled','reassigned'))`},
+		{&result.AssignedNotStarted, `SELECT COUNT(*) FROM job_containers jc WHERE jc.deleted_at IS NULL AND EXISTS (SELECT 1 FROM assignment_containers ac JOIN assignments a ON a.id=ac.assignment_id WHERE ac.job_container_id=jc.id AND ac.unassigned_at IS NULL AND a.status NOT IN ('cancelled','reassigned')) AND NOT EXISTS (SELECT 1 FROM surveys s WHERE s.job_container_id=jc.id AND s.is_active=1 AND s.deleted_at IS NULL)`},
+		{&result.SurveysDraft, "SELECT COUNT(*) FROM surveys WHERE status='draft' AND deleted_at IS NULL"},
+		{&result.SurveysSubmitted, "SELECT COUNT(*) FROM surveys WHERE status='submitted' AND deleted_at IS NULL"},
+		{&result.SurveysUnderReview, "SELECT COUNT(*) FROM surveys WHERE status='under_review' AND deleted_at IS NULL"},
+		{&result.SurveysNeedRevision, "SELECT COUNT(*) FROM surveys WHERE status='need_revision' AND deleted_at IS NULL"},
+		{&result.SurveysResubmitted, "SELECT COUNT(*) FROM surveys WHERE status='resubmitted' AND deleted_at IS NULL"},
+		{&result.SurveysApproved, "SELECT COUNT(*) FROM surveys WHERE status='approved' AND deleted_at IS NULL"},
+		{&result.SurveysRejected, "SELECT COUNT(*) FROM surveys WHERE status='rejected' AND deleted_at IS NULL"},
+		{&result.JobsMixedDecision, `SELECT COUNT(*) FROM job_orders jo WHERE jo.deleted_at IS NULL AND EXISTS (SELECT 1 FROM surveys s WHERE s.job_order_id=jo.id AND s.status='approved' AND s.is_active=1 AND s.deleted_at IS NULL) AND EXISTS (SELECT 1 FROM surveys s WHERE s.job_order_id=jo.id AND s.status='rejected' AND s.is_active=1 AND s.deleted_at IS NULL)`},
 		{&result.NewJobs, "SELECT COUNT(*) FROM job_orders WHERE status='draft' AND deleted_at IS NULL"},
 		{&result.UnassignedJobs, "SELECT COUNT(*) FROM job_orders jo WHERE jo.deleted_at IS NULL AND jo.status NOT IN ('cancelled','closed') AND NOT EXISTS (SELECT 1 FROM assignments a WHERE a.job_order_id=jo.id AND a.status<>'cancelled')"},
 		{&result.SurveyInProgress, "SELECT COUNT(*) FROM surveys WHERE status IN ('draft','in_progress') AND deleted_at IS NULL"},

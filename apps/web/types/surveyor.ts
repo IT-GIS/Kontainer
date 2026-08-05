@@ -1,10 +1,44 @@
 export type SurveyorDashboard = {
   total_jobs: number;
+	total_assignments: number;
+	assigned_not_started: number;
   not_started: number;
   draft: number;
   submitted: number;
+	under_review: number;
   need_revision: number;
+	resubmitted: number;
   approved: number;
+	rejected: number;
+};
+
+export type AssignedSurveyorContainer = {
+	job_container_id: string;
+	container_no: string;
+	status: string;
+	job_order_id: string;
+	job_order_no: string;
+	customer_name: string;
+	location_name: string;
+	survey_type_name: string;
+	container_type_code?: string | null;
+	assignment_no?: string | null;
+	assignment_due_date?: string | null;
+	effective_due_at?: string | null;
+	assignment_instruction?: string | null;
+};
+
+export type SurveyorProfile = {
+	id: string;
+	surveyor_code: string;
+	full_name: string;
+	phone?: string;
+	area?: string;
+	certificate_number?: string;
+	certificate_valid_until?: string | null;
+	competencies?: string;
+	assignment_locations?: string;
+	status: string;
 };
 
 export type SurveyorSurveyListItem = {
@@ -23,6 +57,11 @@ export type SurveyorSurveyListItem = {
   review_started_at?: string | null;
   resubmitted_at?: string | null;
   approved_at?: string | null;
+	rejected_at?: string | null;
+	current_reviewer_id?: string | null;
+	current_reviewer_name?: string | null;
+	current_revision_no?: number;
+	survey_round?: number;
   created_at?: string | null;
 };
 
@@ -196,6 +235,22 @@ export type SurveyDetail = {
   can_submit?: boolean;
   warnings?: SurveyWarning[];
   survey_result_recommendation?: string;
+	current_reviewer_id?: string | null;
+	current_reviewer_name?: string | null;
+	current_revision_no?: number;
+	revision_items?: SurveyRevisionItem[];
+};
+
+export type SurveyRevisionItem = {
+	id: string;
+	target_type: "survey" | "finding" | "checklist" | "photo";
+	target_id?: string | null;
+	category: string;
+	note: string;
+	due_at?: string | null;
+	is_resolved: boolean;
+	requested_by_name?: string | null;
+	resolved_by_name?: string | null;
 };
 
 export type SurveyWarning = {

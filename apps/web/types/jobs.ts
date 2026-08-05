@@ -57,6 +57,16 @@ export type JobContainer = {
   truck_no?: string | null;
   driver_name?: string | null;
   csc_plate_status?: string | null;
+	csc_plate_number?: string | null;
+	csc_approval_reference?: string | null;
+	csc_manufacture_date?: string | null;
+	csc_next_examination_date?: string | null;
+	csc_program_type?: string | null;
+	container_number_input?: string | null;
+	container_check_digit_calculated?: string | null;
+	container_check_digit_valid?: boolean | null;
+	check_digit_override_by?: string | null;
+	check_digit_override_at?: string | null;
   remark?: string | null;
   status: string;
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Play, Search } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
@@ -10,8 +10,8 @@ import { DataTable } from "@/components/ui/data-table";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/hooks/use-auth";
-import { apiPaginated, buildQuery } from "@/lib/api-client";
-import type { SurveyorJob } from "@/types/surveyor";
+import { apiData, apiPaginated, buildQuery } from "@/lib/api-client";
+import type { AssignedSurveyorContainer, SurveyorJob } from "@/types/surveyor";
 
 export default function SurveyorJobsPage() {
   return <ProtectedRoute><AppShell title="Job Saya"><Suspense fallback={<div className="loading-state">Memuat pekerjaan...</div>}><SurveyorJobsContent /></Suspense></AppShell></ProtectedRoute>;
@@ -21,10 +21,13 @@ function SurveyorJobsContent() {
   const searchParams = useSearchParams();
   const { accessToken } = useAuth();
   const [rows, setRows] = useState<SurveyorJob[]>([]);
+	const [containerRows, setContainerRows] = useState<AssignedSurveyorContainer[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState(() => searchParams.get("status") ?? "");
+	const isNotStarted = searchParams.get("state") === "not_started";
+	const [startingID, setStartingID] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -33,30 +36,65 @@ function SurveyorJobsContent() {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await apiPaginated<SurveyorJob>(`/surveyor/jobs${buildQuery({ page, per_page: 10, search, status })}`, { accessToken });
-      setRows(result.rows);
+		if (isNotStarted) {
+			const result = await apiPaginated<AssignedSurveyorContainer>(`/surveyor/assigned-containers${buildQuery({ page, per_page: 10, search, state: "not_started" })}`, { accessToken });
+			setContainerRows(result.rows);
+			setTotalPages(Number(result.meta.total_pages ?? 1));
+			return;
+		}
+		const result = await apiPaginated<SurveyorJob>(`/surveyor/jobs${buildQuery({ page, per_page: 10, search, status })}`, { accessToken });
+		setRows(result.rows);
       setTotalPages(Number(result.meta.total_pages ?? 1));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mengambil job saya.");
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken, page, search, status]);
+	}, [accessToken, isNotStarted, page, search, status]);
+
+	const startSurvey = async (container: AssignedSurveyorContainer) => {
+		if (!accessToken || startingID) return;
+		setStartingID(container.job_container_id);
+		setError(null);
+		try {
+			const survey = await apiData<{ id: string }>("/surveys/start", { method: "POST", accessToken, body: JSON.stringify({ job_container_id: container.job_container_id }) });
+			window.location.assign(`/surveyor/surveys/${survey.id}`);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Survey gagal dimulai.");
+			setStartingID(null);
+		}
+	};
 
   useEffect(() => { const timer = window.setTimeout(() => void loadRows(), 0); return () => window.clearTimeout(timer); }, [loadRows]);
 
   return (
     <div className="page-stack">
-      <PageHeader title="Job Saya" description="Daftar job dan container yang ditugaskan kepada Anda." />
+	  <PageHeader title={isNotStarted ? "Belum Dimulai" : "Job Saya"} description={isNotStarted ? "Daftar container aktif yang ditugaskan kepada Anda dan belum memiliki Survey." : "Daftar job dan container yang ditugaskan kepada Anda."} />
       <div className="toolbar">
         <label className="search-box"><Search size={17} /><input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Search job" /></label>
-        <select value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }}>
+		{!isNotStarted ? <select value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }}>
           <option value="">All Status</option>
           {["assigned", "in_progress", "all_survey_submitted", "all_survey_approved", "cancelled"].map((item) => <option key={item} value={item}>{item}</option>)}
-        </select>
+		</select> : null}
       </div>
       {error ? <div className="alert alert-danger">{error}</div> : null}
-      <DataTable
+	  {isNotStarted ? <DataTable
+		rows={containerRows}
+		isLoading={isLoading}
+		emptyText="Tidak ada container assignment yang belum dimulai."
+		page={page}
+		totalPages={totalPages}
+		onPageChange={setPage}
+		columns={[
+			{ key: "container_no", header: "Container", render: (row) => <strong>{row.container_no}</strong> },
+			{ key: "job", header: "Job / Assignment", render: (row) => <><Link className="text-link" href={`/surveyor/jobs/${row.job_order_id}`}>{row.job_order_no}</Link><br /><span className="muted-text">{row.assignment_no ?? "-"}</span></> },
+			{ key: "customer", header: "Customer / Location", render: (row) => <><strong>{row.customer_name}</strong><br /><span className="muted-text">{row.location_name}</span></> },
+			{ key: "survey_type", header: "Survey Type", render: (row) => row.survey_type_name },
+			{ key: "due", header: "Batas Waktu", render: (row) => row.effective_due_at ?? "-" },
+			{ key: "instruction", header: "Instruksi", render: (row) => row.assignment_instruction ?? "-" },
+			{ key: "action", header: "Aksi", render: (row) => <button className="primary-button table-action" type="button" disabled={Boolean(startingID)} onClick={() => void startSurvey(row)}><Play size={15} /><span>{startingID === row.job_container_id ? "Memulai..." : "Mulai Survey"}</span></button> },
+		]}
+	  /> : <DataTable
         rows={rows}
         isLoading={isLoading}
         page={page}
@@ -73,7 +111,7 @@ function SurveyorJobsContent() {
           { key: "instruction", header: "Instruction", render: (row) => row.assignment_instruction ?? "-" },
           { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "assigned" ? "warning" : "success"}>{row.status.toUpperCase()}</StatusBadge> }
         ]}
-      />
+	  />}
     </div>
   );
 }

@@ -1,8 +1,9 @@
 # Setup Database MySQL Laragon
 
-`database/kontainer_db.sql` adalah sumber canonical skema dan seed database untuk
-MySQL 8/Laragon. Import file tersebut melalui phpMyAdmin ke database
-`kontainer_db`.
+`services/api/migrations` adalah sumber canonical skema untuk MySQL 8/Laragon.
+`database/kontainer_db.sql` adalah baseline export dan seed, sedangkan
+`database/patches` hanya jalur kompatibilitas untuk deployment lama. Perubahan
+schema baru wajib dibuat di migration terlebih dahulu.
 
 Buat database dengan character set `utf8mb4` dan collation
 `utf8mb4_0900_ai_ci` sebelum import agar seluruh foreign key pada dump
@@ -24,11 +25,15 @@ dan survey yang ditugaskan.
 
 ## Database baru
 
-Untuk database baru, cukup import:
+Untuk instalasi baru yang memerlukan akun/data demo, import baseline lalu
+jalankan seluruh compatibility patch yang tercantum di bagian berikutnya:
 
 1. `database/kontainer_db.sql`
 
-Dump utama sudah memuat permission workspace Admin, Surveyor, Finance, foundation Sistem Kelaikan Peti Kemas, Admin Master Data Kelaikan, deploy readiness numbering sequence 2026, serta seluruh akun demo. Data runtime `refresh_tokens` dan `audit_logs` tidak ikut disimpan sebagai data deploy.
+Jangan menganggap dump sebagai source pengembangan schema. Baseline harus
+diekspor ulang hanya setelah rangkaian migration, UAT, dan pemeriksaan orphan
+lulus. Data runtime `refresh_tokens` dan `audit_logs` tidak boleh ikut disimpan
+sebagai data deploy.
 
 ## Database yang sudah terlanjur dibuat
 
@@ -44,6 +49,11 @@ Jalankan patch berikut secara berurutan:
 8. `database/patches/0016_container_fitness_master_stage1_permissions.sql`
 9. `database/patches/0017_container_fitness_master_stage2_permissions.sql`
 10. `database/patches/0018_container_fitness_deploy_readiness.sql`
+11. `database/patches/0019_iso_cedex_decision_rules.sql`
+12. `database/patches/0020_iso_cedex_governance.sql`
+13. `database/patches/0021_interactive_survey_sheet.sql`
+14. `database/patches/0022_survey_workflow_integrity.sql`
+15. `database/patches/0023_workflow_operational_closure.sql`
 
 Patch aman dijalankan berulang sejauh memungkinkan. Patch `0009`
 menyelaraskan permission menu dan role. Patch `0010` menambahkan akun demo,
@@ -79,5 +89,14 @@ type Kelaikan: `fitness_application`, `fitness_container_import`,
 `release_letter`. Patch ini tidak menghapus data runtime dan tidak
 mengaktifkan workflow lapangan.
 
-Jangan menyalin skema dari dokumentasi lain. Jika ada perbedaan, gunakan
-`database/kontainer_db.sql` sebagai acuan.
+Patch `0019` sampai `0022` menambahkan decision rule ISO CEDEX, governance
+referensi pemeriksaan, Survey Sheet Interaktif, dan integritas workflow
+Surveyor-Reviewer. Patch `0023` menutup workflow operasional: status Job
+terpusat, round/phase Survey, claim reviewer, item revisi terstruktur, audit
+check digit dan CSC, metadata laporan internal, profil Surveyor, serta antrean
+purge foto dengan retensi. Jalankan perintah dari root repository karena patch
+`0023` memakai `SOURCE` ke migration canonical.
+
+Jangan menyalin skema dari dokumentasi lain. Jika ada perbedaan struktur,
+gunakan urutan `services/api/migrations` sebagai acuan; gunakan dump hanya
+sebagai baseline import dan patch sebagai kompatibilitas deployment lama.

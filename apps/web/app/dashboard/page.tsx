@@ -9,6 +9,20 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiData } from "@/lib/api-client";
 
 type AdminMetrics = {
+	jobs_total: number;
+	containers_total: number;
+	assignments_total: number;
+	surveys_total: number;
+	unassigned_containers: number;
+	assigned_not_started: number;
+	surveys_draft: number;
+	surveys_submitted: number;
+	surveys_under_review: number;
+	surveys_need_revision: number;
+	surveys_resubmitted: number;
+	surveys_approved: number;
+	surveys_rejected: number;
+	jobs_mixed_decision: number;
   new_jobs: number;
   unassigned_jobs: number;
   survey_in_progress: number;
@@ -28,13 +42,20 @@ type AdminMetrics = {
 };
 
 const metricDefinitions = [
-  { key: "new_jobs", label: "Pekerjaan Baru", icon: ClipboardList, tone: "teal" },
-  { key: "unassigned_jobs", label: "Belum Ditugaskan", icon: PackageOpen, tone: "cyan" },
-  { key: "survey_in_progress", label: "Pemeriksaan Berlangsung", icon: Timer, tone: "cyan" },
-  { key: "submitted_surveys", label: "Menunggu Review", icon: Send, tone: "gold" },
-  { key: "need_revision_surveys", label: "Perlu Revisi", icon: RotateCcw, tone: "gold" },
-  { key: "approved_surveys", label: "Disetujui", icon: CheckCircle2, tone: "blue" },
-  { key: "incomplete_customer_master", label: "Master Customer Belum Lengkap", icon: UsersRound, tone: "violet" }
+	{ key: "jobs_total", label: "Total Job", icon: ClipboardList, tone: "teal", href: "/jobs" },
+	{ key: "containers_total", label: "Total Container", icon: PackageOpen, tone: "cyan", href: "/jobs" },
+	{ key: "assignments_total", label: "Total Assignment", icon: UsersRound, tone: "cyan", href: "/jobs?tab=assignments" },
+	{ key: "unassigned_containers", label: "Container Belum Ditugaskan", icon: PackageOpen, tone: "gold", href: "/jobs?view=unassigned" },
+	{ key: "assigned_not_started", label: "Ditugaskan Belum Dimulai", icon: Timer, tone: "gold", href: "/jobs?view=assigned-not-started" },
+	{ key: "surveys_draft", label: "Survey Draft", icon: Timer, tone: "cyan", href: "/monitoring/surveys/in-progress" },
+	{ key: "surveys_submitted", label: "Survey Terkirim", icon: Send, tone: "gold", href: "/monitoring/surveys/submitted" },
+	{ key: "surveys_under_review", label: "Dalam Review", icon: Timer, tone: "gold", href: "/monitoring/surveys?status=under_review" },
+	{ key: "surveys_need_revision", label: "Perlu Revisi", icon: RotateCcw, tone: "gold", href: "/monitoring/surveys/need-revision" },
+	{ key: "surveys_resubmitted", label: "Dikirim Ulang", icon: Send, tone: "cyan", href: "/monitoring/surveys?status=resubmitted" },
+	{ key: "surveys_approved", label: "Disetujui", icon: CheckCircle2, tone: "blue", href: "/monitoring/surveys/approved" },
+	{ key: "surveys_rejected", label: "Ditolak", icon: RotateCcw, tone: "violet", href: "/monitoring/surveys?status=rejected" },
+	{ key: "jobs_mixed_decision", label: "Job Hasil Campuran", icon: ClipboardList, tone: "violet", href: "/jobs?status=completed_with_rejection" },
+	{ key: "incomplete_customer_master", label: "Master Customer Belum Lengkap", icon: UsersRound, tone: "violet", href: "/master/customers?readiness=incomplete" }
 ] as const;
 
 export default function DashboardPage() {
@@ -50,7 +71,7 @@ export default function DashboardPage() {
 function DashboardContent() {
   const { accessToken, user } = useAuth();
   const roles = user?.roles ?? [];
-  const isAdmin = roles.includes("admin") || roles.includes("super_admin");
+  const isAdmin = user?.active_role === "admin" || user?.active_role === "super_admin";
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
   const [error, setError] = useState<string | null>(null);
   const isLoading = Boolean(accessToken && isAdmin && metrics === null && error === null);
@@ -83,13 +104,13 @@ function DashboardContent() {
         {metricDefinitions.map((metric) => {
           const Icon = metric.icon;
           return (
-            <article className="metric-tile source-metric-card" key={metric.label}>
+			<Link className="metric-tile source-metric-card" href={metric.href} key={metric.label}>
               <div className="source-metric-head">
                 <p>{metric.label}</p>
                 <span className={`source-metric-icon source-metric-${metric.tone}`}><Icon size={20} /></span>
               </div>
               <strong>{metrics[metric.key]}</strong>
-            </article>
+			</Link>
           );
         })}
       </section> : null}

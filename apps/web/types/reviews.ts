@@ -10,6 +10,9 @@ export type PendingReview = {
   review_started_at?: string | null;
   resubmitted_at?: string | null;
   status: string;
+	current_reviewer_id?: string | null;
+	current_reviewer_name?: string | null;
+	current_revision_no?: number;
 };
 
 export type ReviewDetail = PendingReview & {
@@ -23,6 +26,18 @@ export type ReviewDetail = PendingReview & {
   photos?: Array<Record<string, unknown>>;
   approval_history?: Array<Record<string, unknown>>;
   revision_history?: SurveyRevision[];
+	revision_items?: SurveyRevisionItem[];
+};
+
+export type SurveyRevisionItem = {
+	id: string;
+	target_type: "survey" | "finding" | "checklist" | "photo";
+	target_id?: string | null;
+	category: string;
+	note: string;
+	due_at?: string | null;
+	is_resolved: boolean;
+	resolved_by_name?: string | null;
 };
 
 export type SurveyRevision = {
@@ -31,8 +46,10 @@ export type SurveyRevision = {
   revision_no: number;
   revision_reason: string;
   requested_by: string;
+	requested_by_name?: string | null;
   requested_at: string;
   resubmitted_by?: string | null;
+	resubmitted_by_name?: string | null;
   resubmitted_at?: string | null;
   reviewer_note?: string | null;
   status: string;

@@ -17,6 +17,8 @@ import (
 var ImportHeaders = []string{
 	"container_no", "container_type_code", "iso_type_code", "seal_no", "cargo_status",
 	"gross_weight", "tare_weight", "payload", "manufacture_date", "csc_plate_status",
+	"csc_plate_number", "csc_approval_reference", "csc_manufacture_date",
+	"csc_next_examination_date", "csc_program_type",
 	"truck_no", "driver_name", "remark", "check_digit_override_reason",
 }
 
@@ -165,10 +167,15 @@ func parseImportRecords(records [][]string) ([]ContainerInput, error) {
 			return nil, ErrInvalidInput
 		}
 		manufactureDate := optionalString(get("manufacture_date"))
+		cscManufactureDate := optionalString(get("csc_manufacture_date"))
+		cscNextExaminationDate := optionalString(get("csc_next_examination_date"))
 		rows = append(rows, ContainerInput{
 			ContainerNo: get("container_no"), ContainerTypeCode: get("container_type_code"), ISOTypeCode: get("iso_type_code"),
 			SealNo: get("seal_no"), CargoStatus: get("cargo_status"), GrossWeight: gross, TareWeight: tare, Payload: payload,
-			ManufactureDate: manufactureDate, CSCPlateStatus: get("csc_plate_status"), TruckNo: get("truck_no"),
+			ManufactureDate: manufactureDate, CSCPlateStatus: get("csc_plate_status"),
+			CSCPlateNumber: get("csc_plate_number"), CSCApprovalReference: get("csc_approval_reference"),
+			CSCManufactureDate: cscManufactureDate, CSCNextExaminationDate: cscNextExaminationDate,
+			CSCProgramType: get("csc_program_type"), TruckNo: get("truck_no"),
 			DriverName: get("driver_name"), Remark: get("remark"), CheckDigitOverrideReason: get("check_digit_override_reason"),
 		})
 	}

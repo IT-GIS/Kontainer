@@ -51,14 +51,22 @@ type ContainerForm = {
   truck_no: string;
   driver_name: string;
   csc_plate_status: string;
+	csc_plate_number: string;
+	csc_approval_reference: string;
+	csc_manufacture_date: string;
+	csc_next_examination_date: string;
+	csc_program_type: string;
   remark: string;
 };
 type ContainerCheck = { is_format_valid: boolean; is_check_digit_valid: boolean };
+type CustomerReadiness = { overall_ready: boolean; checks: Array<{ label: string; ready: boolean }> };
 
 const emptyContainer: ContainerForm = {
   container_no: "", container_type_id: "", iso_type_code: "", seal_no: "", cargo_status: "unknown",
   gross_weight: "", tare_weight: "", payload: "", manufacture_date: "", check_digit_override_reason: "",
-  truck_no: "", driver_name: "", csc_plate_status: "not_checked", remark: ""
+	truck_no: "", driver_name: "", csc_plate_status: "not_checked", csc_plate_number: "",
+	csc_approval_reference: "", csc_manufacture_date: "", csc_next_examination_date: "",
+	csc_program_type: "", remark: ""
 };
 const emptySupport: JobDetailSupportingData = { surveys: [], reviews: [], documents: [], versions: {} };
 
@@ -76,6 +84,7 @@ function JobDetailContent() {
   const [activeTab, setActiveTab] = useState<TabID>("ringkasan");
   const [error, setError] = useState<string | null>(null);
   const [supportWarning, setSupportWarning] = useState<string | null>(null);
+	const [readiness, setReadiness] = useState<CustomerReadiness | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [containerDialog, setContainerDialog] = useState(false);
   const [assignDialog, setAssignDialog] = useState(false);
@@ -95,7 +104,8 @@ function JobDetailContent() {
 
   const canAddContainer = can(user, "job_containers.create.all");
   const canImport = can(user, "job_containers.import.all");
-  const canAssign = can(user, "assignments.assign.all");
+	const canAssignPermission = can(user, "assignments.assign.all");
+	const canAssign = canAssignPermission && readiness?.overall_ready === true;
   const canReassign = can(user, "job_containers.reassign.all");
   const canViewReviews = can(user, "reviews.view.all");
   const canViewReports = can(user, "reports.view.all");
@@ -174,6 +184,13 @@ function JobDetailContent() {
     }).catch(() => setSupportWarning("Pilihan Container Type milik Customer tidak dapat dimuat."));
   }, [accessToken, job?.customer_id]);
 
+	useEffect(() => {
+		if (!accessToken || !job?.customer_id) return;
+		apiData<CustomerReadiness>(`/customers/${job.customer_id}/readiness`, { accessToken })
+			.then(setReadiness)
+			.catch(() => setSupportWarning("Status readiness Customer tidak dapat dimuat; backend tetap akan memvalidasi saat assign."));
+	}, [accessToken, job?.customer_id]);
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const requested = searchParams.get("tab");
@@ -197,6 +214,8 @@ function JobDetailContent() {
         if (value !== "" && (!Number.isFinite(Number(value)) || Number(value) < 0)) throw new Error(`${label} tidak boleh negatif.`);
       }
       if (containerForm.manufacture_date && containerForm.manufacture_date > new Date().toISOString().slice(0, 10)) throw new Error("Tanggal pembuatan tidak boleh di masa depan.");
+	  if (containerForm.csc_manufacture_date && containerForm.csc_manufacture_date > new Date().toISOString().slice(0, 10)) throw new Error("Tanggal manufacture CSC tidak boleh di masa depan.");
+	  if (containerForm.csc_manufacture_date && containerForm.csc_next_examination_date && containerForm.csc_next_examination_date < containerForm.csc_manufacture_date) throw new Error("Next Examination CSC tidak boleh lebih awal dari tanggal manufacture CSC.");
       const validation = await apiData<ContainerCheck>("/job-containers/validate-container-no", { method: "POST", accessToken, body: JSON.stringify({ container_no: containerForm.container_no }) });
       if (!validation.is_format_valid) throw new Error("Format nomor peti kemas tidak valid.");
       if (!validation.is_check_digit_valid && !containerForm.check_digit_override_reason.trim()) throw new Error("Alasan override wajib diisi untuk check digit yang tidak valid.");
@@ -215,7 +234,8 @@ function JobDetailContent() {
     if (!accessToken) return;
     setIsSubmitting(true);
     setError(null);
-    try {
+	try {
+		if (readiness?.overall_ready === false) throw new Error("Master Data Customer belum siap untuk assignment.");
       if (!surveyorID) throw new Error("Surveyor GIFT wajib dipilih.");
       if (selectedContainers.length === 0) throw new Error("Pilih minimal satu peti kemas pada tab Peti Kemas.");
       if (assignmentStartDate && assignmentDueDate && assignmentDueDate < assignmentStartDate) throw new Error("Due Date tidak boleh lebih kecil dari Start Date.");
@@ -276,6 +296,7 @@ function JobDetailContent() {
       <PageHeader title={job.job_order_no} description={`${job.customer?.customer_name ?? job.customer_name} — ${job.survey_type?.name ?? job.survey_type_name}`} />
       {error ? <div className="alert alert-danger">{error}</div> : null}
       {supportWarning ? <div className="alert alert-warning">{supportWarning}</div> : null}
+	  {readiness?.overall_ready === false ? <div className="alert alert-danger"><div><strong>Assignment diblokir: Master Data Customer belum siap.</strong><p>{readiness.checks.filter((item) => !item.ready).map((item) => item.label).join(", ")}</p></div></div> : null}
       <div aria-label="Tab detail pekerjaan" className="tab-list" role="tablist">{tabs.map((tab) => <button aria-controls={`panel-${tab.id}`} aria-selected={activeTab === tab.id} className={activeTab === tab.id ? "tab-active" : ""} id={`tab-${tab.id}`} key={tab.id} onClick={() => setActiveTab(tab.id)} role="tab" type="button">{tab.label}</button>)}</div>
 
       <TabPanel active={activeTab === "ringkasan"} id="ringkasan"><JobSummaryTab job={job} support={support} /></TabPanel>
@@ -299,6 +320,11 @@ function JobDetailContent() {
           <Field label="Payload"><input min="0" step="0.01" type="number" value={containerForm.payload} onChange={(event) => updateContainer(setContainerForm, "payload", event.target.value)} /></Field>
           <Field label="Tanggal Pembuatan"><input type="date" value={containerForm.manufacture_date} onChange={(event) => updateContainer(setContainerForm, "manufacture_date", event.target.value)} /></Field>
           <Field label="CSC Plate Status"><select value={containerForm.csc_plate_status} onChange={(event) => updateContainer(setContainerForm, "csc_plate_status", event.target.value)}><option value="not_checked">Not Checked</option><option value="available">Available</option><option value="missing">Missing</option><option value="damaged">Damaged</option></select></Field>
+		  <Field label="CSC Plate Number"><input value={containerForm.csc_plate_number} onChange={(event) => updateContainer(setContainerForm, "csc_plate_number", event.target.value)} /></Field>
+		  <Field label="CSC Approval Reference"><input value={containerForm.csc_approval_reference} onChange={(event) => updateContainer(setContainerForm, "csc_approval_reference", event.target.value)} /></Field>
+		  <Field label="CSC Manufacture Date"><input type="date" value={containerForm.csc_manufacture_date} onChange={(event) => updateContainer(setContainerForm, "csc_manufacture_date", event.target.value)} /></Field>
+		  <Field label="CSC Next Examination"><input min={containerForm.csc_manufacture_date || undefined} type="date" value={containerForm.csc_next_examination_date} onChange={(event) => updateContainer(setContainerForm, "csc_next_examination_date", event.target.value)} /></Field>
+		  <Field label="CSC Program Type"><input value={containerForm.csc_program_type} onChange={(event) => updateContainer(setContainerForm, "csc_program_type", event.target.value)} placeholder="ACEP / PES / lainnya" /></Field>
           <Field label="Truck Number"><input value={containerForm.truck_no} onChange={(event) => updateContainer(setContainerForm, "truck_no", event.target.value)} /></Field>
           <Field label="Driver"><input value={containerForm.driver_name} onChange={(event) => updateContainer(setContainerForm, "driver_name", event.target.value)} /></Field>
           <label className="field form-span-2"><span>Alasan Override Check Digit</span><textarea rows={2} value={containerForm.check_digit_override_reason} onChange={(event) => updateContainer(setContainerForm, "check_digit_override_reason", event.target.value)} /></label>

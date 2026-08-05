@@ -48,12 +48,30 @@ type ListResult struct {
 }
 
 type Dashboard struct {
-	TotalJobs    int `json:"total_jobs"`
-	NotStarted   int `json:"not_started"`
-	Draft        int `json:"draft"`
-	Submitted    int `json:"submitted"`
-	NeedRevision int `json:"need_revision"`
-	Approved     int `json:"approved"`
+	TotalJobs          int `json:"total_jobs"`
+	TotalAssignments   int `json:"total_assignments"`
+	AssignedNotStarted int `json:"assigned_not_started"`
+	NotStarted         int `json:"not_started"`
+	Draft              int `json:"draft"`
+	Submitted          int `json:"submitted"`
+	UnderReview        int `json:"under_review"`
+	NeedRevision       int `json:"need_revision"`
+	Resubmitted        int `json:"resubmitted"`
+	Approved           int `json:"approved"`
+	Rejected           int `json:"rejected"`
+}
+
+type Profile struct {
+	ID                    string `json:"id"`
+	SurveyorCode          string `json:"surveyor_code"`
+	FullName              string `json:"full_name"`
+	Phone                 string `json:"phone"`
+	Area                  string `json:"area"`
+	CertificateNumber     string `json:"certificate_number"`
+	CertificateValidUntil any    `json:"certificate_valid_until"`
+	Competencies          string `json:"competencies"`
+	AssignmentLocations   string `json:"assignment_locations"`
+	Status                string `json:"status"`
 }
 
 type StartSurveyInput struct {

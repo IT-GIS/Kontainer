@@ -9,49 +9,57 @@ import (
 )
 
 type Config struct {
-	Environment       string
-	AppName           string
-	Port              string
-	DatabaseURL       string
-	RedisAddr         string
-	AccessSecret      string
-	RefreshSecret     string
-	AccessTTL         time.Duration
-	RefreshTTL        time.Duration
-	S3Endpoint        string
-	S3AccessKey       string
-	S3SecretKey       string
-	S3Bucket          string
-	S3ObjectPrefix    string
-	S3Region          string
-	S3UseSSL          bool
-	MaxUploadBytes    int64
-	WorkerEnabled     bool
-	AllowedWebOrigins []string
+	Environment              string
+	AppName                  string
+	Port                     string
+	DatabaseURL              string
+	RedisAddr                string
+	AccessSecret             string
+	RefreshSecret            string
+	AccessTTL                time.Duration
+	RefreshTTL               time.Duration
+	S3Endpoint               string
+	S3AccessKey              string
+	S3SecretKey              string
+	S3Bucket                 string
+	S3ObjectPrefix           string
+	S3Region                 string
+	S3UseSSL                 bool
+	MaxUploadBytes           int64
+	WorkerEnabled            bool
+	EnableDataBootstrap      bool
+	EnablePublicVerification bool
+	EnableFinalPDF           bool
+	EnablePublicQR           bool
+	AllowedWebOrigins        []string
 }
 
 func Load() Config {
 	loadDotEnv()
 	return Config{
-		Environment:       getenv("APP_ENV", "development"),
-		AppName:           getenv("APP_NAME", "gift-survey-api"),
-		Port:              getenv("APP_PORT", "8080"),
-		DatabaseURL:       getenv("DATABASE_URL", ""),
-		RedisAddr:         getenv("REDIS_ADDR", "localhost:6379"),
-		AccessSecret:      getenv("JWT_ACCESS_SECRET", "change_me_access_secret"),
-		RefreshSecret:     getenv("JWT_REFRESH_SECRET", "change_me_refresh_secret"),
-		AccessTTL:         time.Duration(getenvInt("JWT_ACCESS_TTL_MINUTES", 60)) * time.Minute,
-		RefreshTTL:        time.Duration(getenvInt("JWT_REFRESH_TTL_DAYS", 14)) * 24 * time.Hour,
-		S3Endpoint:        getenv("S3_ENDPOINT", "http://localhost:9000"),
-		S3AccessKey:       getenv("S3_ACCESS_KEY", "minioadmin"),
-		S3SecretKey:       getenv("S3_SECRET_KEY", "minioadmin"),
-		S3Bucket:          getenv("S3_BUCKET", "gift-survey"),
-		S3ObjectPrefix:    getenv("S3_OBJECT_PREFIX", ""),
-		S3Region:          getenv("S3_REGION", "us-east-1"),
-		S3UseSSL:          getenvBool("S3_USE_SSL", false),
-		MaxUploadBytes:    int64(getenvInt("MAX_UPLOAD_MB", 10)) * 1024 * 1024,
-		WorkerEnabled:     getenvBool("WORKER_ENABLED", true),
-		AllowedWebOrigins: splitCSV(getenv("WEB_ALLOWED_ORIGINS", "http://localhost:3000")),
+		Environment:              getenv("APP_ENV", "development"),
+		AppName:                  getenv("APP_NAME", "gift-survey-api"),
+		Port:                     getenv("APP_PORT", "8080"),
+		DatabaseURL:              getenv("DATABASE_URL", ""),
+		RedisAddr:                getenv("REDIS_ADDR", "localhost:6379"),
+		AccessSecret:             getenv("JWT_ACCESS_SECRET", "change_me_access_secret"),
+		RefreshSecret:            getenv("JWT_REFRESH_SECRET", "change_me_refresh_secret"),
+		AccessTTL:                time.Duration(getenvInt("JWT_ACCESS_TTL_MINUTES", 60)) * time.Minute,
+		RefreshTTL:               time.Duration(getenvInt("JWT_REFRESH_TTL_DAYS", 14)) * 24 * time.Hour,
+		S3Endpoint:               getenv("S3_ENDPOINT", "http://localhost:9000"),
+		S3AccessKey:              getenv("S3_ACCESS_KEY", "minioadmin"),
+		S3SecretKey:              getenv("S3_SECRET_KEY", "minioadmin"),
+		S3Bucket:                 getenv("S3_BUCKET", "gift-survey"),
+		S3ObjectPrefix:           getenv("S3_OBJECT_PREFIX", ""),
+		S3Region:                 getenv("S3_REGION", "us-east-1"),
+		S3UseSSL:                 getenvBool("S3_USE_SSL", false),
+		MaxUploadBytes:           int64(getenvInt("MAX_UPLOAD_MB", 10)) * 1024 * 1024,
+		WorkerEnabled:            getenvBool("WORKER_ENABLED", true),
+		EnableDataBootstrap:      getenvBool("ENABLE_DATA_BOOTSTRAP", false),
+		EnablePublicVerification: getenvBool("ENABLE_PUBLIC_VERIFICATION", false),
+		EnableFinalPDF:           getenvBool("ENABLE_FINAL_PDF", false),
+		EnablePublicQR:           getenvBool("ENABLE_PUBLIC_QR", false),
+		AllowedWebOrigins:        splitCSV(getenv("WEB_ALLOWED_ORIGINS", "http://localhost:3000")),
 	}
 }
 

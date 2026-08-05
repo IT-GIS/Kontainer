@@ -2,6 +2,8 @@ package surveyor
 
 import (
 	"container-survey/services/api/internal/database"
+	"container-survey/services/api/internal/jobstatus"
+	"container-survey/services/api/internal/masterdata"
 	"container-survey/services/api/internal/numbering"
 	"context"
 	"errors"
@@ -28,23 +30,102 @@ func (r Repository) Dashboard(ctx context.Context, actor Actor) (Dashboard, erro
 	}
 	row := r.pool.QueryRow(ctx, `
 		SELECT COUNT(DISTINCT jo.id),
-		       COUNT(DISTINCT CASE WHEN s.id IS NULL THEN jc.id END),
+		       COUNT(DISTINCT a.id),
+		       COUNT(DISTINCT CASE WHEN s.id IS NULL AND jc.status IN ('assigned','not_started') THEN jc.id END),
+		       COUNT(DISTINCT CASE WHEN s.id IS NULL AND jc.status IN ('assigned','not_started') THEN jc.id END),
 		       COUNT(DISTINCT CASE WHEN s.status='draft' THEN s.id END),
-		       COUNT(DISTINCT CASE WHEN s.status IN ('submitted','under_review','resubmitted') THEN s.id END),
+		       COUNT(DISTINCT CASE WHEN s.status='submitted' THEN s.id END),
+		       COUNT(DISTINCT CASE WHEN s.status='under_review' THEN s.id END),
 		       COUNT(DISTINCT CASE WHEN s.status='need_revision' THEN s.id END),
-		       COUNT(DISTINCT CASE WHEN s.status='approved' THEN s.id END)
+		       COUNT(DISTINCT CASE WHEN s.status='resubmitted' THEN s.id END),
+		       COUNT(DISTINCT CASE WHEN s.status='approved' THEN s.id END),
+		       COUNT(DISTINCT CASE WHEN s.status='rejected' THEN s.id END)
 		FROM assignments a
 		JOIN assignment_containers ac ON ac.assignment_id = a.id AND ac.unassigned_at IS NULL
 		JOIN job_orders jo ON jo.id = a.job_order_id AND jo.deleted_at IS NULL
 		JOIN job_containers jc ON jc.id = ac.job_container_id AND jc.deleted_at IS NULL
-		LEFT JOIN surveys s ON s.job_container_id = jc.id AND s.surveyor_id = a.surveyor_id AND s.deleted_at IS NULL
+		LEFT JOIN surveys s ON s.job_container_id = jc.id AND s.surveyor_id = a.surveyor_id AND s.is_active=1 AND s.deleted_at IS NULL
 		WHERE a.surveyor_id = $1
 	`, surveyorID)
 	var item Dashboard
-	if err := row.Scan(&item.TotalJobs, &item.NotStarted, &item.Draft, &item.Submitted, &item.NeedRevision, &item.Approved); err != nil {
+	if err := row.Scan(&item.TotalJobs, &item.TotalAssignments, &item.AssignedNotStarted, &item.NotStarted, &item.Draft, &item.Submitted, &item.UnderReview, &item.NeedRevision, &item.Resubmitted, &item.Approved, &item.Rejected); err != nil {
 		return Dashboard{}, err
 	}
 	return item, nil
+}
+
+func (r Repository) ListAssignedContainers(ctx context.Context, params ListParams, actor Actor) (ListResult, error) {
+	surveyorID, err := r.surveyorID(ctx, actor.UserID)
+	if err != nil {
+		return ListResult{}, err
+	}
+	page, perPage := normalizePagination(params.Page, params.PerPage)
+	args := []any{surveyorID}
+	search := ""
+	if strings.TrimSpace(params.Search) != "" {
+		args = append(args, "%"+strings.TrimSpace(params.Search)+"%")
+		search = fmt.Sprintf(" AND (jc.container_no LIKE $%d OR jo.job_order_no LIKE $%d OR c.customer_name LIKE $%d)", len(args), len(args), len(args))
+	}
+	var total int
+	if err := r.pool.QueryRow(ctx, `
+		SELECT COUNT(DISTINCT jc.id)
+		FROM assignments a
+		JOIN assignment_containers ac ON ac.assignment_id=a.id AND ac.unassigned_at IS NULL
+		JOIN job_containers jc ON jc.id=ac.job_container_id AND jc.deleted_at IS NULL AND jc.status NOT IN ('cancelled','closed')
+		JOIN job_orders jo ON jo.id=jc.job_order_id AND jo.deleted_at IS NULL AND jo.status<>'cancelled'
+		JOIN customers c ON c.id=jo.customer_id
+		WHERE a.surveyor_id=$1 AND a.status NOT IN ('cancelled','reassigned')
+		  AND NOT EXISTS (SELECT 1 FROM surveys s WHERE s.job_container_id=jc.id AND s.is_active=1 AND s.deleted_at IS NULL)
+		`+search, args...).Scan(&total); err != nil {
+		return ListResult{}, err
+	}
+	args = append(args, perPage, (page-1)*perPage)
+	rows, err := r.pool.Query(ctx, fmt.Sprintf(`
+		SELECT DISTINCT jc.id AS job_container_id, jc.container_no, jc.status,
+		       jo.id AS job_order_id, jo.job_order_no, jo.deadline,
+		       c.customer_name, l.location_name, st.name AS survey_type_name,
+		       ct.code AS container_type_code, a.assignment_no, a.due_date AS assignment_due_date,
+		       COALESCE(a.due_date,jo.deadline) AS effective_due_at,
+		       COALESCE(NULLIF(TRIM(a.instruction),''),jo.instruction) AS assignment_instruction
+		FROM assignments a
+		JOIN assignment_containers ac ON ac.assignment_id=a.id AND ac.unassigned_at IS NULL
+		JOIN job_containers jc ON jc.id=ac.job_container_id AND jc.deleted_at IS NULL AND jc.status NOT IN ('cancelled','closed')
+		JOIN job_orders jo ON jo.id=jc.job_order_id AND jo.deleted_at IS NULL AND jo.status<>'cancelled'
+		JOIN customers c ON c.id=jo.customer_id
+		JOIN locations l ON l.id=jo.location_id
+		JOIN survey_types st ON st.id=jo.survey_type_id
+		LEFT JOIN container_types ct ON ct.id=jc.container_type_id
+		WHERE a.surveyor_id=$1 AND a.status NOT IN ('cancelled','reassigned')
+		  AND NOT EXISTS (SELECT 1 FROM surveys s WHERE s.job_container_id=jc.id AND s.is_active=1 AND s.deleted_at IS NULL)
+		  %s
+		ORDER BY effective_due_at IS NULL, effective_due_at, jc.container_no
+		LIMIT $%d OFFSET $%d
+	`, search, len(args)-1, len(args)), args...)
+	if err != nil {
+		return ListResult{}, err
+	}
+	defer rows.Close()
+	items, err := rowsToMaps(rows)
+	if err != nil {
+		return ListResult{}, err
+	}
+	totalPages := 0
+	if total > 0 {
+		totalPages = int(math.Ceil(float64(total) / float64(perPage)))
+	}
+	return ListResult{Rows: items, Meta: PaginationMeta{Page: page, PerPage: perPage, Total: total, TotalPages: totalPages, HasNext: page < totalPages, HasPrev: page > 1}}, nil
+}
+
+func (r Repository) Profile(ctx context.Context, actor Actor) (map[string]any, error) {
+	return r.queryOne(ctx, `
+		SELECT sp.id, sp.surveyor_code, sp.full_name, COALESCE(sp.phone,'') AS phone,
+		       COALESCE(sp.area,'') AS area, COALESCE(sp.certificate_number,'') AS certificate_number,
+		       sp.certificate_valid_until, COALESCE(sp.competencies,'') AS competencies,
+		       COALESCE(sp.assignment_locations,'') AS assignment_locations, sp.status
+		FROM surveyor_profiles sp
+		WHERE sp.user_id=$1 AND sp.deleted_at IS NULL
+		LIMIT 1
+	`, actor.UserID)
 }
 
 func (r Repository) ListJobs(ctx context.Context, params ListParams, actor Actor) (ListResult, error) {
@@ -127,13 +208,16 @@ func (r Repository) ListSurveys(ctx context.Context, params ListParams, actor Ac
 	rows, err := r.pool.Query(ctx, fmt.Sprintf(`
 		SELECT s.id AS survey_id, s.survey_no, jo.id AS job_order_id, jo.job_order_no,
 		       jc.id AS job_container_id, jc.container_no, c.customer_name, l.location_name,
-		       st.name AS survey_type_name, s.status, s.started_at, s.submitted_at, s.approved_at, s.created_at
+		       st.name AS survey_type_name, s.status, s.phase, s.survey_round, s.current_revision_no,
+		       s.current_reviewer_id, reviewer.name AS current_reviewer_name, s.review_started_at,
+		       s.started_at, s.submitted_at, s.resubmitted_at, s.approved_at, s.rejected_at, s.created_at
 		FROM surveys s
 		JOIN job_orders jo ON jo.id=s.job_order_id
 		JOIN job_containers jc ON jc.id=s.job_container_id
 		JOIN customers c ON c.id=jo.customer_id
 		JOIN locations l ON l.id=jo.location_id
 		JOIN survey_types st ON st.id=s.survey_type_id
+		LEFT JOIN users reviewer ON reviewer.id=s.current_reviewer_id
 		%s ORDER BY COALESCE(s.approved_at,s.submitted_at,s.started_at,s.created_at) DESC
 		LIMIT $%d OFFSET $%d
 	`, where, len(args)-1, len(args)), args...)
@@ -241,6 +325,17 @@ func (r Repository) StartSurvey(ctx context.Context, input StartSurveyInput, act
 	if err != nil {
 		return nil, err
 	}
+	readiness, err := masterdata.EvaluateReadinessTx(ctx, tx, parseUUIDString(container["customer_id"]), parseUUIDString(container["survey_type_id"]))
+	if err != nil {
+		return nil, err
+	}
+	if !readiness.Ready() {
+		warnings := make([]ValidationWarning, 0, len(readiness.Missing))
+		for _, missing := range readiness.Missing {
+			warnings = append(warnings, ValidationWarning{Code: missing.Code, Message: missing.Label})
+		}
+		return nil, SurveyValidationError{Warnings: warnings}
+	}
 	existing, err := r.existingSurveyTx(ctx, tx, containerID, parseUUIDString(container["survey_type_id"]))
 	if err == nil {
 		return existing, tx.Commit(ctx)
@@ -273,12 +368,16 @@ func (r Repository) StartSurvey(ctx context.Context, input StartSurveyInput, act
 	err = tx.QueryRow(ctx, `
 		INSERT INTO surveys (
 		  survey_no, job_order_id, job_container_id, assignment_id, surveyor_id,
-		  survey_type_id, checklist_template_id, started_at
+		  survey_type_id, phase, survey_round, is_active, checklist_template_id, started_at
 		)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,now()) RETURNING id
+		VALUES ($1,$2,$3,$4,$5,$6,'initial',1,1,$7,now()) RETURNING id
 	`, surveyNo, jobID, containerID, assignmentID, surveyorID, surveyTypeID, checklistTemplateID).Scan(&surveyID)
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "duplicate") {
+			existing, existingErr := r.existingSurveyTx(ctx, tx, containerID, surveyTypeID)
+			if existingErr == nil {
+				return existing, tx.Commit(ctx)
+			}
 			return nil, ErrDuplicate
 		}
 		return nil, err
@@ -295,9 +394,10 @@ func (r Repository) StartSurvey(ctx context.Context, input StartSurveyInput, act
 	if err := r.instantiateChecklistTx(ctx, tx, surveyID, checklistTemplateID); err != nil {
 		return nil, err
 	}
-	_, _ = tx.Exec(ctx, `UPDATE job_containers SET status='in_progress', updated_at=now() WHERE id=$1 AND status IN ('assigned','not_started')`, containerID)
-	_, _ = tx.Exec(ctx, `UPDATE job_orders SET status='in_progress', updated_by=$2, updated_at=now() WHERE id=$1 AND status IN ('draft','assigned')`, jobID, actor.UserID)
 	_, _ = tx.Exec(ctx, `UPDATE assignments SET status='in_progress', updated_at=now() WHERE id=$1 AND status IN ('assigned','accepted')`, assignmentID)
+	if _, err := jobstatus.RecalculateJobStatusTx(ctx, tx, jobID, &actor.UserID); err != nil {
+		return nil, err
+	}
 	item := map[string]any{
 		"id": surveyID.String(), "survey_no": surveyNo, "status": "draft",
 		"job_order_no": container["job_order_no"], "container_no": container["container_no"],
@@ -324,6 +424,20 @@ func (r Repository) GetSurvey(ctx context.Context, surveyID uuid.UUID, actor Act
 	checklist, _ := r.Checklist(ctx, surveyID, actor)
 	damages, _ := r.Damages(ctx, surveyID, actor)
 	photos, _ := r.Photos(ctx, surveyID, actor)
+	revisionItems, err := r.optionRows(ctx, `
+		SELECT item.id, item.target_type, item.target_id, item.category, item.target_snapshot,
+		       item.note, item.due_at, item.is_resolved, item.resolved_at, item.created_at,
+		       requester.name AS requested_by_name, resolver.name AS resolved_by_name
+		FROM survey_revision_items item
+		JOIN survey_approvals approval ON approval.id=item.approval_id
+		LEFT JOIN users requester ON requester.id=approval.reviewer_id
+		LEFT JOIN users resolver ON resolver.id=item.resolved_by
+		WHERE item.survey_id=$1
+		ORDER BY item.is_resolved, item.created_at DESC
+	`, surveyID)
+	if err != nil {
+		return nil, err
+	}
 	requiredPhotoCategories, err := r.optionRows(ctx, `
 		SELECT category.code, category.name, category.applies_to
 		FROM customer_survey_type_photo_categories mapping
@@ -340,6 +454,7 @@ func (r Repository) GetSurvey(ctx context.Context, surveyID uuid.UUID, actor Act
 	base["checklist"] = checklist
 	base["damages"] = damages
 	base["photos"] = photos
+	base["revision_items"] = revisionItems
 	base["required_photo_categories"] = requiredPhotoCategories
 	if err := r.recordAudit(ctx, actor, "surveys.open", "surveys", surveyID, map[string]any{"survey_no": base["survey_no"]}); err != nil {
 		return nil, err
@@ -635,15 +750,18 @@ func (r Repository) DeleteDamage(ctx context.Context, damageID uuid.UUID, actor 
 func (r Repository) PhotoContext(ctx context.Context, damageID uuid.UUID, actor Actor) (PhotoContext, error) {
 	var info PhotoContext
 	err := r.pool.QueryRow(ctx, `
-		SELECT s.id, s.customer_id, s.survey_type_id, s.survey_no, jc.container_no, sd.damage_no, sp.full_name,
+		SELECT s.id, s.customer_id, s.survey_type_id, s.survey_no, jc.container_no, sd.damage_no,
+		       l.location_name, sp.full_name,
 		       sgi.gps_latitude, sgi.gps_longitude
 		FROM survey_damages sd
 		JOIN surveys s ON s.id=sd.survey_id AND s.deleted_at IS NULL
 		JOIN job_containers jc ON jc.id=s.job_container_id
+		JOIN job_orders jo ON jo.id=s.job_order_id
+		JOIN locations l ON l.id=jo.location_id
 		JOIN surveyor_profiles sp ON sp.id=s.surveyor_id
 		LEFT JOIN survey_general_infos sgi ON sgi.survey_id=s.id
 		WHERE sd.id=$1 AND sd.deleted_at IS NULL
-	`, damageID).Scan(&info.SurveyID, &info.CustomerID, &info.SurveyTypeID, &info.SurveyNo, &info.ContainerNo, &info.DamageNo, &info.SurveyorName, &info.GPSLatitude, &info.GPSLongitude)
+	`, damageID).Scan(&info.SurveyID, &info.CustomerID, &info.SurveyTypeID, &info.SurveyNo, &info.ContainerNo, &info.DamageNo, &info.LocationName, &info.SurveyorName, &info.GPSLatitude, &info.GPSLongitude)
 	if err != nil {
 		if errors.Is(err, database.ErrNoRows) {
 			return PhotoContext{}, ErrNotFound
@@ -663,14 +781,17 @@ func (r Repository) PhotoContext(ctx context.Context, damageID uuid.UUID, actor 
 func (r Repository) SurveyPhotoContext(ctx context.Context, surveyID uuid.UUID, actor Actor) (PhotoContext, error) {
 	var info PhotoContext
 	err := r.pool.QueryRow(ctx, `
-		SELECT s.id, s.customer_id, s.survey_type_id, s.survey_no, jc.container_no, sp.full_name,
+		SELECT s.id, s.customer_id, s.survey_type_id, s.survey_no, jc.container_no,
+		       l.location_name, sp.full_name,
 		       sgi.gps_latitude, sgi.gps_longitude
 		FROM surveys s
 		JOIN job_containers jc ON jc.id=s.job_container_id
+		JOIN job_orders jo ON jo.id=s.job_order_id
+		JOIN locations l ON l.id=jo.location_id
 		JOIN surveyor_profiles sp ON sp.id=s.surveyor_id
 		LEFT JOIN survey_general_infos sgi ON sgi.survey_id=s.id
 		WHERE s.id=$1 AND s.deleted_at IS NULL
-	`, surveyID).Scan(&info.SurveyID, &info.CustomerID, &info.SurveyTypeID, &info.SurveyNo, &info.ContainerNo, &info.SurveyorName, &info.GPSLatitude, &info.GPSLongitude)
+	`, surveyID).Scan(&info.SurveyID, &info.CustomerID, &info.SurveyTypeID, &info.SurveyNo, &info.ContainerNo, &info.LocationName, &info.SurveyorName, &info.GPSLatitude, &info.GPSLongitude)
 	if err != nil {
 		if errors.Is(err, database.ErrNoRows) {
 			return PhotoContext{}, ErrNotFound
@@ -823,9 +944,14 @@ func (r Repository) DeletePhoto(ctx context.Context, photoID uuid.UUID, actor Ac
 	}
 	defer tx.Rollback(ctx)
 	item, err := scanRow(tx.QueryRow(ctx, `
-		SELECT id, survey_id, damage_id, photo_category, caption
-		FROM survey_photos WHERE id=$1 AND deleted_at IS NULL FOR UPDATE
-	`, photoID), []string{"id", "survey_id", "damage_id", "photo_category", "caption"})
+		SELECT photo.id, photo.survey_id, photo.damage_id, photo.photo_category, photo.caption,
+		       photo.file_id, original.bucket_name, original.object_key AS original_object_key,
+		       photo.watermarked_file_id, watermarked.object_key AS watermarked_object_key
+		FROM survey_photos photo
+		JOIN file_objects original ON original.id=photo.file_id
+		LEFT JOIN file_objects watermarked ON watermarked.id=photo.watermarked_file_id
+		WHERE photo.id=$1 AND photo.deleted_at IS NULL FOR UPDATE
+	`, photoID), []string{"id", "survey_id", "damage_id", "photo_category", "caption", "file_id", "bucket_name", "original_object_key", "watermarked_file_id", "watermarked_object_key"})
 	if err != nil {
 		return nil, err
 	}
@@ -838,6 +964,22 @@ func (r Repository) DeletePhoto(ctx context.Context, photoID uuid.UUID, actor Ac
 	}
 	if _, err := tx.Exec(ctx, `UPDATE survey_photos SET deleted_at=now() WHERE id=$1`, photoID); err != nil {
 		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE file_objects SET deleted_at=now() WHERE id=$1 OR id=$2`, item["file_id"], item["watermarked_file_id"]); err != nil {
+		return nil, err
+	}
+	for _, field := range []string{"original_object_key", "watermarked_object_key"} {
+		objectKey := strings.TrimSpace(fmt.Sprint(item[field]))
+		if objectKey == "" || objectKey == "<nil>" {
+			continue
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT IGNORE INTO object_deletion_queue (
+			  bucket_name,object_key,reason,requested_by,eligible_after,status
+			) VALUES ($1,$2,'survey_photo_soft_deleted',$3,DATE_ADD(now(), INTERVAL 7 DAY),'pending')
+		`, item["bucket_name"], objectKey, actor.UserID); err != nil {
+			return nil, err
+		}
 	}
 	_ = r.insertAudit(ctx, tx, actor, "survey_photos.delete", "survey_photos", &photoID, item, nil)
 	return item, tx.Commit(ctx)
@@ -918,7 +1060,7 @@ func (r Repository) Submit(ctx context.Context, surveyID uuid.UUID, input Submit
 		SET status=$2,
 		    submitted_at=CASE WHEN $2='submitted' THEN now() ELSE submitted_at END,
 		    resubmitted_at=CASE WHEN $2='resubmitted' THEN now() ELSE resubmitted_at END,
-		    review_started_by=NULL, review_started_at=NULL,
+		    review_started_by=NULL, current_reviewer_id=NULL, review_started_at=NULL,
 		    final_remark=NULLIF($3,''), survey_result=$4, updated_at=now()
 		WHERE id=$1 AND status IN ('draft','need_revision')
 		RETURNING id, survey_no, status, submitted_at, resubmitted_at
@@ -950,15 +1092,9 @@ func (r Repository) Submit(ctx context.Context, surveyID uuid.UUID, input Submit
 		`, surveyID, actor.UserID)
 	}
 	jobID := parseUUIDString(base["job_order_id"])
-	containerID := parseUUIDString(base["job_container_id"])
-	_, _ = tx.Exec(ctx, `UPDATE job_containers SET status='submitted', updated_at=now() WHERE id=$1`, containerID)
-	_, _ = tx.Exec(ctx, `
-		UPDATE job_orders SET status='all_survey_submitted', updated_by=$2, updated_at=now()
-		WHERE id=$1 AND NOT EXISTS (
-		  SELECT 1 FROM job_containers jc
-		  WHERE jc.job_order_id=$1 AND jc.deleted_at IS NULL AND jc.status NOT IN ('submitted','approved','report_generated','cancelled')
-		)
-	`, jobID, actor.UserID)
+	if _, err := jobstatus.RecalculateJobStatusTx(ctx, tx, jobID, &actor.UserID); err != nil {
+		return nil, err
+	}
 	_ = r.insertJobEvent(ctx, tx, jobID, eventType, eventTitle, fmt.Sprint(base["container_no"]), actor.UserID, item)
 	_ = r.insertAudit(ctx, tx, actor, auditAction, "surveys", &surveyID, base, item)
 	return item, tx.Commit(ctx)
