@@ -260,24 +260,42 @@ func (r Repository) validateSeverityTx(ctx context.Context, tx database.Tx, cust
 	return err
 }
 
-func (r Repository) validatePhotoCategoryTx(ctx context.Context, tx database.Tx, customerID, surveyTypeID uuid.UUID, categoryCode string) error {
+func (r Repository) ValidatePhotoCategory(ctx context.Context, customerID, surveyTypeID uuid.UUID, categoryCode, expectedScope string) error {
+	return validatePhotoCategoryQuery(ctx, r.pool, customerID, surveyTypeID, categoryCode, expectedScope)
+}
+
+func (r Repository) validatePhotoCategoryTx(ctx context.Context, tx database.Tx, customerID, surveyTypeID uuid.UUID, categoryCode, expectedScope string) error {
+	return validatePhotoCategoryQuery(ctx, tx, customerID, surveyTypeID, categoryCode, expectedScope)
+}
+
+type photoCategoryQuerier interface {
+	QueryRow(context.Context, string, ...any) database.Row
+}
+
+func validatePhotoCategoryQuery(ctx context.Context, query photoCategoryQuerier, customerID, surveyTypeID uuid.UUID, categoryCode, expectedScope string) error {
 	if strings.TrimSpace(categoryCode) == "" {
 		return validationError("PHOTO_CATEGORY_REQUIRED", "Kategori foto wajib dipilih.")
 	}
-	var code string
-	err := tx.QueryRow(ctx, `
-		SELECT category.code
+	var code, appliesTo string
+	err := query.QueryRow(ctx, `
+		SELECT category.code, COALESCE(category.applies_to, '')
 		FROM customer_survey_type_photo_categories mapping
 		JOIN evidence_photo_categories category
 		  ON category.id=mapping.photo_category_id AND category.status='active'
 		WHERE mapping.customer_id=$1 AND mapping.survey_type_id=$2
 		  AND mapping.is_active=1 AND LOWER(category.code)=LOWER($3)
 		LIMIT 1
-	`, customerID, surveyTypeID, strings.TrimSpace(categoryCode)).Scan(&code)
+	`, customerID, surveyTypeID, strings.TrimSpace(categoryCode)).Scan(&code, &appliesTo)
 	if errors.Is(err, database.ErrNoRows) {
 		return validationError("PHOTO_CATEGORY_SCOPE", "Kategori foto tidak aktif atau tidak dipetakan ke Customer dan Survey Type ini.")
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	if !strings.EqualFold(strings.TrimSpace(appliesTo), strings.TrimSpace(expectedScope)) {
+		return validationError("PHOTO_CATEGORY_APPLIES_TO", "Kategori foto tidak berlaku untuk scope unggahan ini.")
+	}
+	return nil
 }
 
 func parseOptionalReferenceID(value, code, message string) (*uuid.UUID, error) {

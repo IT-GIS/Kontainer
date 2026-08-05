@@ -3,7 +3,7 @@
 import { Camera, Check, FilePlus2, ImagePlus, Plus, Save, Send, Trash2, TriangleAlert, X } from "lucide-react";
 import Image from "next/image";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AppShell } from "@/components/layout/app-shell";
@@ -14,8 +14,9 @@ import { FormDialog } from "@/components/ui/form-dialog";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/hooks/use-auth";
+import { useDialogBehavior } from "@/hooks/use-dialog-behavior";
 import { apiData } from "@/lib/api-client";
-import { buildFindingDescription, formatCedexDamage, parseLocationSnapshot, selectionDescription, SURVEY_SHEET_FACES, type LocationSelectionSnapshot } from "@/lib/survey-sheet";
+import { buildFindingDescription, filterPhotoCategories, focusSurveyDamage, formatCedexDamage, parseLocationSnapshot, selectionDescription, type LocationSelectionSnapshot } from "@/lib/survey-sheet";
 import type { OptionItem } from "@/types/jobs";
 import type { ChecklistItem, DamageDecisionPreview, DimensionProfile, SurveyDamage, SurveyDetail, SurveyGeneralInfo, SurveyMasterOption, SurveyMasterOptions, SurveyPhoto } from "@/types/surveyor";
 
@@ -94,6 +95,10 @@ function SurveyDetailContent() {
   const [survey, setSurvey] = useState<SurveyDetail | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("Ringkasan Pekerjaan");
   const [activeFace, setActiveFace] = useState("right");
+  const [sheetSelection, setSheetSelection] = useState<LocationSelectionSnapshot | null>(null);
+  const [focusedDamageId, setFocusedDamageId] = useState<string | null>(null);
+  const [focusRequestKey, setFocusRequestKey] = useState(0);
+  const focusRequestRef = useRef(0);
   const [general, setGeneral] = useState<SurveyGeneralInfo>({});
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [components, setComponents] = useState<OptionItem[]>([]);
@@ -123,6 +128,8 @@ function SurveyDetailContent() {
   const [isSaving, setIsSaving] = useState(false);
 
   const readonly = survey ? !["draft", "need_revision"].includes(survey.status) : true;
+  const generalPhotoCategories = filterPhotoCategories(photoCategories, "inspection");
+  const findingPhotoCategories = filterPhotoCategories(photoCategories, "finding");
   const loadSurvey = useCallback(async () => {
     if (!accessToken || !params.id) return;
     setError(null);
@@ -213,7 +220,9 @@ function SurveyDetailContent() {
     };
     setDamagePhotoFile(null);
     setDamagePhotoCaption("");
-    setDamagePhotoCategory(photoCategories[0]?.code ?? "");
+    setDamagePhotoCategory(findingPhotoCategories[0]?.code ?? "");
+    setSheetSelection(selection ?? null);
+    setFocusedDamageId(null);
     setDamageForm(nextDamage);
     setDamageBaseline(JSON.stringify(nextDamage));
     setPendingChecklistItem(null);
@@ -232,8 +241,11 @@ function SurveyDetailContent() {
   }
 
   function openEditDamage(row: SurveyDamage) {
-    const snapshot = parseLocationSnapshot(row.location_selection_snapshot);
-    const snapshotFace = SURVEY_SHEET_FACES.find((item) => item.code === snapshot?.face);
+    const focus = focusSurveyDamage(focusRequestRef.current, row);
+    focusRequestRef.current = focus.focusRequestKey;
+    setSheetSelection(focus.selection);
+    setFocusedDamageId(focus.focusedDamageId);
+    setFocusRequestKey(focus.focusRequestKey);
     const nextDamage = {
       ...emptyDamage,
       id: row.id,
@@ -249,7 +261,7 @@ function SurveyDetailContent() {
       responsibility_code_id: row.responsibility_code_id ?? "",
       severity: row.severity,
       dimension_profile: row.dimension_profile ?? "manual_review",
-      location_selection_snapshot: snapshot,
+      location_selection_snapshot: focus.selection,
       quantity: row.quantity != null ? String(row.quantity) : "",
       quantity_unit: row.quantity_unit ?? "pc",
       length: row.length != null ? String(row.length) : "",
@@ -262,10 +274,13 @@ function SurveyDetailContent() {
     };
     setDamagePhotoFile(null);
     setDamagePhotoCaption("");
-    setDamagePhotoCategory(photoCategories[0]?.code ?? "");
+    setDamagePhotoCategory(findingPhotoCategories[0]?.code ?? "");
     setDamageForm(nextDamage);
     setDamageBaseline(JSON.stringify(nextDamage));
-    if (snapshotFace) setActiveFace(snapshotFace.face);
+    if (focus.activeFace) setActiveFace(focus.activeFace);
+    setMessage(focus.legacyWithoutSnapshot
+      ? `${row.damage_no} adalah Temuan legacy tanpa snapshot area. Form dibuka tanpa membuat marker atau area fiktif.`
+      : `Fokus dipindahkan ke ${row.damage_no}.`);
     setActiveTab("Survey Sheet Interaktif");
     setDamageDialog(true);
   }
@@ -456,25 +471,28 @@ function SurveyDetailContent() {
       {activeTab === "Survey Sheet Interaktif" ? <div className="survey-sheet-workspace">
         <SurveySheetSummary survey={survey} />
         <InteractiveSurveySheet
-          key={damageForm.id ?? "survey-sheet"}
           containerSize={survey.container_size}
           activeFace={activeFace}
           locations={cedexLocations}
           damages={survey.damages ?? []}
           readonly={readonly}
-          initialSelection={damageDialog ? damageForm.location_selection_snapshot : null}
-          onFace={setActiveFace}
+          selection={sheetSelection}
+          focusedDamageId={focusedDamageId}
+          focusRequestKey={focusRequestKey}
+          onFace={(face) => { setActiveFace(face); setSheetSelection(null); setFocusedDamageId(null); }}
+          onSelectionChange={setSheetSelection}
           onUseLocation={openNewDamage}
           onProposeLocation={openLocationProposal}
           onEditDamage={openEditDamage}
           sidePanel={damageDialog ? <DamageEditorPanel title={damageForm.id ? `Edit ${survey.damages?.find((item) => item.id === damageForm.id)?.damage_no ?? "Temuan"}` : "Temuan Baru"} isSaving={isSaving} onClose={() => closeDamageDialog()} onSave={() => void saveDamage()}>
-            <DamageFormFields form={damageForm} setForm={setDamageForm} checklistItems={checklist.filter((item) => item.value === "no")} locations={cedexLocations} components={components} damageCodes={damageCodes} damageMasters={damageMasters} repairs={repairs} materials={materials} responsibilities={responsibilities} severities={severities} photoCategories={photoCategories} photoFile={damagePhotoFile} photoCaption={damagePhotoCaption} photoCategory={damagePhotoCategory} decisionPreview={decisionPreview} decisionLoading={decisionLoading} onPhotoFile={setDamagePhotoFile} onPhotoCaption={setDamagePhotoCaption} onPhotoCategory={setDamagePhotoCategory} onPropose={() => setProposalDialog(true)} />
+            {!damageForm.location_selection_snapshot && damageForm.id ? <div className="alert alert-warning">Temuan legacy ini tidak mempunyai snapshot area. Form tetap dapat diperiksa, tetapi Survey Sheet tidak membuat marker atau area fiktif.</div> : null}
+            <DamageFormFields form={damageForm} setForm={setDamageForm} checklistItems={checklist.filter((item) => item.value === "no")} locations={cedexLocations} components={components} damageCodes={damageCodes} damageMasters={damageMasters} repairs={repairs} materials={materials} responsibilities={responsibilities} severities={severities} photoCategories={findingPhotoCategories} photoFile={damagePhotoFile} photoCaption={damagePhotoCaption} photoCategory={damagePhotoCategory} decisionPreview={decisionPreview} decisionLoading={decisionLoading} onPhotoFile={setDamagePhotoFile} onPhotoCaption={setDamagePhotoCaption} onPhotoCategory={setDamagePhotoCategory} onPropose={() => setProposalDialog(true)} />
           </DamageEditorPanel> : undefined}
         />
-        <DamageList rows={survey.damages ?? []} readonly={readonly} embedded onAdd={() => { setPendingChecklistItem(null); setMessage("Pilih area pada diagram untuk membuat Temuan baru."); }} onSelect={openEditDamage} onEdit={openEditDamage} onDelete={deleteDamage} onPhoto={setPhotoDamage} />
+        <DamageList rows={survey.damages ?? []} selectedDamageId={focusedDamageId} readonly={readonly} embedded onAdd={() => { setPendingChecklistItem(null); setFocusedDamageId(null); setMessage("Pilih area pada diagram untuk membuat Temuan baru."); }} onSelect={openEditDamage} onEdit={openEditDamage} onDelete={deleteDamage} onPhoto={setPhotoDamage} />
       </div> : null}
-      {activeTab === "Daftar Temuan" ? <DamageList rows={survey.damages ?? []} readonly={readonly} onAdd={() => { setPendingChecklistItem(null); setActiveTab("Survey Sheet Interaktif"); setMessage("Pilih area pada diagram untuk membuat Temuan baru."); }} onSelect={openEditDamage} onEdit={openEditDamage} onDelete={deleteDamage} onPhoto={setPhotoDamage} /> : null}
-      {activeTab === "Foto" ? <PhotosTab damages={survey.damages ?? []} photos={survey.photos ?? []} categories={photoCategories} readonly={readonly} onGeneralPhoto={() => setGeneralPhotoDialog(true)} onPhoto={setPhotoDamage} onDeletePhoto={deletePhoto} /> : null}
+      {activeTab === "Daftar Temuan" ? <DamageList rows={survey.damages ?? []} selectedDamageId={focusedDamageId} readonly={readonly} onAdd={() => { setPendingChecklistItem(null); setFocusedDamageId(null); setActiveTab("Survey Sheet Interaktif"); setMessage("Pilih area pada diagram untuk membuat Temuan baru."); }} onSelect={openEditDamage} onEdit={openEditDamage} onDelete={deleteDamage} onPhoto={setPhotoDamage} /> : null}
+      {activeTab === "Foto" ? <PhotosTab damages={survey.damages ?? []} photos={survey.photos ?? []} categories={generalPhotoCategories} readonly={readonly} onGeneralPhoto={() => setGeneralPhotoDialog(true)} onPhoto={setPhotoDamage} onDeletePhoto={deletePhoto} /> : null}
       {activeTab === "Pratinjau & Submit" ? <PreviewAndSubmitTab survey={survey} activeFace={activeFace} locations={cedexLocations} readonly={readonly} isSaving={isSaving} onFace={setActiveFace} onSubmit={submitSurvey} onBack={() => setActiveTab("Survey Sheet Interaktif")} onSaveDraft={() => setMessage("Draf yang sudah diisi tetap tersimpan.")} /> : null}
       <FormDialog title="Ajukan Kode Baru" open={proposalDialog} onClose={() => setProposalDialog(false)} onSubmit={submitCodeProposal} isSubmitting={isSaving} submitLabel="Kirim Pengajuan" size="large">
         <div className="alert alert-info">Pengajuan tidak langsung mengubah master aktif. Admin akan memeriksa kode, alasan, dan bukti sebelum menyetujui atau menolak.</div>
@@ -487,8 +505,8 @@ function SurveyDetailContent() {
           <label className="field form-span-2"><span>Catatan</span><textarea rows={3} value={proposalForm.notes} onChange={(event) => setProposalForm((current) => ({ ...current, notes: event.target.value }))} /></label>
         </div>
       </FormDialog>
-      <PhotoDialog title={`Unggah Foto ${photoDamage?.damage_no ?? "Temuan"}`} categories={photoCategories} open={Boolean(photoDamage)} onClose={() => setPhotoDamage(null)} onSubmit={uploadDamagePhoto} isSaving={isSaving} />
-      <PhotoDialog title="Unggah Foto Evidence Umum Survey" categories={photoCategories} open={generalPhotoDialog} onClose={() => setGeneralPhotoDialog(false)} onSubmit={uploadGeneralPhoto} isSaving={isSaving} />
+      <PhotoDialog title={`Unggah Foto ${photoDamage?.damage_no ?? "Temuan"}`} categories={findingPhotoCategories} open={Boolean(photoDamage)} onClose={() => setPhotoDamage(null)} onSubmit={uploadDamagePhoto} isSaving={isSaving} />
+      <PhotoDialog title="Unggah Foto Evidence Umum Survey" categories={generalPhotoCategories} open={generalPhotoDialog} onClose={() => setGeneralPhotoDialog(false)} onSubmit={uploadGeneralPhoto} isSaving={isSaving} />
     </div>
   );
 }
@@ -532,8 +550,25 @@ function SurveySheetSummary({ survey }: { survey: SurveyDetail }) {
 }
 
 function DamageEditorPanel({ title, children, isSaving, onClose, onSave }: { title: string; children: React.ReactNode; isSaving: boolean; onClose: () => void; onSave: () => void }) {
-  return <aside className="survey-damage-editor-panel" aria-label={title}>
-    <div className="survey-damage-editor-header"><div><span className="eyebrow">Form Temuan</span><h3>{title}</h3></div><button aria-label="Tutup form Temuan" className="icon-button" onClick={onClose} type="button"><X size={18} /></button></div>
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 960px)");
+    const sync = () => setIsMobile(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
+  const { dialogRef, titleId } = useDialogBehavior({ open: true, onClose, enabled: isMobile, closeOnBackdrop: false });
+  return <aside
+    aria-label={isMobile ? undefined : title}
+    aria-labelledby={isMobile ? titleId : undefined}
+    aria-modal={isMobile ? true : undefined}
+    className="survey-damage-editor-panel"
+    ref={dialogRef}
+    role={isMobile ? "dialog" : undefined}
+    tabIndex={isMobile ? -1 : undefined}
+  >
+    <div className="survey-damage-editor-header"><div><span className="eyebrow">Form Temuan</span><h3 id={titleId}>{title}</h3></div><button aria-label="Tutup form Temuan" className="icon-button" onClick={onClose} type="button"><X size={18} /></button></div>
     <div className="survey-damage-editor-body">{children}</div>
     <div className="survey-damage-editor-actions"><button className="secondary-button" disabled={isSaving} onClick={onClose} type="button">Batalkan</button><button className="primary-button" disabled={isSaving} onClick={onSave} type="button"><Save size={17} /><span>{isSaving ? "Menyimpan..." : "Simpan Temuan"}</span></button></div>
   </aside>;
@@ -570,8 +605,8 @@ function ChecklistTab({ items, readonly, isSaving, onChange, onSave, onFinding }
   return <section className="workspace-panel checklist-list"><div className="alert alert-info">Referensi inspeksi aktif disimpan bersama snapshot checklist saat survei dibuat.</div>{items.map((item, index) => <div className="check-row" key={item.item_key}><div><strong>{item.item_label ?? item.item_key}</strong>{item.is_critical ? <span>Kritis</span> : null}{item.standard_reference ? <small>{item.standard_reference}</small> : null}{item.value === "no" ? <button className="secondary-button checklist-finding-button" disabled={readonly || isSaving} onClick={() => onFinding(item)} type="button"><Plus size={16} /><span>Buat Temuan CEDEX</span></button> : null}</div>{item.response_type === "numeric" ? <label className="field"><span>Hasil {item.unit ? `(${item.unit})` : ""}</span><input disabled={readonly} type="number" value={item.numeric_value ?? ""} onChange={(event) => onChange(items.map((row, rowIndex) => rowIndex === index ? { ...row, numeric_value: event.target.value === "" ? null : Number(event.target.value) } : row))} /></label> : item.response_type === "text" ? <input disabled={readonly} value={item.value ?? ""} onChange={(event) => onChange(items.map((row, rowIndex) => rowIndex === index ? { ...row, value: event.target.value } : row))} /> : <div className="segmented-control">{["yes", "no", "na"].map((value) => <button disabled={readonly || isSaving} className={item.value === value ? "selected" : ""} key={value} onClick={() => onChange(items.map((row, rowIndex) => rowIndex === index ? { ...row, value } : row))}>{value.toUpperCase()}</button>)}</div>}</div>)}<StickyActions><button className="primary-button" disabled={readonly || isSaving} onClick={onSave}><Check size={17} /><span>Simpan Checklist</span></button></StickyActions></section>;
 }
 
-function DamageList({ rows, readonly, embedded = false, onAdd, onSelect, onEdit, onDelete, onPhoto }: { rows: SurveyDamage[]; readonly: boolean; embedded?: boolean; onAdd: () => void; onSelect: (row: SurveyDamage) => void; onEdit: (row: SurveyDamage) => void; onDelete: (row: SurveyDamage) => void; onPhoto: (row: SurveyDamage) => void }) {
-  return <section className={`workspace-panel damage-list-panel ${embedded ? "damage-list-embedded" : ""}`}><div className="section-title-row"><div><span className="eyebrow">Tersinkron dengan marker</span><h2>Daftar Temuan</h2><p className="muted-text">Klik baris untuk kembali ke sisi, area, dan form Temuan terkait.</p></div><button className="primary-button" disabled={readonly} onClick={onAdd} type="button"><Plus size={17} /><span>Tambah Temuan</span></button></div><DataTable responsiveCards rows={rows} onRowClick={onSelect} columns={[
+function DamageList({ rows, selectedDamageId, readonly, embedded = false, onAdd, onSelect, onEdit, onDelete, onPhoto }: { rows: SurveyDamage[]; selectedDamageId?: string | null; readonly: boolean; embedded?: boolean; onAdd: () => void; onSelect: (row: SurveyDamage) => void; onEdit: (row: SurveyDamage) => void; onDelete: (row: SurveyDamage) => void; onPhoto: (row: SurveyDamage) => void }) {
+  return <section className={`workspace-panel damage-list-panel ${embedded ? "damage-list-embedded" : ""}`}><div className="section-title-row"><div><span className="eyebrow">Tersinkron dengan marker</span><h2>Daftar Temuan</h2><p className="muted-text">Klik baris untuk kembali ke sisi, area, dan form Temuan terkait.</p></div><button className="primary-button" disabled={readonly} onClick={onAdd} type="button"><Plus size={17} /><span>Tambah Temuan</span></button></div><DataTable responsiveCards rows={rows} rowKey={(row) => row.id} selectedRowKey={selectedDamageId} onRowClick={onSelect} columns={[
     { key: "damage_no", header: "No. Temuan", render: (row) => <strong>{row.damage_no}</strong> },
     { key: "location", header: "Lokasi", render: (row) => <span title={formatCedexDamage(row)}>{row.cedex_location_code ?? row.internal_location}</span> },
     { key: "component", header: "Component", render: (row) => row.component_name ?? row.component_code ?? "-" },
@@ -611,7 +646,7 @@ function PreviewAndSubmitTab({ survey, activeFace, locations, readonly, isSaving
   const warnings = survey.warnings ?? [];
   return <div className="preview-stack">
     <section className="workspace-panel"><div className="section-title-row"><div><h2>Pratinjau &amp; Submit</h2><p className="muted-text">Periksa identitas, marker, format CEDEX, deskripsi, foto, dan rekomendasi sistem sebelum mengirim.</p></div><StatusBadge tone={warnings.length === 0 ? "success" : "danger"}>{warnings.length === 0 ? "LENGKAP" : `${warnings.length} KEKURANGAN`}</StatusBadge></div><div className="detail-grid"><div><span>Nomor Job/SPK</span><strong>{survey.job_order_no}</strong></div><div><span>Survey No</span><strong>{survey.survey_no}</strong></div><div><span>Customer</span><strong>{survey.customer_name}</strong></div><div><span>Container</span><strong>{survey.container_no} / {survey.container_size ?? "-"} feet</strong></div><div><span>Jumlah temuan</span><strong>{survey.damages?.length ?? 0}</strong></div><div><span>Jumlah foto</span><strong>{survey.photos?.length ?? 0}</strong></div><div><span>Rekomendasi Sistem</span><strong>{survey.survey_result_recommendation ?? "Manual Review"}</strong></div><div><span>Status kelengkapan</span><strong>{warnings.length === 0 ? "Lengkap" : "Perlu diperbaiki"}</strong></div></div></section>
-    <InteractiveSurveySheet containerSize={survey.container_size} activeFace={activeFace} locations={locations} damages={survey.damages ?? []} readonly preview onFace={onFace} />
+    <InteractiveSurveySheet containerSize={survey.container_size} activeFace={activeFace} locations={locations} damages={survey.damages ?? []} selection={null} readonly preview onFace={onFace} />
     <section className="workspace-panel"><h3>Format CEDEX dan Deskripsi Otomatis</h3><DataTable responsiveCards rows={survey.damages ?? []} columns={[{ key: "no", header: "No.", render: (row) => row.damage_no }, { key: "cedex", header: "CEDEX Format", render: (row) => formatCedexDamage(row) }, { key: "description", header: "Deskripsi otomatis", render: (row) => row.finding_description || "-" }, { key: "decision", header: "Rekomendasi Sistem", render: (row) => decisionResultText(row.decision_result) }, { key: "photo", header: "Foto", render: (row) => row.photo_count ?? 0 }]} /></section>
     <section className="workspace-panel submit-panel"><h3>Validasi Submit</h3>{warnings.length > 0 ? warnings.map((warning) => <div className="alert alert-danger" key={warning.code}><TriangleAlert size={16} />{warning.message}</div>) : <div className="alert alert-success">Survey siap dikirim ke Reviewer.</div>}<div className="preview-submit-actions"><button className="secondary-button" disabled={readonly || isSaving} onClick={onSaveDraft}><Save size={17} /><span>Simpan Draft</span></button><button className="secondary-button" disabled={isSaving} onClick={onBack}>Kembali Perbaiki</button><button className="primary-button" disabled={readonly || isSaving || warnings.length > 0} onClick={onSubmit}><Send size={17} /><span>Submit ke Reviewer</span></button></div></section>
   </div>;
@@ -897,6 +932,6 @@ function validateDamageForm(form: DamageForm, requiresDimension: boolean) {
 }
 
 function toOptionItems(rows: SurveyMasterOption[] = []): OptionItem[] {
-  return rows.map((item) => ({ id: item.id, code: item.code, label: item.name }));
+  return rows.map((item) => ({ id: item.id, code: item.code, label: item.name, applies_to: item.applies_to }));
 }
 

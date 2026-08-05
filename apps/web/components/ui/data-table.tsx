@@ -23,6 +23,8 @@ type DataTableProps<T> = {
   onSort?: (key: string, order: SortOrder) => void;
   responsiveCards?: boolean;
   onRowClick?: (row: T) => void;
+  rowKey?: (row: T) => string | number;
+  selectedRowKey?: string | number | null;
 };
 
 export function DataTable<T>({
@@ -38,7 +40,9 @@ export function DataTable<T>({
   sortOrder = "asc",
   onSort,
   responsiveCards = false,
-  onRowClick
+  onRowClick,
+  rowKey,
+  selectedRowKey
 }: DataTableProps<T>) {
   return (
     <div className={`table-frame${responsiveCards ? " table-frame-responsive-cards" : ""}`}>
@@ -73,10 +77,14 @@ export function DataTable<T>({
                 <td className="table-empty-cell" colSpan={columns.length}>{emptyText}</td>
               </tr>
             ) : (
-              rows.map((row, index) => (
+              rows.map((row, index) => {
+                const key = rowKey?.(row) ?? index;
+                const selected = selectedRowKey != null && String(key) === String(selectedRowKey);
+                return (
                 <tr
-                  className={onRowClick ? "table-row-clickable" : undefined}
-                  key={index}
+                  aria-current={selected ? "true" : undefined}
+                  className={[onRowClick ? "table-row-clickable" : "", selected ? "table-row-selected" : ""].filter(Boolean).join(" ") || undefined}
+                  key={key}
                   onClick={() => onRowClick?.(row)}
                   onKeyDown={(event) => {
                     if (!onRowClick || (event.key !== 'Enter' && event.key !== ' ')) return;
@@ -89,7 +97,7 @@ export function DataTable<T>({
                     <td data-label={column.header} key={column.key}>{column.render(row)}</td>
                   ))}
                 </tr>
-              ))
+              )})
             )}
           </tbody>
         </table>

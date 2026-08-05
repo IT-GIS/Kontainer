@@ -22,6 +22,7 @@ type Config struct {
 	S3AccessKey       string
 	S3SecretKey       string
 	S3Bucket          string
+	S3ObjectPrefix    string
 	S3Region          string
 	S3UseSSL          bool
 	MaxUploadBytes    int64
@@ -45,6 +46,7 @@ func Load() Config {
 		S3AccessKey:       getenv("S3_ACCESS_KEY", "minioadmin"),
 		S3SecretKey:       getenv("S3_SECRET_KEY", "minioadmin"),
 		S3Bucket:          getenv("S3_BUCKET", "gift-survey"),
+		S3ObjectPrefix:    getenv("S3_OBJECT_PREFIX", ""),
 		S3Region:          getenv("S3_REGION", "us-east-1"),
 		S3UseSSL:          getenvBool("S3_USE_SSL", false),
 		MaxUploadBytes:    int64(getenvInt("MAX_UPLOAD_MB", 10)) * 1024 * 1024,

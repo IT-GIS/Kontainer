@@ -64,7 +64,7 @@ func NewRouter(cfg config.Config, logger *slog.Logger, pool *database.Pool) *gin
 		panic(err)
 	}
 	surveyorRepo := surveyor.NewRepository(pool)
-	surveyorService := surveyor.NewService(surveyorRepo, objectStore, cfg.S3Bucket, cfg.MaxUploadBytes)
+	surveyorService := surveyor.NewService(surveyorRepo, objectStore, cfg.S3Bucket, cfg.MaxUploadBytes, cfg.S3ObjectPrefix)
 	surveyor.Register(protected, authService, surveyorService)
 
 	reviewRepo := reviews.NewRepository(pool)

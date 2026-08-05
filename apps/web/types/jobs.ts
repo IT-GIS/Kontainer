@@ -87,4 +87,5 @@ export type OptionItem = {
   id: string;
   label: string;
   code?: string;
+  applies_to?: string | null;
 };

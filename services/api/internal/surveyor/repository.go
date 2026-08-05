@@ -635,7 +635,7 @@ func (r Repository) DeleteDamage(ctx context.Context, damageID uuid.UUID, actor 
 func (r Repository) PhotoContext(ctx context.Context, damageID uuid.UUID, actor Actor) (PhotoContext, error) {
 	var info PhotoContext
 	err := r.pool.QueryRow(ctx, `
-		SELECT s.id, s.survey_no, jc.container_no, sd.damage_no, sp.full_name,
+		SELECT s.id, s.customer_id, s.survey_type_id, s.survey_no, jc.container_no, sd.damage_no, sp.full_name,
 		       sgi.gps_latitude, sgi.gps_longitude
 		FROM survey_damages sd
 		JOIN surveys s ON s.id=sd.survey_id AND s.deleted_at IS NULL
@@ -643,7 +643,7 @@ func (r Repository) PhotoContext(ctx context.Context, damageID uuid.UUID, actor 
 		JOIN surveyor_profiles sp ON sp.id=s.surveyor_id
 		LEFT JOIN survey_general_infos sgi ON sgi.survey_id=s.id
 		WHERE sd.id=$1 AND sd.deleted_at IS NULL
-	`, damageID).Scan(&info.SurveyID, &info.SurveyNo, &info.ContainerNo, &info.DamageNo, &info.SurveyorName, &info.GPSLatitude, &info.GPSLongitude)
+	`, damageID).Scan(&info.SurveyID, &info.CustomerID, &info.SurveyTypeID, &info.SurveyNo, &info.ContainerNo, &info.DamageNo, &info.SurveyorName, &info.GPSLatitude, &info.GPSLongitude)
 	if err != nil {
 		if errors.Is(err, database.ErrNoRows) {
 			return PhotoContext{}, ErrNotFound
@@ -663,14 +663,14 @@ func (r Repository) PhotoContext(ctx context.Context, damageID uuid.UUID, actor 
 func (r Repository) SurveyPhotoContext(ctx context.Context, surveyID uuid.UUID, actor Actor) (PhotoContext, error) {
 	var info PhotoContext
 	err := r.pool.QueryRow(ctx, `
-		SELECT s.id, s.survey_no, jc.container_no, sp.full_name,
+		SELECT s.id, s.customer_id, s.survey_type_id, s.survey_no, jc.container_no, sp.full_name,
 		       sgi.gps_latitude, sgi.gps_longitude
 		FROM surveys s
 		JOIN job_containers jc ON jc.id=s.job_container_id
 		JOIN surveyor_profiles sp ON sp.id=s.surveyor_id
 		LEFT JOIN survey_general_infos sgi ON sgi.survey_id=s.id
 		WHERE s.id=$1 AND s.deleted_at IS NULL
-	`, surveyID).Scan(&info.SurveyID, &info.SurveyNo, &info.ContainerNo, &info.SurveyorName, &info.GPSLatitude, &info.GPSLongitude)
+	`, surveyID).Scan(&info.SurveyID, &info.CustomerID, &info.SurveyTypeID, &info.SurveyNo, &info.ContainerNo, &info.SurveyorName, &info.GPSLatitude, &info.GPSLongitude)
 	if err != nil {
 		if errors.Is(err, database.ErrNoRows) {
 			return PhotoContext{}, ErrNotFound
@@ -727,12 +727,19 @@ func (r Repository) createPhotoMetadata(ctx context.Context, surveyID uuid.UUID,
 		}
 		damageValue = found
 	}
+	expectedScope := "inspection"
+	photoType := "general"
+	if damageID != nil {
+		expectedScope = "finding"
+		photoType = "damage"
+	}
 	if err := r.validatePhotoCategoryTx(
 		ctx,
 		tx,
 		parseUUIDString(base["customer_id"]),
 		parseUUIDString(base["survey_type_id"]),
 		input.PhotoCategory,
+		expectedScope,
 	); err != nil {
 		return nil, err
 	}
@@ -752,7 +759,6 @@ func (r Repository) createPhotoMetadata(ctx context.Context, surveyID uuid.UUID,
 	if err != nil {
 		return nil, err
 	}
-	photoType := defaultString(input.PhotoType, "damage")
 	item, err := scanRow(tx.QueryRow(ctx, `
 		INSERT INTO survey_photos (
 			survey_id, damage_id, file_id, watermarked_file_id, photo_type, photo_category,

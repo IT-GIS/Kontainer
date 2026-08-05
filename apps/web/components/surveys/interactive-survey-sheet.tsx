@@ -1,7 +1,7 @@
 "use client";
 
 import { Crosshair, FilePlus2, LocateFixed, Minus, Plus, RotateCcw, ZoomIn } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   areaAriaLabel,
   buildSheetAreas,
@@ -28,8 +28,11 @@ type InteractiveSurveySheetProps = {
   readonly?: boolean;
   preview?: boolean;
   sidePanel?: React.ReactNode;
-  initialSelection?: LocationSelectionSnapshot | null;
+  selection: LocationSelectionSnapshot | null;
+  focusedDamageId?: string | null;
+  focusRequestKey?: number;
   onFace: (face: string) => void;
+  onSelectionChange?: (selection: LocationSelectionSnapshot | null) => void;
   onUseLocation?: (selection: LocationSelectionSnapshot, location: SurveyMasterOption) => void;
   onProposeLocation?: (selection: LocationSelectionSnapshot) => void;
   onEditDamage?: (damage: SurveyDamage) => void;
@@ -52,8 +55,11 @@ export function InteractiveSurveySheet({
   readonly = false,
   preview = false,
   sidePanel,
-  initialSelection = null,
+  selection,
+  focusedDamageId = null,
+  focusRequestKey = 0,
   onFace,
+  onSelectionChange,
   onUseLocation,
   onProposeLocation,
   onEditDamage
@@ -62,8 +68,8 @@ export function InteractiveSurveySheet({
   const config = SURVEY_SHEET_FACES.find((item) => item.face === activeFace) ?? SURVEY_SHEET_FACES[0];
   const areas = useMemo(() => size ? buildSheetAreas(config, size) : [], [config, size]);
   const [anchor, setAnchor] = useState<SurveySheetArea | null>(null);
-  const [selection, setSelection] = useState<LocationSelectionSnapshot | null>(initialSelection);
   const [zoom, setZoom] = useState(1);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const mappedLocation = useMemo(
     () => selection ? findStructuredLocation(selection, locations) : undefined,
     [locations, selection]
@@ -73,17 +79,38 @@ export function InteractiveSurveySheet({
     if (readonly || preview) return;
     if (!anchor || anchor.face !== area.face || anchor.bandId !== area.bandId || anchor.containerSize !== area.containerSize) {
       setAnchor(area);
-      setSelection(createSelection(area));
+      onSelectionChange?.(createSelection(area));
       return;
     }
-    setSelection(createSelection(anchor, area));
+    onSelectionChange?.(createSelection(anchor, area));
     setAnchor(null);
   }
 
   function resetSelection() {
     setAnchor(null);
-    setSelection(null);
+    onSelectionChange?.(null);
   }
+
+  useEffect(() => {
+    if (!selection || !focusRequestKey) return;
+    const timer = window.setTimeout(() => {
+      const scroll = scrollRef.current;
+      const bandId = config.bands.find((band) => (
+        band.verticalPosition === selection.vertical_position
+        && band.transversePosition === selection.transverse_position
+      ))?.id;
+      const areaId = bandId ? [selection.face, bandId, selection.section_start, selection.container_size].join("-") : "";
+      const area = scroll?.querySelector<SVGGElement>(`[data-area-id="${areaId}"]`);
+      if (!scroll || !area) return;
+      const scrollBox = scroll.getBoundingClientRect();
+      const areaBox = area.getBoundingClientRect();
+      scroll.scrollTo({
+        left: Math.max(0, scroll.scrollLeft + areaBox.left - scrollBox.left - (scroll.clientWidth - areaBox.width) / 2),
+        behavior: "smooth"
+      });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [activeFace, config.bands, focusRequestKey, selection, zoom]);
 
   if (!size) {
     return (
@@ -124,7 +151,7 @@ export function InteractiveSurveySheet({
             aria-selected={config.face === face.face}
             className={config.face === face.face ? "selected" : ""}
             key={face.face}
-            onClick={() => { resetSelection(); onFace(face.face); }}
+            onClick={() => onFace(face.face)}
             role="tab"
             type="button"
           >
@@ -134,7 +161,7 @@ export function InteractiveSurveySheet({
       </div>
 
       <div className="interactive-sheet-stage">
-        <div className="interactive-sheet-scroll">
+        <div className="interactive-sheet-scroll" ref={scrollRef}>
           <div className="interactive-sheet-canvas" style={{ width: `${zoom * 100}%` }}>
             <ContainerFaceSvg
               areas={areas}
@@ -143,6 +170,7 @@ export function InteractiveSurveySheet({
               locations={locations}
               readonly={readonly || preview}
               selection={selection}
+              focusedDamageId={focusedDamageId}
               size={size}
               onArea={selectArea}
               onDamage={onEditDamage}
@@ -168,7 +196,9 @@ export function InteractiveSurveySheet({
       <div className="survey-sheet-legend" aria-label="Legenda Survey Sheet">
         <span><i className="legend-swatch legend-select" /> Area dipilih</span>
         <span><i className="legend-swatch legend-mapped" /> Mapping aktif tersedia</span>
+        <span><i className="legend-swatch legend-unmapped" /> Belum dipetakan</span>
         <span><i className="legend-marker">01</i> Marker temuan tersimpan</span>
+        <span><i className="legend-marker legend-marker-active">01</i> Marker/baris aktif</span>
         <span>Status mapping juga ditulis pada panel, tidak hanya dibedakan dengan warna.</span>
       </div>
     </section>
@@ -182,6 +212,7 @@ function ContainerFaceSvg({
   locations,
   readonly,
   selection,
+  focusedDamageId,
   size,
   onArea,
   onDamage
@@ -192,6 +223,7 @@ function ContainerFaceSvg({
   locations: SurveyMasterOption[];
   readonly: boolean;
   selection: LocationSelectionSnapshot | null;
+  focusedDamageId?: string | null;
   size: SurveyContainerSize;
   onArea: (area: SurveySheetArea) => void;
   onDamage?: (damage: SurveyDamage) => void;
@@ -228,7 +260,8 @@ function ContainerFaceSvg({
           return (
             <g
               aria-label={areaAriaLabel(area)}
-              className={`svg-area ${mappedArea ? "is-mapped" : ""} ${selected ? "is-selected" : ""}`}
+              className={`svg-area ${mappedArea ? "is-mapped" : "is-unmapped"} ${selected ? "is-selected" : ""}`}
+              data-area-id={area.id}
               data-container-size={area.containerSize}
               data-face={area.face}
               data-location-code-id={mappedArea?.id}
@@ -286,7 +319,8 @@ function ContainerFaceSvg({
           return (
             <g
               aria-label={`Temuan ${damage.damage_no}, ${selectionDescription(snapshot!)}`}
-              className="svg-damage-marker"
+              aria-current={damage.id === focusedDamageId ? "true" : undefined}
+              className={`svg-damage-marker ${damage.id === focusedDamageId ? "is-active" : ""}`}
               key={damage.id}
               onClick={(event) => {
                 event.stopPropagation();

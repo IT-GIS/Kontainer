@@ -2,6 +2,7 @@ package surveyor
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"image"
 	"image/color"
@@ -9,6 +10,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+
+	"container-survey/services/api/internal/database"
 )
 
 func TestReadPhotoAndWatermark(t *testing.T) {
@@ -53,6 +58,51 @@ func TestGeneralSurveyPhotoWatermark(t *testing.T) {
 	if !strings.Contains(text, "Damage: General Evidence") || !strings.Contains(text, "Surveyor: Surveyor Demo") {
 		t.Fatalf("general photo watermark is incomplete: %s", text)
 	}
+}
+
+func TestObjectKeyPrefixIsOptionalAndNormalized(t *testing.T) {
+	withoutPrefix := NewService(Repository{}, nil, "bucket", 1024)
+	if got := withoutPrefix.objectKey("surveys/id/photo.jpg"); got != "surveys/id/photo.jpg" {
+		t.Fatalf("default object key changed: %s", got)
+	}
+	withPrefix := NewService(Repository{}, nil, "bucket", 1024, "/uat/UAT-REAL-CASE-2026-08/")
+	if got := withPrefix.objectKey("/surveys/id/photo.jpg"); got != "uat/UAT-REAL-CASE-2026-08/surveys/id/photo.jpg" {
+		t.Fatalf("prefixed object key = %s", got)
+	}
+}
+
+func TestPhotoCategoryScopeMismatchHasSpecificContext(t *testing.T) {
+	err := validatePhotoCategoryQuery(context.Background(), photoCategoryQuery{appliesTo: "finding"}, uuid.New(), uuid.New(), "damage_finding", "inspection")
+	validation, ok := err.(SurveyValidationError)
+	if !ok || len(validation.Warnings) != 1 || validation.Warnings[0].Code != "PHOTO_CATEGORY_APPLIES_TO" {
+		t.Fatalf("unexpected scope mismatch: %#v", err)
+	}
+	if err := validatePhotoCategoryQuery(context.Background(), photoCategoryQuery{appliesTo: "inspection"}, uuid.New(), uuid.New(), "general_container", "inspection"); err != nil {
+		t.Fatalf("matching scope rejected: %v", err)
+	}
+}
+
+type photoCategoryQuery struct {
+	appliesTo string
+	err       error
+}
+
+func (query photoCategoryQuery) QueryRow(context.Context, string, ...any) database.Row {
+	return photoCategoryRow{appliesTo: query.appliesTo, err: query.err}
+}
+
+type photoCategoryRow struct {
+	appliesTo string
+	err       error
+}
+
+func (row photoCategoryRow) Scan(dest ...any) error {
+	if row.err != nil {
+		return row.err
+	}
+	*(dest[0].(*string)) = "category"
+	*(dest[1].(*string)) = row.appliesTo
+	return nil
 }
 
 func testPNG(t *testing.T) []byte {

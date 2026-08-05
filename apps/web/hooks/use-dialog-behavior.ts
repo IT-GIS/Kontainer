@@ -8,6 +8,7 @@ type UseDialogBehaviorOptions = {
   closeOnEscape?: boolean;
   closeOnBackdrop?: boolean;
   preventClose?: boolean;
+  enabled?: boolean;
 };
 
 const focusableSelector = [
@@ -24,7 +25,8 @@ export function useDialogBehavior({
   onClose,
   closeOnEscape = true,
   closeOnBackdrop = true,
-  preventClose = false
+  preventClose = false,
+  enabled = true
 }: UseDialogBehaviorOptions) {
   const dialogRef = useRef<HTMLElement | null>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
@@ -32,7 +34,7 @@ export function useDialogBehavior({
   const descriptionId = useId();
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !enabled) return;
 
     previouslyFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const originalOverflow = document.body.style.overflow;
@@ -48,10 +50,10 @@ export function useDialogBehavior({
       document.body.style.overflow = originalOverflow;
       previouslyFocusedRef.current?.focus();
     };
-  }, [open]);
+  }, [enabled, open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !enabled) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && closeOnEscape) {
@@ -83,7 +85,7 @@ export function useDialogBehavior({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [closeOnEscape, onClose, open, preventClose]);
+  }, [closeOnEscape, enabled, onClose, open, preventClose]);
 
   const requestClose = () => {
     if (!preventClose) onClose();

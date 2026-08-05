@@ -4567,6 +4567,39 @@ pre {
   stroke: #2563eb;
 }
 
+.survey-sheet-workspace .svg-area.is-unmapped:not(.is-selected) rect {
+  fill: #f8fafc;
+  stroke: #94a3b8;
+  stroke-dasharray: 5 4;
+}
+
+.survey-sheet-workspace .svg-area.is-selected rect {
+  fill: #fef3c7;
+  stroke: #d97706;
+  stroke-width: 3;
+}
+
+.survey-sheet-workspace .svg-damage-marker.is-active rect {
+  fill: #dc2626;
+  stroke: #7f1d1d;
+  stroke-width: 4;
+}
+
+.survey-sheet-workspace .svg-damage-marker.is-active text {
+  fill: #fff;
+  font-weight: 900;
+}
+
+.legend-unmapped {
+  background: #f8fafc;
+  border: 1px dashed #64748b;
+}
+
+.legend-marker-active {
+  background: #dc2626;
+  color: #fff;
+}
+
 .survey-damage-editor-panel {
   background: #fff;
   border: 1px solid #93c5fd;
@@ -4605,7 +4638,9 @@ pre {
   display: grid;
   gap: 14px;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 16px;
 }
 
@@ -4647,6 +4682,15 @@ pre {
 .table-row-clickable:focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: -2px;
+}
+
+.table-row-selected td,
+.table-row-selected:hover td {
+  background: #dbeafe;
+}
+
+.table-row-selected {
+  box-shadow: inset 4px 0 0 #2563eb;
 }
 
 .photo-list-divider {
@@ -4696,10 +4740,13 @@ pre {
     border: 0;
     border-radius: 0;
     inset: 0;
+    height: 100dvh;
     max-height: 100dvh;
+    max-width: 100vw;
     min-height: 100dvh;
     position: fixed;
     top: 0;
+    width: 100vw;
     z-index: 80;
   }
 
@@ -4711,6 +4758,16 @@ pre {
 
   .survey-damage-editor-actions {
     padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+
+  .survey-damage-editor-header {
+    padding-top: max(14px, env(safe-area-inset-top));
+  }
+
+  .survey-damage-editor-body {
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
   }
 }
 

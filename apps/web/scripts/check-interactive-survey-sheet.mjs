@@ -56,6 +56,24 @@ assert.equal(sheet.findStructuredLocation(range, [{ ...mapped, input_mode: "manu
 assert.deepEqual(sheet.parseLocationSnapshot(JSON.stringify(range)), range);
 assert.equal(sheet.selectionContainsArea(range, areas[2]), true);
 assert.equal(sheet.selectionContainsArea(range, areas[5]), false);
+const focused = sheet.focusSurveyDamage(0, { id: "damage-1", location_selection_snapshot: JSON.stringify(range) });
+assert.equal(focused.activeFace, "right");
+assert.equal(focused.focusedDamageId, "damage-1");
+assert.equal(focused.focusRequestKey, 1);
+assert.deepEqual(focused.selection, range);
+assert.equal(sheet.focusSurveyDamage(focused.focusRequestKey, { id: "damage-1", location_selection_snapshot: range }).focusRequestKey, 2);
+const legacyFocus = sheet.focusSurveyDamage(2, { id: "legacy-1", location_selection_snapshot: null });
+assert.equal(legacyFocus.selection, null);
+assert.equal(legacyFocus.legacyWithoutSnapshot, true);
+assert.equal(legacyFocus.activeFace, null);
+const categories = [
+  { code: "general", applies_to: "inspection" },
+  { code: "damage", applies_to: "finding" },
+  { code: "other", applies_to: "report" },
+  { code: "unset" }
+];
+assert.deepEqual(sheet.filterPhotoCategories(categories, "inspection").map((item) => item.code), ["general"]);
+assert.deepEqual(sheet.filterPhotoCategories(categories, "finding").map((item) => item.code), ["damage"]);
 assert.match(sheet.formatCedexDamage({
   cedex_location_code: "RB14", component_code: "PAA", damage_code: "DT",
   length: 20, width: 10, unit: "cm", quantity: 1, quantity_unit: "pc",
@@ -80,6 +98,10 @@ assert.match(component, /role="button"/);
 assert.match(component, /onKeyDown/);
 assert.match(component, /location_selection_snapshot/);
 assert.match(component, /sidePanel/);
+assert.match(component, /focusRequestKey/);
+assert.match(component, /focusedDamageId/);
+assert.match(component, /onSelectionChange/);
+assert.doesNotMatch(component, /initialSelection/);
 assert.match(component, /damage\.damage_no/);
 assert.match(route, /Survey Sheet Interaktif/);
 assert.match(route, /Pratinjau &amp; Submit/);
@@ -91,7 +113,14 @@ assert.match(route, /Informasi Pekerjaan &amp; Identitas Peti Kemas/);
 assert.match(route, /Foto Evidence Umum Survey/);
 assert.match(route, /Rekomendasi Tindakan/);
 assert.match(route, /onRowClick/);
+assert.match(route, /role=\{isMobile \? "dialog"/);
+assert.match(route, /aria-modal=\{isMobile \? true/);
+assert.match(route, /useDialogBehavior/);
+assert.match(route, /findingPhotoCategories/);
+assert.match(route, /generalPhotoCategories/);
 assert.match(dataTable, /onRowClick/);
+assert.match(dataTable, /selectedRowKey/);
+assert.match(dataTable, /aria-current/);
 assert.match(styles, /survey-sheet-workspace[\s\S]*grid-template-columns: minmax\(0, 1\.65fr\) minmax\(340px, 1fr\)/);
 assert.match(styles, /@media \(max-width: 960px\)[\s\S]*survey-damage-editor-panel[\s\S]*position: fixed/);
 assert.match(styles, /survey-sheet-workspace[\s\S]*max-width: 100%/);

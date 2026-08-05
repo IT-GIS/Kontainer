@@ -44,6 +44,32 @@ export type SurveySheetArea = {
   bandLabel: string;
 };
 
+export type SurveySheetFocusState = {
+  selection: LocationSelectionSnapshot | null;
+  focusedDamageId: string | null;
+  focusRequestKey: number;
+  activeFace: SurveySheetFaceKey | null;
+  legacyWithoutSnapshot: boolean;
+};
+
+export function focusSurveyDamage(currentRequestKey: number, damage: Pick<SurveyDamage, "id" | "location_selection_snapshot">): SurveySheetFocusState {
+  const selection = parseLocationSnapshot(damage.location_selection_snapshot);
+  return {
+    selection,
+    focusedDamageId: damage.id,
+    focusRequestKey: currentRequestKey + 1,
+    activeFace: selection ? SURVEY_SHEET_FACES.find((item) => item.code === selection.face)?.face ?? null : null,
+    legacyWithoutSnapshot: !selection
+  };
+}
+
+export function filterPhotoCategories<T extends { applies_to?: string | null }>(
+  categories: T[],
+  scope: "inspection" | "finding"
+): T[] {
+  return categories.filter((category) => String(category.applies_to ?? "").trim().toLowerCase() === scope);
+}
+
 const SIDE_BANDS: SurveySheetBand[] = [
   { id: "header", label: "Header", verticalPosition: "H", transversePosition: "X" },
   { id: "top", label: "Top", verticalPosition: "T", transversePosition: "X" },

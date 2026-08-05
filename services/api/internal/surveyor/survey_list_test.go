@@ -121,6 +121,20 @@ func TestFindingPhotoRequirementIsScopedPerDamage(t *testing.T) {
 	}
 }
 
+func TestSubmitValidationIgnoresUnrelatedPhotoScope(t *testing.T) {
+	repo := Repository{}
+	survey := map[string]any{
+		"required_photo_categories": []map[string]any{{
+			"code": "report_only", "name": "Report Only", "applies_to": "report",
+		}},
+		"photos": []map[string]any{},
+	}
+	warnings := repo.validateSurvey(survey)
+	if hasWarningCode(warnings, "PHOTO_CATEGORY_REQUIRED") || hasWarningCode(warnings, "DAMAGE_PHOTO_CATEGORY_REQUIRED") {
+		t.Fatalf("unrelated scope must not be treated as general or finding: %#v", warnings)
+	}
+}
+
 func hasWarningCode(warnings []ValidationWarning, code string) bool {
 	for _, warning := range warnings {
 		if warning.Code == code {

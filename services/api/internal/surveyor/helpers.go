@@ -570,7 +570,8 @@ func (r Repository) validateSurvey(survey map[string]any) []ValidationWarning {
 	for _, category := range requiredPhotoCategories {
 		code := strings.ToLower(strings.TrimSpace(fmt.Sprint(category["code"])))
 		name := defaultString(category["name"], code)
-		if strings.EqualFold(strings.TrimSpace(fmt.Sprint(category["applies_to"])), "finding") {
+		switch strings.ToLower(strings.TrimSpace(fmt.Sprint(category["applies_to"]))) {
+		case "finding":
 			for _, damage := range damages {
 				damageID := strings.TrimSpace(fmt.Sprint(damage["id"]))
 				if photoCountByDamageCategory[damageID+"|"+code] == 0 {
@@ -580,10 +581,12 @@ func (r Repository) validateSurvey(survey map[string]any) []ValidationWarning {
 					})
 				}
 			}
-		} else if photoCountByCategory[code] == 0 {
-			warnings = append(warnings, ValidationWarning{
-				Code: "PHOTO_CATEGORY_REQUIRED", Message: "Foto Evidence wajib kategori " + name + " belum tersedia.",
-			})
+		case "inspection":
+			if photoCountByCategory[code] == 0 {
+				warnings = append(warnings, ValidationWarning{
+					Code: "PHOTO_CATEGORY_REQUIRED", Message: "Foto Evidence wajib kategori " + name + " belum tersedia.",
+				})
+			}
 		}
 	}
 	return warnings

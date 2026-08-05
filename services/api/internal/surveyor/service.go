@@ -12,11 +12,16 @@ type Service struct {
 	repo           Repository
 	store          objectstorage.Store
 	bucket         string
+	objectPrefix   string
 	maxUploadBytes int64
 }
 
-func NewService(repo Repository, store objectstorage.Store, bucket string, maxUploadBytes int64) *Service {
-	return &Service{repo: repo, store: store, bucket: bucket, maxUploadBytes: maxUploadBytes}
+func NewService(repo Repository, store objectstorage.Store, bucket string, maxUploadBytes int64, objectPrefix ...string) *Service {
+	prefix := ""
+	if len(objectPrefix) > 0 {
+		prefix = strings.Trim(strings.TrimSpace(objectPrefix[0]), "/")
+	}
+	return &Service{repo: repo, store: store, bucket: bucket, objectPrefix: prefix, maxUploadBytes: maxUploadBytes}
 }
 
 func (s *Service) Dashboard(ctx context.Context, actor Actor) (Dashboard, error) {
@@ -138,6 +143,7 @@ func (s *Service) UploadPhoto(ctx context.Context, damageID uuid.UUID, input Pho
 	if strings.TrimSpace(input.FileName) == "" {
 		input.FileName = "photo"
 	}
+	input.PhotoType = "damage"
 	return s.uploadPhoto(ctx, damageID, input, actor)
 }
 

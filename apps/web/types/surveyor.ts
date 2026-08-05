@@ -240,6 +240,7 @@ export type SurveyMasterOption = {
   requires_reinspection?: boolean;
   reference_type?: string | null;
   clause_section?: string | null;
+  applies_to?: string | null;
 };
 
 export type SurveyMasterOptions = {

@@ -36,6 +36,8 @@ const maxPhotoPixels int64 = 40_000_000
 
 type PhotoContext struct {
 	SurveyID     uuid.UUID
+	CustomerID   uuid.UUID
+	SurveyTypeID uuid.UUID
 	SurveyNo     string
 	ContainerNo  string
 	DamageNo     string
@@ -83,6 +85,9 @@ func (s *Service) uploadPhoto(ctx context.Context, damageID uuid.UUID, input Pho
 	if err != nil {
 		return nil, err
 	}
+	if err := s.repo.ValidatePhotoCategory(ctx, photoContext.CustomerID, photoContext.SurveyTypeID, input.PhotoCategory, "finding"); err != nil {
+		return nil, err
+	}
 	return s.storePhoto(ctx, photoContext, input, func(record PhotoRecordInput) (map[string]any, error) {
 		return s.repo.CreatePhotoMetadata(ctx, damageID, record, actor)
 	})
@@ -91,6 +96,9 @@ func (s *Service) uploadPhoto(ctx context.Context, damageID uuid.UUID, input Pho
 func (s *Service) uploadSurveyPhoto(ctx context.Context, surveyID uuid.UUID, input PhotoInput, actor Actor) (map[string]any, error) {
 	photoContext, err := s.repo.SurveyPhotoContext(ctx, surveyID, actor)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.ValidatePhotoCategory(ctx, photoContext.CustomerID, photoContext.SurveyTypeID, input.PhotoCategory, "inspection"); err != nil {
 		return nil, err
 	}
 	return s.storePhoto(ctx, photoContext, input, func(record PhotoRecordInput) (map[string]any, error) {
@@ -115,8 +123,8 @@ func (s *Service) storePhoto(ctx context.Context, photoContext PhotoContext, inp
 
 	objectID := uuid.NewString()
 	originalExtension := supportedPhotoTypes[contentType]
-	originalKey := fmt.Sprintf("surveys/%s/photos/original/%s%s", photoContext.SurveyID, objectID, originalExtension)
-	watermarkedKey := fmt.Sprintf("surveys/%s/photos/watermarked/%s.jpg", photoContext.SurveyID, objectID)
+	originalKey := s.objectKey(fmt.Sprintf("surveys/%s/photos/original/%s%s", photoContext.SurveyID, objectID, originalExtension))
+	watermarkedKey := s.objectKey(fmt.Sprintf("surveys/%s/photos/watermarked/%s.jpg", photoContext.SurveyID, objectID))
 	baseName := strings.TrimSuffix(sanitizeFileName(input.FileName), path.Ext(input.FileName))
 	if baseName == "" {
 		baseName = "photo"
@@ -149,6 +157,13 @@ func (s *Service) storePhoto(ctx context.Context, photoContext PhotoContext, inp
 		return nil, err
 	}
 	return item, nil
+}
+
+func (s *Service) objectKey(key string) string {
+	if s.objectPrefix == "" {
+		return key
+	}
+	return s.objectPrefix + "/" + strings.TrimLeft(key, "/")
 }
 
 func (s *Service) photoContent(ctx context.Context, photoID uuid.UUID, variant string, actor Actor) (PhotoContent, error) {
