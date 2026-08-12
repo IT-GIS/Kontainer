@@ -3,6 +3,7 @@ package surveyor
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"path"
 	"strconv"
@@ -56,6 +57,7 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	v1.POST("/survey-damages/:id/photos", middleware.RequirePermission(authService, "survey_photos.upload.assigned"), h.UploadPhoto)
 	v1.GET("/survey-photos/:id/content", middleware.RequirePermission(authService, "survey_photos.view.assigned"), h.PhotoContent)
 	v1.DELETE("/survey-photos/:id", middleware.RequirePermission(authService, "survey_photos.delete.assigned"), h.DeletePhoto)
+	v1.POST("/survey-photos/:id/restore", middleware.RequirePermission(authService, "survey_photos.delete.assigned"), h.RestorePhoto)
 }
 
 func (h Handler) Dashboard(c *gin.Context) {
@@ -444,6 +446,19 @@ func (h Handler) DeletePhoto(c *gin.Context) {
 	apphttp.OK(c, "Foto evidence berhasil dihapus.", item)
 }
 
+func (h Handler) RestorePhoto(c *gin.Context) {
+	id, ok := parseID(c)
+	if !ok {
+		return
+	}
+	item, err := h.service.RestorePhoto(c.Request.Context(), id, actorFromContext(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Foto evidence berhasil dipulihkan dan antrean penghapusan dibatalkan.", item)
+}
+
 func (h Handler) Photos(c *gin.Context) {
 	id, ok := parseID(c)
 	if !ok {
@@ -507,6 +522,12 @@ func (h Handler) writeError(c *gin.Context, err error) {
 	case errors.Is(err, ErrDuplicate):
 		apphttp.Fail(c, http.StatusConflict, "Data duplikat.", "DUPLICATE_RESOURCE", nil)
 	default:
+		slog.Error("surveyor request failed",
+			"request_id", c.GetString("request_id"),
+			"method", c.Request.Method,
+			"path", c.FullPath(),
+			"error", err,
+		)
 		apphttp.Fail(c, http.StatusInternalServerError, "Terjadi kesalahan internal.", "INTERNAL_ERROR", nil)
 	}
 }
@@ -514,7 +535,10 @@ func (h Handler) writeError(c *gin.Context, err error) {
 func listParams(c *gin.Context) ListParams {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "20"))
-	return ListParams{Page: page, PerPage: perPage, Search: c.Query("search"), Status: c.Query("status"), Date: c.Query("date")}
+	return ListParams{
+		Page: page, PerPage: perPage, Search: c.Query("search"), Status: c.Query("status"), Date: c.Query("date"),
+		Customer: c.Query("customer"), Container: c.Query("container"), DateFrom: c.Query("date_from"), DateTo: c.Query("date_to"),
+	}
 }
 
 func parseID(c *gin.Context) (uuid.UUID, bool) {

@@ -3,8 +3,12 @@
 import Image from "next/image";
 import { Loader2, Lock, Mail } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useState } from "react";
+import { FormEvent, Suspense, useState, useSyncExternalStore } from "react";
 import { useAuth } from "@/hooks/use-auth";
+
+const subscribeToHydration = () => () => undefined;
+const getHydratedSnapshot = () => true;
+const getServerHydratedSnapshot = () => false;
 
 export default function LoginPage() {
   return (
@@ -22,6 +26,7 @@ function LoginForm() {
   const [password, setPassword] = useState("password");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isHydrated = useSyncExternalStore(subscribeToHydration, getHydratedSnapshot, getServerHydratedSnapshot);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -89,7 +94,7 @@ function LoginForm() {
 
           {error ? <div className="source-login-alert" role="alert">{error}</div> : null}
 
-          <button className="source-login-submit" type="submit" disabled={isSubmitting}>
+          <button className="source-login-submit" type="submit" disabled={!isHydrated || isSubmitting}>
             {isSubmitting ? <><Loader2 className="source-login-loader" size={17} /><span>Memproses...</span></> : <span>Masuk</span>}
           </button>
         </form>

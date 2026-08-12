@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"container-survey/services/api/internal/database"
+	"container-survey/services/api/internal/masterdata"
 
 	"github.com/google/uuid"
 )
@@ -83,88 +84,61 @@ func (r Repository) MasterOptions(ctx context.Context, surveyID uuid.UUID, actor
 		},
 	}
 
-	if options.CEDEXLocations, err = r.optionRows(ctx, `
+	if options.CEDEXLocations, err = r.optionRows(ctx, fmt.Sprintf(`
 		SELECT location.id, location.code, location.code AS name, location.description,
 		       location.face, location.grid_code, location.container_size, location.display_order,
 		       location.input_mode, location.sector_code, location.vertical_code,
 		       location.start_section, location.end_section, location.transverse_span,
 		       location.source_type, location.status
 		FROM cedex_locations location
-		WHERE location.status='active'
-		  AND (location.customer_id=$1 OR (
-		    location.customer_id IS NULL AND NOT EXISTS (
-		      SELECT 1 FROM cedex_locations override
-		      WHERE override.customer_id=$1 AND override.status='active'
-		        AND LOWER(override.code)=LOWER(location.code)
-		    )
-		  ))
+		WHERE %s
 		ORDER BY location.display_order, location.face, location.grid_code, location.code
-	`, customerID); err != nil {
+	`, mustEffectiveMasterScope("cedex_locations", "location")), customerID); err != nil {
 		return SurveyMasterOptions{}, err
 	}
-	if options.CEDEXComponents, err = r.optionRows(ctx, `
+	if options.CEDEXComponents, err = r.optionRows(ctx, fmt.Sprintf(`
 		SELECT component.id, component.code, component.component_name AS name, component.description,
 		       component.applicable_face, component.is_structural_critical, component.display_order,
 		       component.source_type
 		FROM cedex_components component
-		WHERE component.status='active'
-		  AND (component.customer_id=$1 OR (component.customer_id IS NULL AND NOT EXISTS (
-		    SELECT 1 FROM cedex_components override
-		    WHERE override.customer_id=$1 AND override.status='active'
-		      AND LOWER(override.code)=LOWER(component.code)
-		  )))
+		WHERE %s
 		ORDER BY component.display_order, component.code
-	`, customerID); err != nil {
+	`, mustEffectiveMasterScope("cedex_components", "component")), customerID); err != nil {
 		return SurveyMasterOptions{}, err
 	}
-	if options.CEDEXDamages, err = r.optionRows(ctx, `
+	if options.CEDEXDamages, err = r.optionRows(ctx, fmt.Sprintf(`
 		SELECT damage.id, damage.code, damage.damage_name AS name, damage.description, damage.damage_category,
 		       damage.default_severity, damage.requires_dimension, damage.default_action_id,
 		       damage.default_inspection_reference_id, damage.display_order, damage.source_type
 		FROM cedex_damages damage
-		WHERE damage.status='active'
-		  AND (damage.customer_id=$1 OR (damage.customer_id IS NULL AND NOT EXISTS (
-		    SELECT 1 FROM cedex_damages override
-		    WHERE override.customer_id=$1 AND override.status='active'
-		      AND LOWER(override.code)=LOWER(damage.code)
-		  )))
+		WHERE %s
 		ORDER BY damage.display_order, damage.code
-	`, customerID); err != nil {
+	`, mustEffectiveMasterScope("cedex_damages", "damage")), customerID); err != nil {
 		return SurveyMasterOptions{}, err
 	}
-	if options.CEDEXRepairs, err = r.optionRows(ctx, `
+	if options.CEDEXRepairs, err = r.optionRows(ctx, fmt.Sprintf(`
 		SELECT repair.id, repair.code, repair.repair_name AS name, repair.description, repair.result_mapping,
 		       repair.requires_reinspection, repair.display_order, repair.source_type
 		FROM cedex_repairs repair
-		WHERE repair.status='active'
-		  AND (repair.customer_id=$1 OR (repair.customer_id IS NULL AND NOT EXISTS (
-		    SELECT 1 FROM cedex_repairs override
-		    WHERE override.customer_id=$1 AND override.status='active'
-		      AND LOWER(override.code)=LOWER(repair.code)
-		  )))
+		WHERE %s
 		ORDER BY repair.display_order, repair.code
-	`, customerID); err != nil {
+	`, mustEffectiveMasterScope("cedex_repairs", "repair")), customerID); err != nil {
 		return SurveyMasterOptions{}, err
 	}
-	if options.CEDEXMaterials, err = r.optionRows(ctx, `
+	if options.CEDEXMaterials, err = r.optionRows(ctx, fmt.Sprintf(`
 		SELECT material.id, material.code, material.material_name AS name, material.description, material.source_type
 		FROM cedex_materials material
-		WHERE material.status='active'
-		  AND (material.customer_id=$1 OR (material.customer_id IS NULL AND NOT EXISTS (
-		    SELECT 1 FROM cedex_materials override
-		    WHERE override.customer_id=$1 AND override.status='active'
-		      AND LOWER(override.code)=LOWER(material.code)
-		  )))
+		WHERE %s
 		ORDER BY material.code
-	`, customerID); err != nil {
+	`, mustEffectiveMasterScope("cedex_materials", "material")), customerID); err != nil {
 		return SurveyMasterOptions{}, err
 	}
-	if options.ResponsibilityCodes, err = r.optionRows(ctx, `
-		SELECT id, code, name, description
-		FROM responsibility_codes
-		WHERE customer_id=$1 AND status='active'
-		ORDER BY code
-	`, customerID); err != nil {
+	if options.ResponsibilityCodes, err = r.optionRows(ctx, fmt.Sprintf(`
+		SELECT responsibility.id, responsibility.code, responsibility.name, responsibility.description
+		FROM responsibility_codes responsibility
+		WHERE %s
+		ORDER BY responsibility.code
+	`, mustEffectiveMasterScope("responsibility_codes", "responsibility")), customerID); err != nil {
 		return SurveyMasterOptions{}, err
 	}
 	if options.FindingSeverities, err = r.optionRows(ctx, `
@@ -213,6 +187,14 @@ func (r Repository) optionRows(ctx context.Context, query string, args ...any) (
 	return rowsToMaps(rows)
 }
 
+func mustEffectiveMasterScope(table, alias string) string {
+	scope, err := masterdata.EffectiveMasterScopeSQL(table, alias, "$1")
+	if err != nil {
+		panic(err)
+	}
+	return scope
+}
+
 func (r Repository) validateScopedReferenceTx(ctx context.Context, tx database.Tx, table string, id uuid.UUID, customerID uuid.UUID, code string) error {
 	allowed := map[string]bool{
 		"cedex_components": true, "cedex_damages": true, "cedex_repairs": true,
@@ -222,20 +204,12 @@ func (r Repository) validateScopedReferenceTx(ctx context.Context, tx database.T
 		return fmt.Errorf("unsupported scoped reference table %q", table)
 	}
 	var found uuid.UUID
-	scopeClause := "item.customer_id=$2"
-	if table != "responsibility_codes" {
-		scopeClause = fmt.Sprintf(`(item.customer_id=$2 OR (
-			item.customer_id IS NULL AND NOT EXISTS (
-				SELECT 1
-				FROM %s override
-				WHERE override.customer_id=$2
-				  AND override.status='active'
-				  AND LOWER(override.code)=LOWER(item.code)
-			)
-		))`, table)
+	scopeClause, err := masterdata.EffectiveMasterScopeSQL(table, "item", "$2")
+	if err != nil {
+		return err
 	}
-	err := tx.QueryRow(ctx, fmt.Sprintf(
-		"SELECT item.id FROM %s item WHERE item.id=$1 AND %s AND item.status='active' LIMIT 1",
+	err = tx.QueryRow(ctx, fmt.Sprintf(
+		"SELECT item.id FROM %s item WHERE item.id=$1 AND %s LIMIT 1",
 		table, scopeClause,
 	), id, customerID).Scan(&found)
 	if errors.Is(err, database.ErrNoRows) {

@@ -26,12 +26,18 @@ jobs:
       - name: Test API
         working-directory: services/api
         run: go test ./...
+      - name: Vet API
+        working-directory: services/api
+        run: go vet ./...
       - name: Test Worker
         working-directory: services/worker
         run: go test ./...
+      - name: Vet Worker
+        working-directory: services/worker
+        run: go vet ./...
 
   mysql-integration:
-    name: MySQL integration test
+    name: MySQL migration and workflow integration
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -59,14 +65,18 @@ jobs:
           for migration in services/api/migrations/*.up.sql; do
             mysql -h 127.0.0.1 -uroot kontainer_test < "$migration"
           done
-      - name: Run MySQL integration test
+      - name: Run MySQL master and workflow integration tests
         working-directory: services/api
         env:
           MASTERDATA_SMOKE_DSN: root@tcp(127.0.0.1:3306)/kontainer_test?parseTime=true&charset=utf8mb4&loc=UTC
-        run: go test ./internal/masterdata -run TestMasterDataSmokeWithTestDatabase -count=1
+        run: go test ./internal/masterdata -run 'Test(MasterDataSmokeWithTestDatabase|EffectiveMasterWithMySQL)' -count=1
+      - name: Verify latest migration down and up
+        run: |
+          mysql -h 127.0.0.1 -uroot kontainer_test < services/api/migrations/0018_final_repository_hardening.down.sql
+          mysql -h 127.0.0.1 -uroot kontainer_test < services/api/migrations/0018_final_repository_hardening.up.sql
 
   web:
-    name: Web typecheck and production build
+    name: Frontend lint, contract tests, typecheck, and build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -78,16 +88,162 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Lint
+        run: npm run lint --workspace apps/web
+      - name: Navigation contract
+        run: npm run test:navigation --workspace apps/web
+      - name: ISO CEDEX contract
+        run: npm run test:iso-cedex --workspace apps/web
+      - name: Survey Sheet contract
+        run: npm run test:survey-sheet --workspace apps/web
       - name: Typecheck
         run: npm run typecheck --workspace apps/web
       - name: Production build
         run: npm run build --workspace apps/web
 
+  browser-smoke:
+    name: Responsive browser smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run responsive smoke
+        run: npm run test:e2e:smoke --workspace apps/web
+      - name: Upload browser evidence on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-smoke-evidence
+          path: |
+            tmp/playwright-results
+            tmp/playwright-report
+          if-no-files-found: ignore
+
+  browser-operational:
+    name: Admin Surveyor Reviewer operational E2E
+    if: ${{ vars.E2E_OPERATIONAL_BASE_URL != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run operational real-case workflow
+        env:
+          PLAYWRIGHT_EXTERNAL_SERVER: "1"
+          PLAYWRIGHT_BASE_URL: ${{ vars.E2E_OPERATIONAL_BASE_URL }}
+          E2E_OPERATIONAL: "1"
+          E2E_MULTI_CONTAINER_JOB_ID: ${{ vars.E2E_MULTI_CONTAINER_JOB_ID }}
+          E2E_CONTAINER_A_NO: ${{ vars.E2E_CONTAINER_A_NO }}
+          E2E_CONTAINER_B_NO: ${{ vars.E2E_CONTAINER_B_NO }}
+          E2E_REVISION_SURVEY_ID: ${{ vars.E2E_REVISION_SURVEY_ID }}
+          E2E_REJECTION_SURVEY_ID: ${{ vars.E2E_REJECTION_SURVEY_ID }}
+          E2E_ISOLATION_SURVEY_ID: ${{ vars.E2E_ISOLATION_SURVEY_ID }}
+          E2E_SURVEYOR_EMAIL: ${{ secrets.E2E_SURVEYOR_EMAIL }}
+          E2E_SURVEYOR_PASSWORD: ${{ secrets.E2E_SURVEYOR_PASSWORD }}
+          E2E_SUPERVISOR_EMAIL: ${{ secrets.E2E_SUPERVISOR_EMAIL }}
+          E2E_SUPERVISOR_PASSWORD: ${{ secrets.E2E_SUPERVISOR_PASSWORD }}
+          E2E_MANAGEMENT_EMAIL: ${{ secrets.E2E_MANAGEMENT_EMAIL }}
+          E2E_MANAGEMENT_PASSWORD: ${{ secrets.E2E_MANAGEMENT_PASSWORD }}
+          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: npm run test:e2e:operational --workspace apps/web -- --workers=1
+      - name: Upload operational browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-operational-evidence
+          path: |
+            tmp/playwright-results
+            tmp/playwright-report
+          if-no-files-found: ignore
+
+  minio-integration:
+    name: MinIO photo and deletion integration
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_DATABASE: kontainer_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+          cache-dependency-path: |
+            services/api/go.sum
+            services/worker/go.sum
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio-ci -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio:RELEASE.2024-06-22T05-26-45Z server /data
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:9000/minio/health/live; then exit 0; fi
+            sleep 2
+          done
+          docker logs minio-ci
+          exit 1
+      - name: Apply schema for queue integration
+        run: |
+          for migration in services/api/migrations/*.up.sql; do
+            mysql -h 127.0.0.1 -uroot kontainer_test < "$migration"
+          done
+      - name: Test API photo round trip
+        working-directory: services/api
+        env:
+          MINIO_TEST_ENDPOINT: http://127.0.0.1:9000
+          MINIO_TEST_ACCESS_KEY: minioadmin
+          MINIO_TEST_SECRET_KEY: minioadmin
+        run: go test ./internal/surveyor -run TestMinIOPhotoRoundTrip -count=1
+      - name: Test worker object deletion
+        working-directory: services/worker
+        env:
+          MINIO_TEST_ENDPOINT: http://127.0.0.1:9000
+          MINIO_TEST_ACCESS_KEY: minioadmin
+          MINIO_TEST_SECRET_KEY: minioadmin
+          WORKER_TEST_DSN: root@tcp(127.0.0.1:3306)/kontainer_test?parseTime=true&charset=utf8mb4&loc=UTC
+        run: go test ./internal/jobs -run 'Test(MinIODeletionRoundTrip|MySQLDeletionQueueRoundTrip)' -count=1
+
   whitespace:
-    name: Whitespace check
+    name: Whitespace and secret scan
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Check diff whitespace
         run: git diff --check
+      - name: Scan common committed secret patterns
+        shell: bash
+        run: |
+          if git grep -I -n -E '(AKIA[0-9A-Z]{16}|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|ghp_[A-Za-z0-9]{36})' -- ':!package-lock.json'; then
+            echo 'Potential committed secret detected.'
+            exit 1
+          fi

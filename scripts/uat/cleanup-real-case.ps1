@@ -18,6 +18,11 @@ if (-not $DatabaseName.EndsWith("_uat", [System.StringComparison]::OrdinalIgnore
 }
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $datasetId = "UAT-REAL-CASE-2026-08"
+$goRuntimeRoot = Join-Path $repoRoot "tmp\go-runtime\uat-real-case"
+$env:GOCACHE = Join-Path $goRuntimeRoot "cache"
+$env:APPDATA = Join-Path $goRuntimeRoot "appdata"
+$env:LOCALAPPDATA = Join-Path $goRuntimeRoot "localappdata"
+New-Item -ItemType Directory -Force -Path $env:GOCACHE,$env:APPDATA,$env:LOCALAPPDATA | Out-Null
 Push-Location (Join-Path $repoRoot "services\api")
 try {
     $arguments = @("run", "./cmd/uat-real-case", "-action", "cleanup", "-database-name", $DatabaseName)

@@ -2,6 +2,7 @@ package masterdata
 
 import (
 	"context"
+	"fmt"
 
 	"container-survey/services/api/internal/database"
 	"github.com/google/uuid"
@@ -25,7 +26,7 @@ func EvaluateReadinessTx(ctx context.Context, tx database.Tx, customerID, survey
 	var checklistTemplate, checklistItem, inspectionReference, photoCategory int
 	var cedexLocation, cedexComponent, cedexDamage, cedexRepair, cedexMaterial, responsibility int
 	var decisionRuleRequired, decisionRule int
-	err := tx.QueryRow(ctx, `
+	query := fmt.Sprintf(`
 		SELECT
 		  (SELECT COUNT(*) FROM customers c WHERE c.id=$1 AND c.status='active' AND c.deleted_at IS NULL
 		    AND NULLIF(TRIM(c.customer_code),'') IS NOT NULL AND NULLIF(TRIM(c.customer_name),'') IS NOT NULL
@@ -46,15 +47,25 @@ func EvaluateReadinessTx(ctx context.Context, tx database.Tx, customerID, survey
 		  (SELECT COUNT(*) FROM customer_survey_type_photo_categories mapping
 		    JOIN evidence_photo_categories category ON category.id=mapping.photo_category_id AND category.status='active'
 		    WHERE mapping.customer_id=$1 AND mapping.survey_type_id=$2 AND mapping.is_active=1),
-		  (SELECT COUNT(*) FROM cedex_locations x WHERE x.customer_id=$1 AND x.status='active'),
-		  (SELECT COUNT(*) FROM cedex_components x WHERE x.customer_id=$1 AND x.status='active'),
-		  (SELECT COUNT(*) FROM cedex_damages x WHERE x.customer_id=$1 AND x.status='active'),
-		  (SELECT COUNT(*) FROM cedex_repairs x WHERE x.customer_id=$1 AND x.status='active'),
-		  (SELECT COUNT(*) FROM cedex_materials x WHERE x.customer_id=$1 AND x.status='active'),
-		  (SELECT COUNT(*) FROM responsibility_codes x WHERE x.customer_id=$1 AND x.status='active'),
-		  (SELECT COUNT(*) FROM cedex_damages x WHERE x.customer_id=$1 AND x.status='active' AND x.requires_dimension=1),
-		  (SELECT COUNT(*) FROM cedex_damage_decision_rules rule WHERE rule.customer_id=$1 AND rule.status='active')
-	`, customerID, surveyTypeID).Scan(
+		  %s,
+		  %s,
+		  %s,
+		  %s,
+		  %s,
+		  %s,
+		  %s,
+		  (SELECT COUNT(*) FROM cedex_damage_decision_rules rule WHERE %s)
+	`,
+		effectiveMasterCountSQL("cedex_locations", "x", "$1"),
+		effectiveMasterCountSQL("cedex_components", "x", "$1"),
+		effectiveMasterCountSQL("cedex_damages", "x", "$1"),
+		effectiveMasterCountSQL("cedex_repairs", "x", "$1"),
+		effectiveMasterCountSQL("cedex_materials", "x", "$1"),
+		effectiveMasterCountSQL("responsibility_codes", "x", "$1"),
+		effectiveMasterCountSQL("cedex_damages", "x", "$1", "x.requires_dimension=1"),
+		EffectiveDecisionRuleScopeSQL("rule", "$1"),
+	)
+	err := tx.QueryRow(ctx, query, customerID, surveyTypeID).Scan(
 		&profile, &personnel, &location, &surveyType, &containerType,
 		&checklistTemplate, &checklistItem, &inspectionReference, &photoCategory,
 		&cedexLocation, &cedexComponent, &cedexDamage, &cedexRepair, &cedexMaterial, &responsibility,

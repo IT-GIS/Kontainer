@@ -10,7 +10,7 @@ import (
 func TestAssignedSurveyWhereScopesOwner(t *testing.T) {
 	id := uuid.MustParse("11111111-1111-1111-1111-111111111111")
 	where, args := assignedSurveyWhere(ListParams{Status: "need_revision", Search: "UAT"}, id)
-	for _, fragment := range []string{"s.surveyor_id=$1", "s.status=$2", "s.survey_no LIKE $3"} {
+	for _, fragment := range []string{"s.is_active=1", "s.surveyor_id=$1", "s.status=$2", "s.survey_no LIKE $3"} {
 		if !strings.Contains(where, fragment) {
 			t.Fatalf("missing %q in %s", fragment, where)
 		}
@@ -21,13 +21,42 @@ func TestAssignedSurveyWhereScopesOwner(t *testing.T) {
 }
 
 func TestValidSurveyListStatus(t *testing.T) {
-	for _, status := range []string{"", "draft", "need_revision", "submitted", "under_review", "resubmitted", "approved", "rejected"} {
+	for _, status := range []string{"", "draft", "need_revision", "submitted", "under_review", "resubmitted", "approved", "rejected", "cancelled", "terminal"} {
 		if !validSurveyListStatus(status) {
 			t.Fatalf("expected %s valid", status)
 		}
 	}
 	if validSurveyListStatus("paid") {
 		t.Fatal("unexpected status accepted")
+	}
+}
+
+func TestAssignedSurveyWhereSupportsTerminalHistoryFilters(t *testing.T) {
+	id := uuid.MustParse("11111111-1111-1111-1111-111111111111")
+	where, args := assignedSurveyWhere(ListParams{
+		Status: "terminal", Customer: "Nusantara", Container: "MSKU",
+		DateFrom: "2026-08-01", DateTo: "2026-08-31",
+	}, id)
+	for _, fragment := range []string{
+		"s.status IN ('approved','rejected','cancelled')",
+		"c.customer_name LIKE $2", "jc.container_no LIKE $3",
+		">= $4", "<= $5",
+	} {
+		if !strings.Contains(where, fragment) {
+			t.Fatalf("missing %q in %s", fragment, where)
+		}
+	}
+	if len(args) != 5 {
+		t.Fatalf("unexpected filter args: %#v", args)
+	}
+}
+
+func TestValidSurveyHistoryDates(t *testing.T) {
+	if !validSurveyHistoryDates("2026-08-01", "2026-08-31") {
+		t.Fatal("valid date range rejected")
+	}
+	if validSurveyHistoryDates("2026-09-01", "2026-08-31") || validSurveyHistoryDates("not-a-date", "") {
+		t.Fatal("invalid date range accepted")
 	}
 }
 

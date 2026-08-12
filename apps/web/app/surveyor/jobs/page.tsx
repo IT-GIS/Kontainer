@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/hooks/use-auth";
 import { apiData, apiPaginated, buildQuery } from "@/lib/api-client";
+import { jobStatusLabel, jobStatusLabels } from "@/lib/status-labels";
 import type { AssignedSurveyorContainer, SurveyorJob } from "@/types/surveyor";
 
 export default function SurveyorJobsPage() {
@@ -69,27 +70,27 @@ function SurveyorJobsContent() {
 
   return (
     <div className="page-stack">
-	  <PageHeader title={isNotStarted ? "Belum Dimulai" : "Job Saya"} description={isNotStarted ? "Daftar container aktif yang ditugaskan kepada Anda dan belum memiliki Survey." : "Daftar job dan container yang ditugaskan kepada Anda."} />
+	  <PageHeader title={isNotStarted ? "Belum Dimulai" : "Job Saya"} description={isNotStarted ? "Daftar peti kemas aktif yang ditugaskan kepada Anda dan belum memiliki Survey." : "Daftar job dan peti kemas yang ditugaskan kepada Anda."} />
       <div className="toolbar">
-        <label className="search-box"><Search size={17} /><input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Search job" /></label>
+		<label className="search-box"><Search size={17} /><span className="sr-only">Cari pekerjaan</span><input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Cari pekerjaan" /></label>
 		{!isNotStarted ? <select value={status} onChange={(event) => { setPage(1); setStatus(event.target.value); }}>
-          <option value="">All Status</option>
-          {["assigned", "in_progress", "all_survey_submitted", "all_survey_approved", "cancelled"].map((item) => <option key={item} value={item}>{item}</option>)}
+		  <option value="">Semua Status</option>
+		  {Object.keys(jobStatusLabels).map((item) => <option key={item} value={item}>{jobStatusLabel(item)}</option>)}
 		</select> : null}
       </div>
       {error ? <div className="alert alert-danger">{error}</div> : null}
 	  {isNotStarted ? <DataTable
 		rows={containerRows}
 		isLoading={isLoading}
-		emptyText="Tidak ada container assignment yang belum dimulai."
+		emptyText="Tidak ada penugasan peti kemas yang belum dimulai."
 		page={page}
 		totalPages={totalPages}
 		onPageChange={setPage}
 		columns={[
-			{ key: "container_no", header: "Container", render: (row) => <strong>{row.container_no}</strong> },
-			{ key: "job", header: "Job / Assignment", render: (row) => <><Link className="text-link" href={`/surveyor/jobs/${row.job_order_id}`}>{row.job_order_no}</Link><br /><span className="muted-text">{row.assignment_no ?? "-"}</span></> },
-			{ key: "customer", header: "Customer / Location", render: (row) => <><strong>{row.customer_name}</strong><br /><span className="muted-text">{row.location_name}</span></> },
-			{ key: "survey_type", header: "Survey Type", render: (row) => row.survey_type_name },
+			{ key: "container_no", header: "Peti Kemas", render: (row) => <strong>{row.container_no}</strong> },
+			{ key: "job", header: "Job / Penugasan", render: (row) => <><Link className="text-link" href={`/surveyor/jobs/${row.job_order_id}`}>{row.job_order_no}</Link><br /><span className="muted-text">{row.assignment_no ?? "-"}</span></> },
+			{ key: "customer", header: "Customer / Lokasi", render: (row) => <><strong>{row.customer_name}</strong><br /><span className="muted-text">{row.location_name}</span></> },
+			{ key: "survey_type", header: "Jenis Pemeriksaan", render: (row) => row.survey_type_name },
 			{ key: "due", header: "Batas Waktu", render: (row) => row.effective_due_at ?? "-" },
 			{ key: "instruction", header: "Instruksi", render: (row) => row.assignment_instruction ?? "-" },
 			{ key: "action", header: "Aksi", render: (row) => <button className="primary-button table-action" type="button" disabled={Boolean(startingID)} onClick={() => void startSurvey(row)}><Play size={15} /><span>{startingID === row.job_container_id ? "Memulai..." : "Mulai Survey"}</span></button> },
@@ -101,15 +102,15 @@ function SurveyorJobsContent() {
         totalPages={totalPages}
         onPageChange={setPage}
         columns={[
-          { key: "job_order_no", header: "Job No", render: (row) => <Link className="text-link" href={`/surveyor/jobs/${row.id}`}>{row.job_order_no}</Link> },
-          { key: "assignment_no", header: "Assignment", render: (row) => row.assignment_no ?? "-" },
+          { key: "job_order_no", header: "Nomor Job", render: (row) => <Link className="text-link" href={`/surveyor/jobs/${row.id}`}>{row.job_order_no}</Link> },
+          { key: "assignment_no", header: "Penugasan", render: (row) => row.assignment_no ?? "-" },
           { key: "customer", header: "Customer", render: (row) => row.customer_name },
-          { key: "location", header: "Location", render: (row) => row.location_name },
-          { key: "survey_type", header: "Survey Type", render: (row) => row.survey_type_name },
-          { key: "progress", header: "Progress", render: (row) => `${row.completed_containers ?? 0}/${row.total_containers ?? 0}` },
-          { key: "deadline", header: "Deadline", render: (row) => row.deadline ?? "-" },
-          { key: "instruction", header: "Instruction", render: (row) => row.assignment_instruction ?? "-" },
-          { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "assigned" ? "warning" : "success"}>{row.status.toUpperCase()}</StatusBadge> }
+          { key: "location", header: "Lokasi", render: (row) => row.location_name },
+          { key: "survey_type", header: "Jenis Pemeriksaan", render: (row) => row.survey_type_name },
+          { key: "progress", header: "Progres", render: (row) => `${row.completed_containers ?? 0}/${row.total_containers ?? 0}` },
+          { key: "deadline", header: "Batas Waktu", render: (row) => row.deadline ?? "-" },
+          { key: "instruction", header: "Instruksi", render: (row) => row.assignment_instruction ?? "-" },
+          { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "assigned" ? "warning" : "success"}>{jobStatusLabel(row.status)}</StatusBadge> }
         ]}
 	  />}
     </div>

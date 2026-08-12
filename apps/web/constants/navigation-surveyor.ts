@@ -27,7 +27,7 @@ export const surveyorWorkspace: NavigationWorkspace = {
 		n("Selesai", "/surveyor/surveys/approved", ClipboardCheck)
       ]
     },
-	n("Riwayat", "/surveyor/surveys/history", History),
+	n("Riwayat Survey", "/surveyor/surveys/history", History),
     n("Pengajuan Kode CEDEX", "/surveyor/cedex-code-proposals", FileQuestion),
     n("Profil", "/surveyor/profile", UserRound)
   ]

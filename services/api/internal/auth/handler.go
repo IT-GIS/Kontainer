@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -159,6 +160,12 @@ func (h Handler) writeAuthError(c *gin.Context, err error) {
 	case errors.Is(err, ErrInvalidCredentials), errors.Is(err, ErrInvalidToken):
 		apphttp.Fail(c, http.StatusUnauthorized, "Credential atau token tidak valid.", "UNAUTHORIZED", nil)
 	default:
+		slog.Error("authentication request failed",
+			"request_id", c.GetString("request_id"),
+			"method", c.Request.Method,
+			"path", c.FullPath(),
+			"error", err,
+		)
 		apphttp.Fail(c, http.StatusInternalServerError, "Terjadi kesalahan internal.", "INTERNAL_ERROR", nil)
 	}
 }

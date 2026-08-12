@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const [workspace, resources, route, legacyRoute, masterService, surveyorScope, surveyorPage] = await Promise.all([
+const [workspace, resources, route, legacyRoute, masterService, effectiveMaster, surveyorScope, surveyorPage] = await Promise.all([
   read("../components/master/iso-cedex-workspace.tsx"),
   read("../constants/master-data.ts"),
   read("../app/master/iso-cedex/page.tsx"),
   read("../app/master/[...route]/page.tsx"),
   read("../../../services/api/internal/masterdata/service.go"),
+  read("../../../services/api/internal/masterdata/effective_master.go"),
   read("../../../services/api/internal/surveyor/customer_scope.go"),
   read("../app/surveyor/surveys/[id]/page.tsx")
 ]);
@@ -40,8 +41,10 @@ for (const spec of [["cedex_locations", 4], ["cedex_components", 3], ["cedex_dam
   assert.match(masterService, new RegExp(`case "${spec[0]}":[\\s\\S]*?return ${spec[1]},`), `Missing server validation: ${spec[0]}`);
 }
 assert.match(masterService, /strings\.ToUpper/);
-assert.match(surveyorScope, /customer_id IS NULL/);
-assert.match(surveyorScope, /WHERE (?:location|component|damage|repair|material)\.status='active'/);
+assert.match(effectiveMaster, /customer_id IS NULL/);
+assert.match(effectiveMaster, /NOT EXISTS/);
+assert.match(effectiveMaster, /override\.status='active'/);
+assert.match(surveyorScope, /mustEffectiveMasterScope\("cedex_(?:locations|components|damages|repairs|materials)"/);
 assert.doesNotMatch(surveyorPage, /label="Perbaikan"/);
 assert.match(surveyorPage, /header: "Rekomendasi Tindakan"/);
 assert.match(surveyorPage, /label="Rekomendasi Tindakan \*"/);

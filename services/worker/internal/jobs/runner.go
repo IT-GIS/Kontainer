@@ -18,7 +18,17 @@ func NewRunner(cfg config.Config, logger *slog.Logger) Runner {
 }
 
 func (r Runner) Run(ctx context.Context) error {
-	ticker := time.NewTicker(30 * time.Second)
+	processor, closeResources, err := NewObjectDeletionProcessor(r.cfg, r.logger)
+	if err != nil {
+		return err
+	}
+	defer closeResources()
+
+	interval := r.cfg.ObjectDeletionInterval
+	if interval <= 0 {
+		interval = 30 * time.Second
+	}
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	r.logger.Info(
@@ -27,13 +37,14 @@ func (r Runner) Run(ctx context.Context) error {
 		"s3_endpoint", r.cfg.S3Endpoint,
 		"s3_bucket", r.cfg.S3Bucket,
 	)
+	processor.ProcessAndLog(ctx)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			r.logger.Debug("worker heartbeat")
+			processor.ProcessAndLog(ctx)
 		}
 	}
 }

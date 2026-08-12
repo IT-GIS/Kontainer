@@ -10,6 +10,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { FormDialog } from "@/components/ui/form-dialog";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { revisionStatusLabel, surveyStatusLabel } from "@/lib/status-labels";
 import { useAuth } from "@/hooks/use-auth";
 import { apiData } from "@/lib/api-client";
 import { can } from "@/lib/permissions";
@@ -163,7 +164,7 @@ function ReviewDetailContent() {
 
 function Summary({ review }: { review: ReviewDetail }) {
   const rows: Array<[string, React.ReactNode]> = [
-    ["Status", <StatusBadge key="status" tone={review.status === "approved" ? "success" : review.status === "need_revision" || review.status === "rejected" ? "danger" : "warning"}>{review.status.replaceAll("_", " ").toUpperCase()}</StatusBadge>],
+	["Status", <StatusBadge key="status" tone={review.status === "approved" ? "success" : review.status === "need_revision" || review.status === "rejected" ? "danger" : "warning"}>{surveyStatusLabel(review.status)}</StatusBadge>],
     ["Job No", review.job_order_no],
     ["Container", review.container_no],
     ["Surveyor", review.surveyor_name],
@@ -198,7 +199,7 @@ function History({ approvals, revisions }: { approvals: Array<Record<string, unk
       { key: "reason", header: "Alasan", render: (row) => row.revision_reason },
       { key: "requested", header: "Diminta", render: (row) => row.requested_at },
       { key: "resubmitted", header: "Disubmit Ulang", render: (row) => row.resubmitted_at ?? "-" },
-      { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "approved" ? "success" : row.status === "requested" ? "danger" : "warning"}>{row.status.replaceAll("_", " ").toUpperCase()}</StatusBadge> }
+      { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "approved" ? "success" : row.status === "requested" ? "danger" : "warning"}>{revisionStatusLabel(row.status)}</StatusBadge> }
     ]} />
     {revisions.map((revision) => <details className="revision-comparison" key={revision.id}>
       <summary>Bandingkan Revision #{revision.revision_no}</summary>

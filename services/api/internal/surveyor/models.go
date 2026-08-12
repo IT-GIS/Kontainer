@@ -26,11 +26,15 @@ type Actor struct {
 }
 
 type ListParams struct {
-	Page    int
-	PerPage int
-	Search  string
-	Status  string
-	Date    string
+	Page      int
+	PerPage   int
+	Search    string
+	Status    string
+	Date      string
+	Customer  string
+	Container string
+	DateFrom  string
+	DateTo    string
 }
 
 type PaginationMeta struct {

@@ -380,7 +380,7 @@ func assignedJobWhere(params ListParams, surveyorID uuid.UUID) (string, []any) {
 
 func assignedSurveyWhere(params ListParams, surveyorID uuid.UUID) (string, []any) {
 	args := []any{surveyorID}
-	clauses := []string{"s.deleted_at IS NULL", "s.surveyor_id=$1"}
+	clauses := []string{"s.is_active=1", "s.deleted_at IS NULL", "s.surveyor_id=$1"}
 	if params.Status != "" {
 		if params.Status == "submitted" {
 			clauses = append(clauses, "s.status IN ('submitted','under_review','resubmitted')")
@@ -394,6 +394,22 @@ func assignedSurveyWhere(params ListParams, surveyorID uuid.UUID) (string, []any
 	if strings.TrimSpace(params.Search) != "" {
 		args = append(args, "%"+strings.TrimSpace(params.Search)+"%")
 		clauses = append(clauses, fmt.Sprintf("(s.survey_no LIKE $%d OR jo.job_order_no LIKE $%d OR jc.container_no LIKE $%d OR c.customer_name LIKE $%d)", len(args), len(args), len(args), len(args)))
+	}
+	if strings.TrimSpace(params.Customer) != "" {
+		args = append(args, "%"+strings.TrimSpace(params.Customer)+"%")
+		clauses = append(clauses, fmt.Sprintf("c.customer_name LIKE $%d", len(args)))
+	}
+	if strings.TrimSpace(params.Container) != "" {
+		args = append(args, "%"+strings.TrimSpace(params.Container)+"%")
+		clauses = append(clauses, fmt.Sprintf("jc.container_no LIKE $%d", len(args)))
+	}
+	if strings.TrimSpace(params.DateFrom) != "" {
+		args = append(args, strings.TrimSpace(params.DateFrom))
+		clauses = append(clauses, fmt.Sprintf("DATE(COALESCE(s.approved_at,s.rejected_at,s.updated_at,s.created_at)) >= $%d", len(args)))
+	}
+	if strings.TrimSpace(params.DateTo) != "" {
+		args = append(args, strings.TrimSpace(params.DateTo))
+		clauses = append(clauses, fmt.Sprintf("DATE(COALESCE(s.approved_at,s.rejected_at,s.updated_at,s.created_at)) <= $%d", len(args)))
 	}
 	return "WHERE " + strings.Join(clauses, " AND "), args
 }

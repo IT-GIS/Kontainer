@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/hooks/use-auth";
 import { apiData } from "@/lib/api-client";
+import { jobStatusLabel, surveyStatusLabel } from "@/lib/status-labels";
 import type { SurveyorContainer, SurveyorJobDetail } from "@/types/surveyor";
 
 export default function SurveyorJobDetailPage() {
@@ -66,33 +67,33 @@ function SurveyorJobDetailContent() {
 
   return (
     <div className="page-stack">
-      <PageHeader title={`Job Detail: ${job.job_order_no}`} description={`${job.customer_name} - ${job.location_name} - ${job.survey_type_name}`} />
+      <PageHeader title={`Detail Job: ${job.job_order_no}`} description={`${job.customer_name} - ${job.location_name} - ${job.survey_type_name}`} />
       {error ? <div className="alert alert-danger">{error}</div> : null}
       <section className="workspace-panel detail-grid">
-        <div><span>Status</span><strong><StatusBadge tone={job.status === "assigned" ? "warning" : "success"}>{job.status.toUpperCase()}</StatusBadge></strong></div>
-        <div><span>Assignment No</span><strong>{job.assignment_no ?? "-"}</strong></div>
-        <div><span>Job Date</span><strong>{job.job_date ?? "-"}</strong></div>
-        <div><span>Deadline</span><strong>{job.deadline ?? "-"}</strong></div>
-        <div><span>Assignment Period</span><strong>{job.assignment_start_date ?? "-"} - {job.assignment_due_date ?? "-"}</strong></div>
-        <div><span>Instruction</span><strong>{job.assignment_instruction ?? "-"}</strong></div>
+        <div><span>Status</span><strong><StatusBadge tone={job.status === "assigned" ? "warning" : "success"}>{jobStatusLabel(job.status)}</StatusBadge></strong></div>
+        <div><span>Nomor Penugasan</span><strong>{job.assignment_no ?? "-"}</strong></div>
+        <div><span>Tanggal Job</span><strong>{job.job_date ?? "-"}</strong></div>
+        <div><span>Batas Waktu</span><strong>{job.deadline ?? "-"}</strong></div>
+        <div><span>Periode Penugasan</span><strong>{job.assignment_start_date ?? "-"} - {job.assignment_due_date ?? "-"}</strong></div>
+        <div><span>Instruksi</span><strong>{job.assignment_instruction ?? "-"}</strong></div>
       </section>
       <section className="workspace-panel">
         <div className="section-title-row">
           <div>
-            <h2>Container List</h2>
-            <p className="muted-text">Hanya container yang ditugaskan kepada Anda yang ditampilkan.</p>
+            <h2>Daftar Peti Kemas</h2>
+            <p className="muted-text">Hanya peti kemas yang ditugaskan kepada Anda yang ditampilkan.</p>
           </div>
           <button className="secondary-button" onClick={() => void loadData()}><RotateCcw size={17} /><span>Refresh</span></button>
         </div>
         <DataTable
           rows={containers}
           columns={[
-            { key: "container_no", header: "Container No", render: (row) => row.container_no },
-            { key: "type", header: "Type", render: (row) => row.container_type_code ?? "-" },
-            { key: "seal", header: "Seal", render: (row) => row.seal_no ?? "-" },
-            { key: "cargo", header: "Cargo", render: (row) => row.cargo_status },
-            { key: "status", header: "Survey Status", render: (row) => <StatusBadge tone={row.status === "assigned" ? "warning" : row.status === "submitted" ? "neutral" : "success"}>{statusLabel(row.status)}</StatusBadge> },
-            { key: "action", header: "Action", render: (row) => <button className="primary-button table-action" disabled={isStarting === row.id} onClick={() => void startSurvey(row)}><Play size={16} /><span>{actionLabel(row)}</span></button> }
+            { key: "container_no", header: "Nomor Peti Kemas", render: (row) => row.container_no },
+            { key: "type", header: "Tipe", render: (row) => row.container_type_code ?? "-" },
+            { key: "seal", header: "Segel", render: (row) => row.seal_no ?? "-" },
+            { key: "cargo", header: "Muatan", render: (row) => row.cargo_status },
+            { key: "status", header: "Status Survey", render: (row) => <StatusBadge tone={row.status === "assigned" ? "warning" : row.status === "submitted" ? "neutral" : "success"}>{surveyStatusLabel(row.status)}</StatusBadge> },
+            { key: "action", header: "Aksi", render: (row) => <button className="primary-button table-action" disabled={isStarting === row.id} onClick={() => void startSurvey(row)}><Play size={16} /><span>{actionLabel(row)}</span></button> }
           ]}
         />
       </section>
@@ -101,13 +102,9 @@ function SurveyorJobDetailContent() {
 }
 
 function actionLabel(row: SurveyorContainer) {
-  if (row.survey_id && row.status === "need_revision") return "Revise";
-  if (row.survey_id && row.status === "draft") return "Continue";
-  if (row.survey_id) return "View";
-  return "Start Survey";
-}
-
-function statusLabel(status: string) {
-  return status.replaceAll("_", " ").toUpperCase();
+  if (row.survey_id && row.status === "need_revision") return "Perbaiki";
+  if (row.survey_id && row.status === "draft") return "Lanjutkan";
+  if (row.survey_id) return "Lihat";
+  return "Mulai Survey";
 }
 

@@ -16,6 +16,11 @@ if (-not $DatabaseName.EndsWith("_uat", [System.StringComparison]::OrdinalIgnore
     throw "Target database wajib berakhiran _uat."
 }
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+$goRuntimeRoot = Join-Path $repoRoot "tmp\go-runtime\uat-real-case"
+$env:GOCACHE = Join-Path $goRuntimeRoot "cache"
+$env:APPDATA = Join-Path $goRuntimeRoot "appdata"
+$env:LOCALAPPDATA = Join-Path $goRuntimeRoot "localappdata"
+New-Item -ItemType Directory -Force -Path $env:GOCACHE,$env:APPDATA,$env:LOCALAPPDATA | Out-Null
 Push-Location (Join-Path $repoRoot "services\api")
 try {
     go run ./cmd/uat-real-case -action verify -database-name $DatabaseName `

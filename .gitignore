@@ -8,6 +8,7 @@ coverage/
 
 bin/
 tmp/
+.tmp/
 *.log
 
 .DS_Store

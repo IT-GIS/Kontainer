@@ -18,8 +18,9 @@ func TestMasterDataSmokeWithTestDatabase(t *testing.T) {
 	if dsn == "" {
 		t.Skip("MASTERDATA_SMOKE_DSN not set; smoke DB test skipped")
 	}
-	if !strings.Contains(strings.ToLower(dsn), "test") {
-		t.Fatalf("MASTERDATA_SMOKE_DSN must point to a test database, got %q", dsn)
+	lowerDSN := strings.ToLower(dsn)
+	if !strings.Contains(lowerDSN, "test") && !strings.Contains(lowerDSN, "_uat") {
+		t.Fatalf("MASTERDATA_SMOKE_DSN must point to a test or _uat database, got %q", dsn)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)

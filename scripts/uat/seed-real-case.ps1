@@ -15,6 +15,11 @@ $ErrorActionPreference = "Stop"
 $datasetId = "UAT-REAL-CASE-2026-08"
 $objectPrefix = "uat/$datasetId"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+$goRuntimeRoot = Join-Path $repoRoot "tmp\go-runtime\uat-real-case"
+$env:GOCACHE = Join-Path $goRuntimeRoot "cache"
+$env:APPDATA = Join-Path $goRuntimeRoot "appdata"
+$env:LOCALAPPDATA = Join-Path $goRuntimeRoot "localappdata"
+New-Item -ItemType Directory -Force -Path $env:GOCACHE,$env:APPDATA,$env:LOCALAPPDATA | Out-Null
 
 if (-not $DatabaseName.EndsWith("_uat", [System.StringComparison]::OrdinalIgnoreCase)) {
     throw "Target database wajib berakhiran _uat."
@@ -50,7 +55,9 @@ $migrationMarkers = @(
     @{ File = "0013_iso_cedex_decision_rules.up.sql"; Query = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$DatabaseName' AND table_name='cedex_damage_decision_rules'" },
     @{ File = "0014_iso_cedex_governance.up.sql"; Query = "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='$DatabaseName' AND table_name='cedex_locations' AND column_name='input_mode'" },
     @{ File = "0015_interactive_survey_sheet.up.sql"; Query = "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='$DatabaseName' AND table_name='survey_damages' AND column_name='location_selection_snapshot'" },
-    @{ File = "0016_survey_workflow_integrity.up.sql"; Query = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$DatabaseName' AND table_name='survey_revisions'" }
+    @{ File = "0016_survey_workflow_integrity.up.sql"; Query = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$DatabaseName' AND table_name='survey_revisions'" },
+    @{ File = "0017_workflow_operational_closure.up.sql"; Query = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$DatabaseName' AND table_name='object_deletion_queue'" },
+    @{ File = "0018_final_repository_hardening.up.sql"; Query = "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='$DatabaseName' AND table_name='object_deletion_queue' AND column_name='retry_count'" }
 )
 foreach ($marker in $migrationMarkers) {
     $present = & $mysql -uroot -N -e $marker.Query
@@ -77,14 +84,14 @@ try {
 
 $structuredCount = & $mysql -uroot -N -e "SELECT COUNT(*) FROM $DatabaseName.cedex_locations WHERE status='active' AND input_mode='structured'"
 if ([int]$structuredCount -eq 0) {
-    Write-Host "SKIPPED_MASTER_MISSING structured_location_mapping=0; Temuan, marker D-001, dan final workflow tidak dibuat agar kode CEDEX tidak dikarang."
+    Write-Host "INFO structured_location_mapping=0; fixture memakai CEDEX Location manual aktif milik Customer tanpa mengarang mapping structured."
 }
 
 try {
     $null = Invoke-WebRequest -UseBasicParsing -Uri ($ApiBaseUrl -replace "/api/v1$", "/health") -TimeoutSec 3
     Write-Host "PASS api_reachable base=$ApiBaseUrl"
 } catch {
-    Write-Host "SKIPPED_API_UNAVAILABLE base=$ApiBaseUrl; domain records via API belum dibuat."
+    Write-Host "INFO api_unavailable base=$ApiBaseUrl; fixture domain database sudah siap dan UAT HTTP dijalankan setelah service dinyalakan."
 }
 
 if ($SkipPhotos) {
@@ -98,4 +105,4 @@ if ($SkipPhotos) {
     }
 }
 
-Write-Host "Dataset $datasetId selesai pada tahap aman yang didukung master aktif. Jalankan verify-real-case.ps1 untuk 17 pemeriksaan."
+Write-Host "Dataset $datasetId selesai pada tahap aman yang didukung master aktif. Jalankan verify-real-case.ps1 untuk 17 pemeriksaan, kemudian jalankan Playwright operational terhadap database UAT ini."

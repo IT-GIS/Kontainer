@@ -156,7 +156,7 @@ func (r Repository) ListJobs(ctx context.Context, params ListParams, actor Actor
 		JOIN assignments a ON a.job_order_id = jo.id
 		JOIN assignment_containers ac ON ac.assignment_id = a.id AND ac.unassigned_at IS NULL
 		JOIN job_containers jc ON jc.id = ac.job_container_id AND jc.deleted_at IS NULL
-		LEFT JOIN surveys s ON s.job_container_id = jc.id AND s.deleted_at IS NULL
+		LEFT JOIN surveys s ON s.job_container_id = jc.id AND s.is_active=1 AND s.deleted_at IS NULL
 		LEFT JOIN assignments latest_assignment ON latest_assignment.id = (
 		  SELECT a2.id
 		  FROM assignments a2
@@ -296,7 +296,7 @@ func (r Repository) ListContainers(ctx context.Context, jobID uuid.UUID, actor A
 		JOIN assignment_containers ac ON ac.assignment_id = a.id AND ac.unassigned_at IS NULL
 		JOIN job_containers jc ON jc.id = ac.job_container_id AND jc.deleted_at IS NULL
 		LEFT JOIN container_types ct ON ct.id = jc.container_type_id
-		LEFT JOIN surveys s ON s.job_container_id = jc.id AND s.surveyor_id = a.surveyor_id AND s.deleted_at IS NULL
+		LEFT JOIN surveys s ON s.job_container_id = jc.id AND s.surveyor_id = a.surveyor_id AND s.is_active=1 AND s.deleted_at IS NULL
 		WHERE a.job_order_id=$1 AND a.surveyor_id=$2
 		ORDER BY jc.container_no
 	`, jobID, surveyorID)
@@ -750,7 +750,7 @@ func (r Repository) DeleteDamage(ctx context.Context, damageID uuid.UUID, actor 
 func (r Repository) PhotoContext(ctx context.Context, damageID uuid.UUID, actor Actor) (PhotoContext, error) {
 	var info PhotoContext
 	err := r.pool.QueryRow(ctx, `
-		SELECT s.id, s.customer_id, s.survey_type_id, s.survey_no, jc.container_no, sd.damage_no,
+		SELECT s.id, jo.customer_id, s.survey_type_id, s.survey_no, jc.container_no, sd.damage_no,
 		       l.location_name, sp.full_name,
 		       sgi.gps_latitude, sgi.gps_longitude
 		FROM survey_damages sd
@@ -781,7 +781,7 @@ func (r Repository) PhotoContext(ctx context.Context, damageID uuid.UUID, actor 
 func (r Repository) SurveyPhotoContext(ctx context.Context, surveyID uuid.UUID, actor Actor) (PhotoContext, error) {
 	var info PhotoContext
 	err := r.pool.QueryRow(ctx, `
-		SELECT s.id, s.customer_id, s.survey_type_id, s.survey_no, jc.container_no,
+		SELECT s.id, jo.customer_id, s.survey_type_id, s.survey_no, jc.container_no,
 		       l.location_name, sp.full_name,
 		       sgi.gps_latitude, sgi.gps_longitude
 		FROM surveys s
@@ -982,6 +982,68 @@ func (r Repository) DeletePhoto(ctx context.Context, photoID uuid.UUID, actor Ac
 		}
 	}
 	_ = r.insertAudit(ctx, tx, actor, "survey_photos.delete", "survey_photos", &photoID, item, nil)
+	return item, tx.Commit(ctx)
+}
+
+func (r Repository) RestorePhoto(ctx context.Context, photoID uuid.UUID, actor Actor) (map[string]any, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+	item, err := scanRow(tx.QueryRow(ctx, `
+		SELECT photo.id,photo.survey_id,photo.file_id,photo.watermarked_file_id,
+		       original.bucket_name,original.object_key AS original_object_key,
+		       watermarked.object_key AS watermarked_object_key,photo.deleted_at
+		FROM survey_photos photo
+		JOIN file_objects original ON original.id=photo.file_id
+		LEFT JOIN file_objects watermarked ON watermarked.id=photo.watermarked_file_id
+		WHERE photo.id=$1 AND photo.deleted_at IS NOT NULL
+		  AND photo.deleted_at>DATE_SUB(NOW(6), INTERVAL 7 DAY)
+		FOR UPDATE
+	`, photoID), []string{"id", "survey_id", "file_id", "watermarked_file_id", "bucket_name", "original_object_key", "watermarked_object_key", "deleted_at"})
+	if err != nil {
+		if errors.Is(err, database.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	base, err := r.surveyBaseTx(ctx, tx, parseUUIDString(item["survey_id"]), actor)
+	if err != nil {
+		return nil, err
+	}
+	if !editableStatus(fmt.Sprint(base["status"])) {
+		return nil, ErrInvalidStatus
+	}
+	keys := []string{strings.TrimSpace(fmt.Sprint(item["original_object_key"])), strings.TrimSpace(fmt.Sprint(item["watermarked_object_key"]))}
+	var processed, claimed int
+	if err := tx.QueryRow(ctx, `
+		SELECT
+		  COALESCE(SUM(status='processed'),0),
+		  COALESCE(SUM(status IN ('pending','failed') AND locked_at IS NOT NULL),0)
+		FROM object_deletion_queue
+		WHERE bucket_name=$1 AND object_key IN ($2,$3)
+		FOR UPDATE
+	`, item["bucket_name"], keys[0], keys[1]).Scan(&processed, &claimed); err != nil {
+		return nil, err
+	}
+	if processed > 0 || claimed > 0 {
+		return nil, ErrInvalidStatus
+	}
+	if _, err := tx.Exec(ctx, `UPDATE survey_photos SET deleted_at=NULL WHERE id=$1`, photoID); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE file_objects SET deleted_at=NULL WHERE id=$1 OR id=$2`, item["file_id"], item["watermarked_file_id"]); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE object_deletion_queue
+		SET status='cancelled',error_message='foto dipulihkan dalam masa retensi',next_retry_at=NULL,locked_at=NULL,locked_by=NULL
+		WHERE bucket_name=$1 AND object_key IN ($2,$3) AND status IN ('pending','failed')
+	`, item["bucket_name"], keys[0], keys[1]); err != nil {
+		return nil, err
+	}
+	_ = r.insertAudit(ctx, tx, actor, "survey_photos.restore", "survey_photos", &photoID, nil, item)
 	return item, tx.Commit(ctx)
 }
 

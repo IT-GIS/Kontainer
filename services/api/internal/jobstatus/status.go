@@ -54,6 +54,8 @@ func Calculate(currentJobStatus string, containers []ContainerState) Result {
 	hasRejected := false
 	hasNeedRevision := false
 	hasUnderReview := false
+	hasSubmitted := false
+	hasDraft := false
 	hasSurvey := false
 	hasAssignment := false
 	for _, container := range active {
@@ -65,6 +67,8 @@ func Calculate(currentJobStatus string, containers []ContainerState) Result {
 		hasRejected = hasRejected || status == "rejected"
 		hasNeedRevision = hasNeedRevision || status == "need_revision"
 		hasUnderReview = hasUnderReview || status == "under_review"
+		hasSubmitted = hasSubmitted || status == "submitted" || status == "resubmitted"
+		hasDraft = hasDraft || status == "draft" || status == "in_progress"
 		hasSurvey = hasSurvey || strings.TrimSpace(container.SurveyStatus) != ""
 		hasAssignment = hasAssignment || container.HasAssignment
 	}
@@ -80,7 +84,7 @@ func Calculate(currentJobStatus string, containers []ContainerState) Result {
 		result.JobStatus = "need_revision"
 	case hasUnderReview:
 		result.JobStatus = "under_review"
-	case allSubmitted:
+	case allSubmitted || (hasSubmitted && !hasDraft):
 		result.JobStatus = "all_survey_submitted"
 	case hasSurvey:
 		result.JobStatus = "in_progress"

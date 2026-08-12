@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/hooks/use-auth";
 import { apiData } from "@/lib/api-client";
+import { cedexCodeTypeLabel, proposalStatusLabel } from "@/lib/status-labels";
 
 type CodeProposal = {
   id: string;
@@ -61,12 +62,12 @@ function CodeProposalsContent() {
       rows={rows}
       columns={[
         { key: "survey", header: "Survey", render: (row) => <Link className="text-link" href={`/surveyor/surveys/${row.survey_id}`}>{row.survey_no}</Link> },
-        { key: "container", header: "Container", render: (row) => row.container_no },
+        { key: "container", header: "Peti Kemas", render: (row) => row.container_no },
         { key: "customer", header: "Customer", render: (row) => row.customer_name },
-        { key: "type", header: "Jenis Kode", render: (row) => row.code_type.replaceAll("_", " ") },
+        { key: "type", header: "Jenis Kode", render: (row) => cedexCodeTypeLabel(row.code_type) },
         { key: "code", header: "Kode Usulan", render: (row) => row.code },
-        { key: "description", header: "Description", render: (row) => row.description },
-        { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "approved" ? "success" : row.status === "rejected" ? "danger" : "warning"}>{row.status.toUpperCase()}</StatusBadge> },
+        { key: "description", header: "Deskripsi", render: (row) => row.description },
+        { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "approved" ? "success" : row.status === "rejected" ? "danger" : "warning"}>{proposalStatusLabel(row.status)}</StatusBadge> },
         { key: "note", header: "Catatan Review", render: (row) => row.review_note ?? "-" }
       ]}
     />

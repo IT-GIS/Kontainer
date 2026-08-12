@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"container-survey/services/api/internal/database"
+	"container-survey/services/api/internal/masterdata"
 
 	"github.com/google/uuid"
 )
@@ -121,7 +122,7 @@ func (r Repository) evaluateDamageDecisionTx(
 	containerTypeID := nullableUUID(base["container_type_id"])
 	var lifecycle string
 	_ = tx.QueryRow(ctx, "SELECT COALESCE(container_lifecycle,'') FROM survey_general_infos WHERE survey_id=$1", parseUUIDString(base["id"])).Scan(&lifecycle)
-	rows, err := tx.Query(ctx, `
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT rule.id, rule.measurement_field, rule.comparison_operator,
 		       rule.minimum_value, rule.maximum_value, rule.unit, rule.decision_result,
 		       rule.decision_note, rule.recommended_action_id,
@@ -135,7 +136,7 @@ func (r Repository) evaluateDamageDecisionTx(
 		  ON reference.id=rule.inspection_reference_id AND reference.status='active'
 		LEFT JOIN cedex_repairs action
 		  ON action.id=rule.recommended_action_id AND action.status='active'
-		WHERE (rule.customer_id=$1 OR rule.customer_id IS NULL) AND rule.damage_id=$2 AND rule.status='active'
+		WHERE %s AND rule.damage_id=$2
 		  AND (rule.component_id IS NULL OR rule.component_id=$3)
 		  AND (rule.location_id IS NULL OR rule.location_id=$4)
 		  AND (rule.material_id IS NULL OR rule.material_id=$5)
@@ -148,7 +149,7 @@ func (r Repository) evaluateDamageDecisionTx(
 		   (rule.material_id IS NOT NULL) + (rule.container_type_id IS NOT NULL) +
 		   (rule.container_lifecycle IS NOT NULL)) DESC,
 		  rule.created_at ASC
-	`, parseUUIDString(base["customer_id"]), damageID, componentID, locationID, materialID, containerTypeID, lifecycle)
+	`, masterdata.EffectiveDecisionRuleScopeSQL("rule", "$1")), parseUUIDString(base["customer_id"]), damageID, componentID, locationID, materialID, containerTypeID, lifecycle)
 	if err != nil {
 		return evaluation, err
 	}

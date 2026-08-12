@@ -15,7 +15,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/hooks/use-auth";
 import { useDialogBehavior } from "@/hooks/use-dialog-behavior";
-import { apiData } from "@/lib/api-client";
+import { ApiClientError, apiData } from "@/lib/api-client";
+import { surveyStatusLabel } from "@/lib/status-labels";
 import { buildFindingDescription, filterPhotoCategories, focusSurveyDamage, formatCedexDamage, parseLocationSnapshot, selectionDescription, type LocationSelectionSnapshot } from "@/lib/survey-sheet";
 import type { OptionItem } from "@/types/jobs";
 import type { ChecklistItem, DamageDecisionPreview, DimensionProfile, SurveyDamage, SurveyDetail, SurveyGeneralInfo, SurveyMasterOption, SurveyMasterOptions, SurveyPhoto } from "@/types/surveyor";
@@ -151,8 +152,10 @@ function SurveyDetailContent() {
       setResponsibilities(toOptionItems(options.responsibility_codes));
       setSeverities(toOptionItems(options.finding_severities));
       setPhotoCategories(toOptionItems(options.photo_categories));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mengambil survey.");
+      } catch (err) {
+        setError(err instanceof ApiClientError && err.code === "FORBIDDEN"
+          ? "Akses ditolak. Survey ini tidak ditugaskan kepada akun aktif."
+          : err instanceof Error ? err.message : "Gagal mengambil survey.");
     }
   }, [accessToken, params.id]);
 
@@ -482,13 +485,14 @@ function SurveyDetailContent() {
     });
   }
 
+  if (!survey && error) return <div className="center-screen" role="alert"><div><strong>{error.startsWith("Akses ditolak") ? "Akses ditolak" : "Survey tidak dapat dimuat"}</strong><p>{error}</p></div></div>;
   if (!survey) return <div className="center-screen">Memuat survey...</div>;
 
   return (
     <div className="page-stack">
       <PageHeader title={`Survei: ${survey.survey_no}`} description={`Peti kemas: ${survey.container_no} - ${survey.customer_name} - ${survey.location_name}`} />
       <div className="survey-strip">
-        <StatusBadge tone={survey.status === "approved" ? "success" : survey.status === "need_revision" || survey.status === "rejected" ? "danger" : "warning"}>{survey.status.replaceAll("_", " ").toUpperCase()}</StatusBadge>
+        <StatusBadge tone={survey.status === "approved" ? "success" : survey.status === "need_revision" || survey.status === "rejected" ? "danger" : "warning"}>{surveyStatusLabel(survey.status)}</StatusBadge>
         <span>{survey.survey_type_name}</span><span>{survey.container_type_code ?? "-"} / {survey.iso_type_code ?? "-"}</span>
         <span>{survey.surveyor_name}</span><strong>{readonly ? "Hanya baca" : "Draf dapat diedit"}</strong>
       </div>
@@ -553,7 +557,7 @@ function JobSummaryTab({ survey }: { survey: SurveyDetail }) {
     <div><span>PIC Customer</span><strong>{survey.pic_customer_name ?? "-"}{survey.pic_customer_phone ? ` / ${survey.pic_customer_phone}` : ""}</strong></div>
     <div><span>Tanggal / jadwal</span><strong>{survey.spk_date ?? survey.job_deadline ?? survey.assignment_due_at ?? "-"}</strong></div>
     <div><span>Nama Surveyor</span><strong>{survey.surveyor_name}</strong></div>
-    <div><span>Status pekerjaan</span><strong>{survey.status.replaceAll("_", " " ).toUpperCase()}</strong></div>
+    <div><span>Status pekerjaan</span><strong>{surveyStatusLabel(survey.status)}</strong></div>
     <div><span>Jenis pemeriksaan</span><strong>{survey.survey_type_name || "Inspeksi Kelaikan"}</strong></div>
     <div className="form-span-2"><span>Instruksi pekerjaan</span><strong>{survey.job_instruction ?? "-"}</strong></div>
     <div className="form-span-2"><span>Instruksi penugasan</span><strong>{survey.assignment_instruction ?? "-"}</strong></div>
@@ -575,10 +579,10 @@ function SurveySheetSummary({ survey }: { survey: SurveyDetail }) {
     ["CSC Plate", survey.csc_plate_status ?? survey.general_info?.csc_plate_status ?? "-"],
     ["Surveyor", survey.surveyor_name],
     ["Instruksi Pekerjaan", survey.job_instruction ?? survey.assignment_instruction ?? "-"],
-    ["Status Survey", survey.status.replaceAll("_", " ").toUpperCase()]
+    ["Status Survey", surveyStatusLabel(survey.status)]
   ];
   return <section className="workspace-panel survey-sheet-summary-panel">
-    <div className="section-title-row"><div><span className="eyebrow">Konteks pekerjaan</span><h2>Informasi Pekerjaan &amp; Identitas Peti Kemas</h2></div><StatusBadge tone={survey.status === "need_revision" ? "danger" : survey.status === "approved" ? "success" : "warning"}>{survey.status.replaceAll("_", " ").toUpperCase()}</StatusBadge></div>
+    <div className="section-title-row"><div><span className="eyebrow">Konteks pekerjaan</span><h2>Informasi Pekerjaan &amp; Identitas Peti Kemas</h2></div><StatusBadge tone={survey.status === "need_revision" ? "danger" : survey.status === "approved" ? "success" : "warning"}>{surveyStatusLabel(survey.status)}</StatusBadge></div>
     <div className="survey-sheet-summary-grid">{rows.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
   </section>;
 }

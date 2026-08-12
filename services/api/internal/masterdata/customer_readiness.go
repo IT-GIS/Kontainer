@@ -3,6 +3,7 @@ package masterdata
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"container-survey/services/api/internal/database"
@@ -46,7 +47,7 @@ func (r Repository) ListCustomerReadiness(ctx context.Context, customerID *uuid.
 		where += " AND c.id=$1"
 		args = append(args, *customerID)
 	}
-	rows, err := r.runner().Query(ctx, `
+	query := fmt.Sprintf(`
 		SELECT c.id, c.customer_code, c.customer_name, c.status, COALESCE(c.address,''),
 		  (SELECT COUNT(*) FROM customer_personnel p WHERE p.customer_id=c.id AND p.status='active' AND p.deleted_at IS NULL),
 		  (SELECT COUNT(*) FROM locations l WHERE l.customer_id=c.id AND l.status='active'),
@@ -62,17 +63,25 @@ func (r Repository) ListCustomerReadiness(ctx context.Context, customerID *uuid.
 		    WHERE m.customer_id=c.id AND st.customer_id=c.id AND st.status='active' AND m.is_active=1),
 		  (SELECT COUNT(*) FROM customer_survey_type_photo_categories m JOIN survey_types st ON st.id=m.survey_type_id
 		    WHERE m.customer_id=c.id AND st.customer_id=c.id AND st.status='active' AND m.is_active=1),
-		  (SELECT COUNT(*) FROM cedex_locations x WHERE x.customer_id=c.id AND x.status='active'),
-		  (SELECT COUNT(*) FROM cedex_components x WHERE x.customer_id=c.id AND x.status='active'),
-		  (SELECT COUNT(*) FROM cedex_damages x WHERE x.customer_id=c.id AND x.status='active'),
-		  (SELECT COUNT(*) FROM cedex_repairs x WHERE x.customer_id=c.id AND x.status='active'),
-		  (SELECT COUNT(*) FROM cedex_materials x WHERE x.customer_id=c.id AND x.status='active'),
-		  (SELECT COUNT(*) FROM responsibility_codes x WHERE x.customer_id=c.id AND x.status='active'),
+		  %s,
+		  %s,
+		  %s,
+		  %s,
+		  %s,
+		  %s,
 		  (SELECT COUNT(*) FROM job_orders jo WHERE jo.customer_id=c.id AND jo.deleted_at IS NULL)
 		FROM customers c
 		`+where+`
 		ORDER BY c.customer_name
-	`, args...)
+	`,
+		effectiveMasterCountSQL("cedex_locations", "x", "c.id"),
+		effectiveMasterCountSQL("cedex_components", "x", "c.id"),
+		effectiveMasterCountSQL("cedex_damages", "x", "c.id"),
+		effectiveMasterCountSQL("cedex_repairs", "x", "c.id"),
+		effectiveMasterCountSQL("cedex_materials", "x", "c.id"),
+		effectiveMasterCountSQL("responsibility_codes", "x", "c.id"),
+	)
+	rows, err := r.runner().Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

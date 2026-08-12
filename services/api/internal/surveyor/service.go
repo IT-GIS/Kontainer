@@ -4,6 +4,7 @@ import (
 	"container-survey/services/api/internal/objectstorage"
 	"context"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -41,15 +42,28 @@ func (s *Service) Profile(ctx context.Context, actor Actor) (map[string]any, err
 }
 
 func (s *Service) ListSurveys(ctx context.Context, params ListParams, actor Actor) (ListResult, error) {
-	if !validSurveyListStatus(params.Status) {
+	if !validSurveyListStatus(params.Status) || !validSurveyHistoryDates(params.DateFrom, params.DateTo) {
 		return ListResult{}, ErrInvalidInput
 	}
 	return s.repo.ListSurveys(ctx, params, actor)
 }
 
+func validSurveyHistoryDates(from, to string) bool {
+	parse := func(value string) (*time.Time, bool) {
+		if strings.TrimSpace(value) == "" {
+			return nil, true
+		}
+		parsed, err := time.Parse("2006-01-02", value)
+		return &parsed, err == nil
+	}
+	fromDate, fromOK := parse(from)
+	toDate, toOK := parse(to)
+	return fromOK && toOK && (fromDate == nil || toDate == nil || !toDate.Before(*fromDate))
+}
+
 func validSurveyListStatus(status string) bool {
 	switch status {
-	case "", "draft", "need_revision", "submitted", "under_review", "resubmitted", "approved", "rejected", "terminal", "history":
+	case "", "draft", "need_revision", "submitted", "under_review", "resubmitted", "approved", "rejected", "cancelled", "terminal", "history":
 		return true
 	default:
 		return false
@@ -181,6 +195,13 @@ func (s *Service) DeletePhoto(ctx context.Context, photoID uuid.UUID, actor Acto
 		return nil, err
 	}
 	return s.repo.DeletePhoto(ctx, photoID, actor)
+}
+
+func (s *Service) RestorePhoto(ctx context.Context, photoID uuid.UUID, actor Actor) (map[string]any, error) {
+	if err := requireSurveyorMutationRole(actor); err != nil {
+		return nil, err
+	}
+	return s.repo.RestorePhoto(ctx, photoID, actor)
 }
 
 func (s *Service) MaxUploadBytes() int64 { return s.maxUploadBytes }

@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/hooks/use-auth";
 import { apiPaginated, buildQuery } from "@/lib/api-client";
 import { loadOptions } from "@/lib/options";
+import { surveyStatusLabel } from "@/lib/status-labels";
 import type { OptionItem } from "@/types/jobs";
 import type { SurveyListItem } from "@/types/surveys";
 
@@ -110,7 +111,7 @@ export function SurveyListPage({ title, description, endpoint, fixedStatus = "",
           { key: "customer", header: "Customer / Location", render: (row) => <><strong>{row.customer_name}</strong><br /><span className="muted-text">{row.location_name}</span></> },
           { key: "survey_type", header: "Survey Type", render: (row) => row.survey_type_name },
           { key: "surveyor", header: "Surveyor", render: (row) => row.surveyor_name },
-          { key: "status", header: "Status", render: (row) => <StatusBadge tone={statusTone(row.status)}>{row.status.replaceAll("_", " ").toUpperCase()}</StatusBadge> },
+		  { key: "status", header: "Status", render: (row) => <StatusBadge tone={statusTone(row.status)}>{surveyStatusLabel(row.status)}</StatusBadge> },
           { key: "started_at", header: "Started At", render: (row) => row.started_at ?? "-" },
           { key: "submitted_at", header: "Submitted At", render: (row) => row.submitted_at ?? "-" },
           { key: "approved_at", header: "Approved At", render: (row) => row.approved_at ?? "-" },
