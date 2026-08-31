@@ -35,7 +35,7 @@ const emptyFilters: ReportFilters = { search: "", customer: "", location: "", su
 
 export function DocumentReportWorkspace() {
   const requestedView = useSearchParams().get("view");
-  const view = requestedView === "recap" ? "recap" : requestedView === "archive" ? "archive" : "reports";
+  const view = requestedView === "recap" ? "recap" : requestedView === "archive" ? "archive" : "active";
   const { accessToken, user } = useAuth();
   const canViewSurveyMonitoring = can(user, "surveys.view.all");
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
@@ -77,8 +77,8 @@ export function DocumentReportWorkspace() {
 
   const rows = useMemo(() => view === "recap"
     ? recaps.filter((row) => matchesRecap(row, filters))
-    : documents.filter((row) => matchesDocument(row, filters)), [documents, filters, recaps, view]);
-  const sourceRows = view === "recap" ? recaps : documents.map(documentFilterSource);
+    : documents.filter((row) => view === "archive" ? isArchivedReport(row.report.status) : !isArchivedReport(row.report.status)).filter((row) => matchesDocument(row, filters)), [documents, filters, recaps, view]);
+  const sourceRows = view === "recap" ? recaps : (rows as DocumentRow[]).map(documentFilterSource);
   const options = {
     customers: unique(sourceRows.map((row) => row.customer)),
     locations: unique(sourceRows.map((row) => row.location)),
@@ -90,12 +90,12 @@ export function DocumentReportWorkspace() {
 
   return <div className="page-stack document-report-workspace">
     <PageHeader
-      title={view === "archive" ? "Arsip Laporan" : view === "recap" ? "Rekap Pemeriksaan" : "Laporan Pemeriksaan"}
-      description={view === "archive" ? "Arsip metadata laporan dan akses ke riwayat versi pada detail." : view === "recap" ? "Rekap berdasarkan data pemeriksaan yang tersedia." : "Laporan hasil pemeriksaan; PDF final dan QR belum aktif."}
+      title={view === "archive" ? "Arsip" : view === "recap" ? "Rekap Pemeriksaan" : "Laporan Aktif"}
+      description={view === "archive" ? "Metadata laporan berstatus final/void/superseded dan akses riwayat versi." : view === "recap" ? "Rekap berdasarkan data pemeriksaan yang tersedia." : "Metadata laporan yang masih aktif; PDF final, QR, dan verifikasi publik belum diaktifkan."}
     />
-    <WorkspaceTabs activeID={view === "archive" ? "archive" : "reports"} label="Dokumen dan Laporan" tabs={[
-      { id: "reports", label: "Laporan Pemeriksaan", href: "/reports" },
-      { id: "archive", label: "Arsip Laporan", href: "/reports?view=archive" }
+    <WorkspaceTabs activeID={view === "archive" ? "archive" : "active"} label="Laporan" tabs={[
+      { id: "active", label: "Aktif", href: "/reports" },
+      { id: "archive", label: "Arsip", href: "/reports?view=archive" }
     ]} />
     {error ? <div className="alert alert-danger">{error}</div> : null}
     <ReportFilter filters={filters} onChange={setFilters} onReset={() => setFilters(emptyFilters)} options={options} />
@@ -214,6 +214,7 @@ function formatDate(value?: string | null) { if (!value) return "Belum tersedia"
 function humanize(value: string) { return value.replaceAll("_", " ").replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 function unique(values: string[]) { return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b)); }
 function latestDate(values: string[]) { return values.reduce((latest, value) => !latest || new Date(value).getTime() > new Date(latest).getTime() ? value : latest, ""); }
+function isArchivedReport(status: string) { return ["generated", "published", "void", "superseded", "archived"].includes(status.toLowerCase()); }
 
 async function mapConcurrent<T, R>(items: T[], limit: number, worker: (item: T) => Promise<R>): Promise<R[]> {
   const results = new Array<R>(items.length); let cursor = 0;

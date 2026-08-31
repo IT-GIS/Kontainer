@@ -57,6 +57,8 @@ export async function loadInspectionWorkDataset(accessToken: string): Promise<In
 export function matchesInspectionView(row: InspectionWorkRow, view: string): boolean {
   if (view === "all") return true;
   if (view === "pending-review") return row.stage === "submitted";
+  if (view === "in-progress") return row.stage === "assigned" || row.stage === "in-progress";
+  if (view === "completed") return row.stage === "approved" || row.stage === "rejected" || row.stage === "completed";
   return row.stage === view;
 }
 
@@ -105,7 +107,7 @@ function buildInspectionRow(
     surveyDetails,
     documents,
     stage,
-    assignmentStatus: assignments.length > 0 ? "Sudah ditugaskan" : "Belum ditugaskan",
+    assignmentStatus: assignments.length > 0 ? "Sudah Ditugaskan" : "Belum Ditugaskan",
     surveyorNames,
     progressPercent,
     completedContainers,
@@ -114,12 +116,12 @@ function buildInspectionRow(
     reviewStatus: rejected
       ? "Ditolak"
       : revisionOpen
-        ? "Perlu revisi"
+        ? "Perlu Revisi"
         : surveys.some((item) => item.status === "submitted")
-          ? "Sudah dikirim"
+          ? "Menunggu Review"
           : surveys.length > 0 && surveys.every((item) => item.status === "approved")
             ? "Disetujui"
-            : "Belum direview",
+            : "Belum Direview",
     documentStatus: documents[0]?.status ?? "Belum tersedia",
     lastUpdated: latestDate(updatedCandidates) ?? job.created_at,
     isOverdue,

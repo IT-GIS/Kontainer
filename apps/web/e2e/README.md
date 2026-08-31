@@ -1,7 +1,7 @@
 # Playwright UAT
 
 `responsive-smoke.spec.ts` tidak memerlukan API dan berjalan pada viewport
-360x800, 390x844, 768x1024, serta 1366x768.
+360x800, 390x844, 412x915, 768x1024, 1366x768, serta 1920x1080.
 Pada Windows dengan Microsoft Edge terpasang, set `PLAYWRIGHT_USE_EDGE=1`
 sebagai alternatif lokal tanpa unduhan browser Playwright. CI tetap memasang
 Chromium versi yang dikunci oleh package.

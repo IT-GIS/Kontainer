@@ -4,6 +4,7 @@ import { Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { DataTable } from "@/components/ui/data-table";
+import { CompletionBadge } from "@/components/ui/completion-badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/hooks/use-auth";
@@ -29,6 +30,7 @@ export function CustomerReadinessIndex() {
   const [rows, setRows] = useState<CustomerReadiness[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [readiness, setReadiness] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,29 +44,34 @@ export function CustomerReadinessIndex() {
 
   const filtered = useMemo(() => rows.filter((row) => {
     if (status && row.status !== status) return false;
+    if (readiness === "ready" && !row.overall_ready) return false;
+    if (readiness === "not-ready" && row.overall_ready) return false;
     const needle = search.trim().toLowerCase();
     return !needle || `${row.customer_code} ${row.customer_name}`.toLowerCase().includes(needle);
-  }), [rows, search, status]);
+  }), [readiness, rows, search, status]);
 
   return <div className="page-stack">
     <PageHeader
-      title="Customer"
-      description="Pilih Customer untuk membuka profil, Personel/PIC, Location, riwayat pekerjaan, dan kelengkapan Master Data."
+      title="Customer & Master"
+      description="Siapkan seluruh data Customer dari satu workspace sampai siap operasional. Persentase berasal dari readiness backend."
       action={can(user, "customers.create.all") ? { label: "Tambah Customer", icon: Plus, onClick: () => window.location.assign("/master/customers/create") } : undefined}
     />
     <div className="toolbar">
       <label className="search-box"><Search size={17} /><span className="sr-only">Cari Customer</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari nama atau kode Customer" /></label>
       <label className="field"><span>Status</span><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">Semua Status</option><option value="active">Aktif</option><option value="inactive">Tidak Aktif</option></select></label>
+      <label className="field"><span>Kesiapan</span><select value={readiness} onChange={(event) => setReadiness(event.target.value)}><option value="">Semua Kesiapan</option><option value="ready">Customer Siap</option><option value="not-ready">Belum Siap</option></select></label>
     </div>
     {error ? <div className="alert alert-danger" role="alert">{error}</div> : null}
-    <DataTable rows={filtered} isLoading={loading} emptyText="Customer belum tersedia." columns={[
+    <DataTable responsiveCards rows={filtered} isLoading={loading} emptyText="Customer belum tersedia." columns={[
       { key: "name", header: "Customer", render: (row) => <><strong>{row.customer_name}</strong><br /><span className="muted-text">{row.customer_code}</span></> },
       { key: "status", header: "Status", render: (row) => <StatusBadge tone={row.status === "active" ? "success" : "warning"}>{row.status === "active" ? "Aktif" : "Tidak Aktif"}</StatusBadge> },
-      { key: "readiness", header: "Kelengkapan Master", render: (row) => <><StatusBadge tone={row.overall_ready ? "success" : "warning"}>{row.overall_ready ? "Lengkap" : "Perlu dilengkapi"}</StatusBadge><br /><span className="muted-text">{row.ready_count}/{row.total_checks} pemeriksaan siap</span></> },
+      { key: "setup", header: "Setup", render: (row) => <CompletionBadge complete={row.ready_count} total={row.total_checks} label="Setup" /> },
+      { key: "readiness", header: "Kesiapan", render: (row) => <StatusBadge tone={row.overall_ready ? "success" : "warning"}>{row.overall_ready ? "Customer Siap" : "Belum Siap"}</StatusBadge> },
+      { key: "missing", header: "Data Kurang", render: (row) => row.overall_ready ? <span className="muted-text">Tidak ada</span> : <span className="muted-text">{row.checks.filter((check) => !check.ready).map((check) => check.label).join(", ")}</span> },
       { key: "locations", header: "Location", render: (row) => row.location_count },
       { key: "personnel", header: "Personel/PIC", render: (row) => row.personnel_count },
       { key: "jobs", header: "Pekerjaan", render: (row) => row.job_count },
-      { key: "action", header: "Aksi", render: (row) => <Link className="primary-button table-action" href={`/master/customers/customer/${row.id}`}>Buka Detail</Link> }
+      { key: "action", header: "Aksi", render: (row) => <Link className="primary-button table-action" href={`/master/customers/customer/${row.id}`}>{row.overall_ready ? "Buka Customer" : "Lanjutkan Setup"}</Link> }
     ]} />
   </div>;
 }

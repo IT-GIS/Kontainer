@@ -22,12 +22,13 @@ export async function ActualMasterDataDetailRoute({ category, customerId, search
 
 export function ActualMasterDataIndex({ category, customerDetailTab }: { category: FitnessMasterDataCategory; customerDetailTab?: string }) {
   const config = getFitnessMasterDataCategoryConfigByID(category);
+  const isCustomer = category === "customer";
   return (
     <ProtectedRoute>
       <AppShell
-        title={config.label}
-        subtitle="Master Data dikelola secara terpisah untuk setiap Customer."
-        breadcrumbs={[{ label: "Master Data" }, { label: config.label }]}
+        title={isCustomer ? "Customer & Master" : config.label}
+        subtitle={isCustomer ? "Siapkan setiap Customer sampai siap operasional." : "Master Data dikelola secara terpisah untuk setiap Customer."}
+        breadcrumbs={[{ label: isCustomer ? "Customer & Master" : "Master Data" }, ...(isCustomer ? [] : [{ label: config.label }])]}
       >
         <CustomerScopedMasterIndex category={category} routeFamily="actual" customerDetailTab={customerDetailTab} />
       </AppShell>

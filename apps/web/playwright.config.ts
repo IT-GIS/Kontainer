@@ -29,7 +29,9 @@ export default defineConfig({
   projects: [
     { name: "mobile-360", use: { browserName: "chromium", ...localChromium, viewport: { width: 360, height: 800 } } },
     { name: "mobile-390", use: { browserName: "chromium", ...localChromium, viewport: { width: 390, height: 844 } } },
+    { name: "mobile-412", use: { browserName: "chromium", ...localChromium, viewport: { width: 412, height: 915 } } },
     { name: "tablet-768", use: { browserName: "chromium", ...localChromium, viewport: { width: 768, height: 1024 } } },
-    { name: "desktop-1366", use: { browserName: "chromium", ...localChromium, viewport: { width: 1366, height: 768 } } }
+    { name: "desktop-1366", use: { browserName: "chromium", ...localChromium, viewport: { width: 1366, height: 768 } } },
+    { name: "desktop-1920", use: { browserName: "chromium", ...localChromium, viewport: { width: 1920, height: 1080 } } }
   ]
 });

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PhotoEvidence } from "@/components/surveys/photo-evidence";
 import { DataTable } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { humanizeStatus, jobStatusLabel, surveyStatusLabel } from "@/lib/status-labels";
 import type { JobDetailSupportingData } from "@/types/job-detail-workspace";
 import type { AssignmentSummary, JobContainer, JobDetail, JobEvent } from "@/types/jobs";
 import type { ReviewDetail } from "@/types/reviews";
@@ -23,9 +24,9 @@ export function JobSummaryTab({ job, support }: { job: JobDetail; support: JobDe
     ["Tanggal SPK", formatDate(job.spk_date)],
     ["Lampiran SPK", job.spk_file_id ? "Metadata file tersedia" : "Belum tersedia - penyimpanan objek belum diverifikasi"],
     ["Keterangan SPK", job.spk_notes ?? "Belum tersedia"],
-    ["Prioritas", humanize(job.priority)],
+    ["Prioritas", humanizeStatus(job.priority)],
     ["Instruksi", job.instruction ?? "Belum tersedia"],
-    ["Status Pekerjaan", <StatusBadge key="status" tone={job.status === "cancelled" ? "danger" : "success"}>{humanize(job.status)}</StatusBadge>],
+    ["Status Pekerjaan", <StatusBadge key="status" tone={job.status === "cancelled" ? "danger" : "success"}>{jobStatusLabel(job.status)}</StatusBadge>],
     ["Progress Keseluruhan", `${progress}% (${completed}/${total} peti kemas selesai)`],
     ["Pembaruan Terakhir", formatDateTime(latestSupportUpdate(job, support))]
   ];
@@ -38,32 +39,37 @@ export function JobContainersTab({
   selected,
   canAdd,
   canImport,
+  canAssign,
   onSelected,
-  onAdd
+  onAdd,
+  onAssign
 }: {
   jobID: string;
   containers: JobContainer[];
   selected: string[];
   canAdd: boolean;
   canImport: boolean;
+  canAssign: boolean;
   onSelected: (ids: string[]) => void;
   onAdd: () => void;
+  onAssign: () => void;
 }) {
   return <section className="workspace-panel job-tab-stack">
     <div className="section-title-row"><div><h2>Peti Kemas</h2><p className="muted-text">Kelola peti kemas yang tercatat pada pekerjaan inspeksi ini.</p></div><div className="job-actions">
       {canAdd ? <button className="secondary-button" onClick={onAdd} type="button"><PackagePlus size={17} /><span>Tambah Peti Kemas</span></button> : null}
       {canImport ? <Link className="primary-button" href={`/jobs/${jobID}/containers/import`}><Upload size={17} /><span>Import Peti Kemas</span></Link> : null}
+      {canAssign && selected.length > 0 ? <button className="primary-button" onClick={onAssign} type="button"><Send size={17} /><span>Tugaskan {selected.length} Peti Kemas</span></button> : null}
     </div></div>
     <DataTable rows={containers} emptyText="Belum ada peti kemas pada pekerjaan ini." columns={[
       { key: "select", header: "Pilih", render: (row) => <input aria-label={`Pilih peti kemas ${row.container_no}`} type="checkbox" checked={selected.includes(row.id)} onChange={(event) => onSelected(event.target.checked ? [...selected, row.id] : selected.filter((id) => id !== row.id))} /> },
       { key: "container_no", header: "Nomor Peti Kemas", render: (row) => row.container_no },
       { key: "type", header: "Container / ISO Type", render: (row) => `${row.container_type_code ?? "-"} / ${row.iso_type_code ?? "-"}` },
-      { key: "identity", header: "Seal / Cargo", render: (row) => `${row.seal_no ?? "-"} / ${humanize(row.cargo_status)}` },
+      { key: "identity", header: "Seal / Cargo", render: (row) => `${row.seal_no ?? "-"} / ${humanizeStatus(row.cargo_status)}` },
       { key: "weight", header: "Gross / Tare / Payload", render: (row) => `${row.gross_weight ?? "-"} / ${row.tare_weight ?? "-"} / ${row.payload ?? "-"}` },
-      { key: "manufacture", header: "Pembuatan / CSC Plate", render: (row) => `${formatDate(row.manufacture_date)} / ${humanize(row.csc_plate_status ?? "belum tersedia")}` },
+      { key: "manufacture", header: "Pembuatan / CSC Plate", render: (row) => `${formatDate(row.manufacture_date)} / ${humanizeStatus(row.csc_plate_status ?? "belum tersedia")}` },
       { key: "vehicle", header: "Truck / Driver", render: (row) => `${row.truck_no ?? "-"} / ${row.driver_name ?? "-"}` },
       { key: "remark", header: "Remark", render: (row) => row.remark ?? "-" },
-      { key: "status", header: "Status", render: (row) => <StatusBadge tone={containerTone(row.status)}>{humanize(row.status)}</StatusBadge> }
+      { key: "status", header: "Status", render: (row) => <StatusBadge tone={containerTone(row.status)}>{surveyStatusLabel(row.status)}</StatusBadge> }
     ]} />
   </section>;
 }
@@ -106,12 +112,12 @@ export function JobProgressTab({ containers, support }: { containers: JobContain
     <div><h2>Progress Pemeriksaan</h2><p className="muted-text">Monitoring read-only. Admin tidak dapat mengisi hasil teknis Surveyor.</p></div>
     <DataTable rows={containers} emptyText="Progress pemeriksaan belum tersedia." columns={[
       { key: "container", header: "Peti Kemas", render: (row) => row.container_no },
-      { key: "status", header: "Status Pemeriksaan", render: (row) => <StatusBadge tone={containerTone(row.status)}>{humanize(row.status)}</StatusBadge> },
+      { key: "status", header: "Status Pemeriksaan", render: (row) => <StatusBadge tone={containerTone(row.status)}>{surveyStatusLabel(row.status)}</StatusBadge> },
       { key: "checklist", header: "Checklist", render: (row) => checklistProgress(reviewForContainer(row, support)) },
       { key: "findings", header: "Temuan", render: (row) => reviewForContainer(row, support)?.damages?.length ?? 0 },
       { key: "photos", header: "Foto", render: (row) => reviewForContainer(row, support)?.photos?.length ?? 0 },
       { key: "updated", header: "Terakhir Diperbarui", render: (row) => formatDateTime(surveyForContainer(row, support)?.approved_at ?? surveyForContainer(row, support)?.submitted_at ?? surveyForContainer(row, support)?.started_at) },
-      { key: "submit", header: "Submit / Revisi", render: (row) => humanize(surveyForContainer(row, support)?.status ?? row.status) },
+      { key: "submit", header: "Submit / Revisi", render: (row) => surveyStatusLabel(surveyForContainer(row, support)?.status ?? row.status) },
       { key: "surveyor", header: "Surveyor", render: (row) => surveyForContainer(row, support)?.surveyor_name ?? "Belum tersedia" }
     ]} />
   </section>;
@@ -120,7 +126,7 @@ export function JobProgressTab({ containers, support }: { containers: JobContain
 export function JobSurveyResultsTab({ support }: { support: JobDetailSupportingData }) {
   if (support.reviews.length === 0) return <section className="workspace-panel"><h2>Hasil Survey</h2><p className="muted-text">Hasil survey belum tersedia atau permission review tidak diberikan.</p></section>;
   return <div className="job-tab-stack">{support.reviews.map((review) => <section className="workspace-panel survey-result-card" key={review.survey_id}>
-    <div className="section-title-row"><div><h2>{review.survey_no}</h2><p className="muted-text">{review.container_no} — {review.surveyor_name}</p></div><StatusBadge tone={review.status === "approved" ? "success" : review.status === "need_revision" ? "danger" : "warning"}>{humanize(review.status)}</StatusBadge></div>
+    <div className="section-title-row"><div><h2>{review.survey_no}</h2><p className="muted-text">{review.container_no} — {review.surveyor_name}</p></div><StatusBadge tone={review.status === "approved" ? "success" : review.status === "need_revision" ? "danger" : "warning"}>{surveyStatusLabel(review.status)}</StatusBadge></div>
     <h3>General Information</h3><ObjectPanel data={review.general_info ?? {}} />
     <h3>Checklist</h3><DataTable rows={review.checklist ?? []} emptyText="Checklist belum tersedia." columns={[
       { key: "item", header: "Item", render: (row) => String(row.item_label ?? row.item_key ?? "-") },
@@ -148,7 +154,7 @@ export function JobReviewTab({ support }: { support: JobDetailSupportingData }) 
     <DataTable rows={support.reviews} emptyText="Belum ada data review." columns={[
       { key: "survey", header: "Survey", render: (row) => row.survey_no },
       { key: "container", header: "Peti Kemas", render: (row) => row.container_no },
-      { key: "status", header: "Status Review", render: (row) => <StatusBadge tone={row.status === "approved" ? "success" : row.status === "need_revision" || row.status === "rejected" ? "danger" : "warning"}>{humanize(row.status)}</StatusBadge> },
+      { key: "status", header: "Status Review", render: (row) => <StatusBadge tone={row.status === "approved" ? "success" : row.status === "need_revision" || row.status === "rejected" ? "danger" : "warning"}>{surveyStatusLabel(row.status)}</StatusBadge> },
       { key: "reviewer", header: "Reviewer", render: () => "Belum tersedia pada kontrak existing" },
       { key: "decision", header: "Keputusan / Catatan", render: (row) => latestDecision(row) },
       { key: "revision", header: "Riwayat Revisi", render: (row) => `${row.approval_history?.filter((item) => String(item.decision) === "need_revision").length ?? 0} revisi` },

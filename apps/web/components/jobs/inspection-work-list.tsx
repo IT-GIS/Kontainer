@@ -11,33 +11,31 @@ import { WorkspaceTabs } from "@/components/ui/workspace-tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { loadInspectionWorkDataset, matchesInspectionView } from "@/lib/inspection-work";
 import { can } from "@/lib/permissions";
+import { jobStatusLabel } from "@/lib/status-labels";
 import type { InspectionWorkRow, InspectionWorkStage, InspectionWorkView } from "@/types/inspection-work";
 
-const validViews: InspectionWorkView[] = ["all", "draft", "unassigned", "assigned", "in-progress", "submitted", "need-revision", "approved", "rejected", "completed"];
+const validViews: InspectionWorkView[] = ["all", "draft", "unassigned", "in-progress", "submitted", "need-revision", "completed"];
 const viewCopy: Record<InspectionWorkView, { title: string; description: string }> = {
   all: { title: "Semua Pekerjaan", description: "Pusat perjalanan pekerjaan inspeksi dari dibuat sampai selesai." },
   draft: { title: "Draf / Baru", description: "Pekerjaan baru yang belum mempunyai peti kemas atau belum siap ditugaskan." },
   unassigned: { title: "Belum Ditugaskan", description: "Pekerjaan yang siap dilengkapi dan belum memiliki Surveyor GIFT aktif." },
   assigned: { title: "Ditugaskan", description: "Pekerjaan yang sudah mempunyai Surveyor GIFT tetapi pemeriksaan belum dimulai." },
-  "in-progress": { title: "Dalam Pemeriksaan", description: "Monitoring pemeriksaan aktif tanpa mengubah hasil teknis Surveyor." },
-  submitted: { title: "Sudah Dikirim", description: "Hasil Surveyor sudah dikirim dan menunggu keputusan Reviewer." },
+  "in-progress": { title: "Sedang Dikerjakan", description: "Pekerjaan yang sudah ditugaskan atau sedang diperiksa, tanpa mengubah hasil teknis Surveyor." },
+  submitted: { title: "Menunggu Review", description: "Hasil Surveyor sudah dikirim dan menunggu keputusan Reviewer." },
   "need-revision": { title: "Perlu Revisi", description: "Monitoring pekerjaan yang dikembalikan Reviewer untuk diperbaiki Surveyor." },
   approved: { title: "Disetujui", description: "Hasil pemeriksaan telah disetujui; penerbitan dokumen tetap mengikuti keputusan fitur terpisah." },
   rejected: { title: "Ditolak", description: "Hasil pemeriksaan dengan keputusan ditolak oleh Reviewer." },
-  completed: { title: "Selesai / Arsip", description: "Pekerjaan yang telah ditutup atau memiliki metadata laporan yang lengkap." }
+  completed: { title: "Selesai", description: "Pekerjaan yang disetujui, ditolak, ditutup, atau memiliki metadata laporan lengkap." }
 };
 
 const workTabs = [
   { id: "all", label: "Semua" },
-  { id: "draft", label: "Draf / Baru" },
+  { id: "draft", label: "Draf" },
   { id: "unassigned", label: "Belum Ditugaskan" },
-  { id: "assigned", label: "Ditugaskan" },
-  { id: "in-progress", label: "Dalam Pemeriksaan" },
-  { id: "submitted", label: "Sudah Dikirim" },
+  { id: "in-progress", label: "Sedang Dikerjakan" },
+  { id: "submitted", label: "Menunggu Review" },
   { id: "need-revision", label: "Perlu Revisi" },
-  { id: "approved", label: "Disetujui" },
-  { id: "rejected", label: "Ditolak" },
-  { id: "completed", label: "Selesai / Arsip" }
+  { id: "completed", label: "Selesai" }
 ] as const;
 
 type Filters = {
@@ -61,7 +59,8 @@ const emptyFilters: Filters = {
 
 export function InspectionWorkList() {
   const searchParams = useSearchParams();
-  const requestedView = searchParams.get("view") === "pending-review" ? "submitted" : searchParams.get("view") ?? "all";
+  const rawView = searchParams.get("view");
+  const requestedView = rawView === "pending-review" ? "submitted" : rawView === "assigned" ? "in-progress" : rawView === "approved" || rawView === "rejected" ? "completed" : rawView ?? "all";
   const view: InspectionWorkView = validViews.includes(requestedView as InspectionWorkView) ? requestedView as InspectionWorkView : "all";
   const compat = searchParams.get("compat");
   const { accessToken, user } = useAuth();
@@ -115,7 +114,7 @@ export function InspectionWorkList() {
       <PageHeader
         title={copy.title}
         description={copy.description}
-        action={canCreate ? { label: "Buat Job/SPK", icon: Plus, onClick: () => window.location.assign("/jobs/create") } : undefined}
+        action={canCreate ? { label: "Buat Pekerjaan", icon: Plus, onClick: () => window.location.assign("/jobs/create") } : undefined}
       />
       <WorkspaceTabs
         activeID={view}
@@ -130,7 +129,7 @@ export function InspectionWorkList() {
         <Metric label="Pekerjaan" value={filteredRows.length} />
         <Metric label="Peti Kemas" value={totalContainers} />
         <Metric label="Terlambat" value={filteredRows.filter((row) => row.isOverdue).length} />
-        <Metric label="Sudah Dikirim" value={filteredRows.filter((row) => row.reviewStatus === "Sudah dikirim").length} />
+        <Metric label="Menunggu Review" value={filteredRows.filter((row) => row.reviewStatus === "Menunggu Review").length} />
       </section>
 
       <InspectionWorkFilter filters={filters} onChange={setFilters} onReset={() => setFilters(emptyFilters)} options={options} />
@@ -169,8 +168,8 @@ function InspectionWorkFilter({
       <FilterSelect label="Location" value={filters.location} options={options.locations} onChange={(value) => set("location", value)} />
       <FilterSelect label="Survey Type" value={filters.surveyType} options={options.surveyTypes} onChange={(value) => set("surveyType", value)} />
       <FilterSelect label="Surveyor GIFT" value={filters.surveyor} options={options.surveyors} onChange={(value) => set("surveyor", value)} />
-      <FilterSelect label="Status Pekerjaan" value={filters.status} options={options.statuses} onChange={(value) => set("status", value)} />
-      <FilterSelect label="Tahap Proses" value={filters.stage} options={["draft", "unassigned", "assigned", "in-progress", "submitted", "need-revision", "approved", "rejected", "completed"]} onChange={(value) => set("stage", value)} />
+      <FilterSelect label="Status Pekerjaan" value={filters.status} options={options.statuses} labels={Object.fromEntries(options.statuses.map((status) => [status, jobStatusLabel(status)]))} onChange={(value) => set("status", value)} />
+      <FilterSelect label="Tahap Proses" value={filters.stage} options={["draft", "unassigned", "assigned", "in-progress", "submitted", "need-revision", "approved", "rejected", "completed"]} labels={stageLabels} onChange={(value) => set("stage", value)} />
       <DateFilter label="Periode dari" value={filters.dateFrom} max={filters.dateTo || undefined} onChange={(value) => set("dateFrom", value)} />
       <DateFilter label="Periode sampai" value={filters.dateTo} min={filters.dateFrom || undefined} onChange={(value) => set("dateTo", value)} />
       <DateFilter label="Deadline sampai" value={filters.deadlineTo} onChange={(value) => set("deadlineTo", value)} />
@@ -269,8 +268,8 @@ function matchesFilters(row: InspectionWorkRow, filters: Filters): boolean {
 
 function reviewTone(status: string): "success" | "warning" | "danger" | "neutral" {
   if (status === "Disetujui") return "success";
-  if (status === "Perlu revisi" || status === "Ditolak") return "danger";
-  if (status === "Sudah dikirim") return "warning";
+  if (status === "Perlu Revisi" || status === "Ditolak") return "danger";
+  if (status === "Menunggu Review") return "warning";
   return "neutral";
 }
 
@@ -295,5 +294,17 @@ function unique(values: string[]) {
 }
 
 export function inspectionStageLabel(stage: InspectionWorkStage) {
-  return humanize(stage);
+  return stageLabels[stage] ?? humanize(stage);
 }
+
+const stageLabels: Record<string, string> = {
+  draft: "Draf",
+  unassigned: "Belum Ditugaskan",
+  assigned: "Belum Dimulai",
+  "in-progress": "Sedang Dikerjakan",
+  submitted: "Menunggu Review",
+  "need-revision": "Perlu Revisi",
+  approved: "Disetujui",
+  rejected: "Ditolak",
+  completed: "Selesai"
+};

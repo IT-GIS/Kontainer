@@ -1,27 +1,31 @@
 export const jobStatusLabels: Record<string, string> = {
   draft: "Draf",
-  assigned: "Ditugaskan",
+  assigned: "Sedang Dikerjakan",
   in_progress: "Sedang Dikerjakan",
-  all_survey_submitted: "Seluruh Survey Terkirim",
-  under_review: "Sedang Direview",
+  all_survey_submitted: "Menunggu Review",
+  under_review: "Menunggu Review",
   need_revision: "Perlu Revisi",
-  all_survey_decided: "Seluruh Survey Diputuskan",
-  all_survey_approved: "Seluruh Survey Disetujui",
+  all_survey_decided: "Selesai",
+  all_survey_approved: "Selesai",
   completed_with_rejection: "Selesai dengan Penolakan",
-  report_generated: "Laporan Tersedia",
+  report_generated: "Selesai",
+  completed: "Selesai",
+  closed: "Selesai",
   cancelled: "Dibatalkan"
 };
 
 export const surveyStatusLabels: Record<string, string> = {
-  assigned: "Ditugaskan",
-  draft: "Draf",
-  submitted: "Terkirim",
-  under_review: "Sedang Direview",
+  assigned: "Belum Dimulai",
+  not_started: "Belum Dimulai",
+  draft: "Sedang Dikerjakan",
+  in_progress: "Sedang Dikerjakan",
+  submitted: "Menunggu Review",
+  under_review: "Menunggu Review",
   need_revision: "Perlu Revisi",
-  resubmitted: "Dikirim Ulang",
+  resubmitted: "Menunggu Review",
   approved: "Disetujui",
   rejected: "Ditolak",
-  report_generated: "Laporan Tersedia",
+  report_generated: "Selesai",
   cancelled: "Dibatalkan"
 };
 
@@ -47,11 +51,11 @@ export const cedexCodeTypeLabels: Record<string, string> = {
 };
 
 export function jobStatusLabel(status: string): string {
-  return jobStatusLabels[status] ?? status;
+  return jobStatusLabels[status] ?? humanizeStatus(status);
 }
 
 export function surveyStatusLabel(status: string): string {
-  return surveyStatusLabels[status] ?? status;
+  return surveyStatusLabels[status] ?? humanizeStatus(status);
 }
 
 export function revisionStatusLabel(status: string): string {
@@ -59,9 +63,16 @@ export function revisionStatusLabel(status: string): string {
 }
 
 export function proposalStatusLabel(status: string): string {
-  return proposalStatusLabels[status] ?? status;
+  return proposalStatusLabels[status] ?? humanizeStatus(status);
 }
 
 export function cedexCodeTypeLabel(codeType: string): string {
-  return cedexCodeTypeLabels[codeType] ?? codeType;
+  return cedexCodeTypeLabels[codeType] ?? humanizeStatus(codeType);
+}
+
+export function humanizeStatus(value: string): string {
+  return value
+    .replaceAll("_", " ")
+    .replaceAll("-", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }

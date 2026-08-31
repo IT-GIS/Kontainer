@@ -13,4 +13,5 @@ export type ContainerTypeOption = {
   label: string;
   code: string;
   isoCode: string;
+  size: string;
 };

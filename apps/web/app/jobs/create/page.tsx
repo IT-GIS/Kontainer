@@ -1,10 +1,11 @@
 "use client";
 
 import { ArrowLeft, Save } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AppShell } from "@/components/layout/app-shell";
+import { JobCreationStepper } from "@/components/jobs/job-creation-stepper";
 import { PageHeader } from "@/components/ui/page-header";
 import { useAuth } from "@/hooks/use-auth";
 import { apiData } from "@/lib/api-client";
@@ -36,12 +37,14 @@ const initialForm: JobForm = {
 };
 
 export default function CreateJobPage() {
-  return <ProtectedRoute><AppShell title="Buat Pekerjaan"><CreateJobContent /></AppShell></ProtectedRoute>;
+  return <ProtectedRoute><AppShell title="Buat Pekerjaan" breadcrumbs={[{ label: "Pekerjaan Inspeksi", href: "/jobs" }, { label: "Buat Pekerjaan" }]}><CreateJobContent /></AppShell></ProtectedRoute>;
 }
 
 function CreateJobContent() {
   const { accessToken } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedCustomerId = searchParams.get("customerId") ?? "";
   const [form, setForm] = useState<JobForm>(initialForm);
   const [customers, setCustomers] = useState<OptionItem[]>([]);
   const [surveyTypes, setSurveyTypes] = useState<OptionItem[]>([]);
@@ -61,10 +64,15 @@ function CreateJobContent() {
   useEffect(() => {
     if (!accessToken) return;
     loadOptions(accessToken, "/master/customers", "customer_name", "customer_code")
-      .then(setCustomers)
+      .then((items) => {
+        setCustomers(items);
+        if (requestedCustomerId && items.some((item) => item.id === requestedCustomerId)) {
+          setForm((current) => current.customer_id ? current : { ...current, customer_id: requestedCustomerId });
+        }
+      })
       .catch((err) => setError(err instanceof Error ? err.message : "Gagal mengambil Customer aktif."))
       .finally(() => setIsLoadingCustomers(false));
-  }, [accessToken]);
+  }, [accessToken, requestedCustomerId]);
 
   useEffect(() => {
     if (!accessToken || !form.customer_id) return;
@@ -188,7 +196,7 @@ function CreateJobContent() {
     try {
       const payload = { ...form, spk_date: form.spk_date || undefined, deadline: form.deadline ? new Date(form.deadline).toISOString() : undefined };
       const result = await apiData<{ id: string }>("/jobs", { method: "POST", accessToken, body: JSON.stringify(payload) });
-      router.replace(`/jobs/${result.id}`);
+      router.replace(`/jobs/${result.id}?tab=peti-kemas&wizard=1`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal membuat pekerjaan.");
     } finally {
@@ -204,7 +212,8 @@ function CreateJobContent() {
   const personnelDisabled = dependenciesDisabled || !form.location_id || isLoadingPersonnel;
   return (
     <div className="page-stack">
-	  <PageHeader title="Buat Pekerjaan Inspeksi" description="Buat header pekerjaan setelah Master Data Customer dinyatakan siap." action={{ label: isSubmitting ? "Menyimpan" : "Simpan Pekerjaan", icon: Save, onClick: () => void submit(), disabled: isSubmitting || isLoadingDependencies || !form.survey_type_id || readiness?.overall_ready !== true }} />
+	  <PageHeader title="Buat Pekerjaan Inspeksi" description="Ikuti empat tahap. Job disimpan sekali pada Informasi Pekerjaan, lalu dilanjutkan pada Job yang sama." action={{ label: isSubmitting ? "Menyimpan" : "Simpan & Lanjut ke Peti Kemas", icon: Save, onClick: () => void submit(), disabled: isSubmitting || isLoadingDependencies || !form.survey_type_id || readiness?.overall_ready !== true }} />
+      <JobCreationStepper current="information" />
       <div className="job-actions"><button className="secondary-button" onClick={leavePage} type="button"><ArrowLeft size={17} /><span>Kembali ke Semua Pekerjaan</span></button></div>
       {error ? <div className="alert alert-danger" role="alert">{error}</div> : null}
       {dependencyNotice ? <div className="alert alert-warning">{dependencyNotice}</div> : null}

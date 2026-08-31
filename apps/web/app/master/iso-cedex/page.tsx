@@ -37,7 +37,7 @@ export default async function IsoCedexPage({ searchParams }: { searchParams: Que
       <AppShell
         title={legacyResponsibility ? "Responsibility Code (Legacy)" : "ISO CEDEX Code"}
         subtitle="Kamus kode untuk temuan Inspeksi Kelaikan."
-        breadcrumbs={[{ label: "Master Data" }, { label: legacyResponsibility ? "Responsibility Code" : "ISO CEDEX" }]}
+        breadcrumbs={[{ label: "Pengaturan", href: "/settings" }, { label: "Master Global", href: "/settings/master-global" }, { label: legacyResponsibility ? "Responsibility Code" : "CEDEX" }]}
       >
         {legacyResponsibility && !customerId ? (
           <CustomerScopedMasterIndex

@@ -155,6 +155,8 @@ export function CustomerScopedMasterDetail({
   forceReadOnlyMessage,
   hideBackLink = false,
   referenceConfigurationReadOnly,
+  showReferenceConfiguration = true,
+  referenceGroups,
   masterDataProps
 }: {
   category: FitnessMasterDataCategory;
@@ -167,6 +169,8 @@ export function CustomerScopedMasterDetail({
   forceReadOnlyMessage?: string;
   hideBackLink?: boolean;
   referenceConfigurationReadOnly?: boolean;
+  showReferenceConfiguration?: boolean;
+  referenceGroups?: ReferenceOptionGroup[];
   masterDataProps?: Pick<MasterDataPageProps,
     "showResourceHeader" | "showToolbarAdd" | "showRichEmptyState" | "showImportUnavailable" | "enableExport" | "enableSaveAndNew" |
     "enableSorting" | "responsiveCards" | "dialogSize" | "actionIdPrefix" | "filters" | "relationEndpointOverrides" |
@@ -220,8 +224,8 @@ export function CustomerScopedMasterDetail({
       dialogTitleOverride={dialogTitleOverride}
       {...masterDataProps}
     />
-    {category === "survey-type" ? (
-      <SurveyTypeReferenceConfiguration customerId={customerId} readOnly={mappingReadOnly} />
+    {category === "survey-type" && showReferenceConfiguration ? (
+      <SurveyTypeReferenceConfiguration customerId={customerId} readOnly={mappingReadOnly} visibleGroups={referenceGroups} />
     ) : null}
   </div>;
 }
@@ -232,8 +236,17 @@ type ReferenceOptions = {
   test_parameters: ReferenceRow[];
   photo_categories: ReferenceRow[];
 };
+export type ReferenceOptionGroup = keyof ReferenceOptions;
 
-function SurveyTypeReferenceConfiguration({ customerId, readOnly }: { customerId: string; readOnly: boolean }) {
+export function SurveyTypeReferenceConfiguration({
+  customerId,
+  readOnly,
+  visibleGroups = ["finding_severities", "test_parameters", "photo_categories"]
+}: {
+  customerId: string;
+  readOnly: boolean;
+  visibleGroups?: ReferenceOptionGroup[];
+}) {
   const { accessToken } = useAuth();
   const [surveyTypes, setSurveyTypes] = useState<Array<{ id: string; code: string; name: string }>>([]);
   const [surveyTypeId, setSurveyTypeId] = useState("");
@@ -294,9 +307,9 @@ function SurveyTypeReferenceConfiguration({ customerId, readOnly }: { customerId
     <label className="field"><span>Survey Type</span><select value={surveyTypeId} onChange={(event) => setSurveyTypeId(event.target.value)}><option value="">Pilih Survey Type</option>{surveyTypes.map((item) => <option key={item.id} value={item.id}>{item.code} - {item.name}</option>)}</select></label>
     {message ? <div className="alert alert-warning">{message}</div> : null}
     {options ? <div className="detail-grid">
-      <ReferenceGroup title="Severity" rows={options.finding_severities} disabled={readOnly} onToggle={(id) => toggle("finding_severities", id)} />
-      <ReferenceGroup title="Test Parameter" rows={options.test_parameters} disabled={readOnly} onToggle={(id) => toggle("test_parameters", id)} />
-      <ReferenceGroup title="Photo Category" rows={options.photo_categories} disabled={readOnly} onToggle={(id) => toggle("photo_categories", id)} />
+      {visibleGroups.includes("finding_severities") ? <ReferenceGroup title="Severity" rows={options.finding_severities} disabled={readOnly} onToggle={(id) => toggle("finding_severities", id)} /> : null}
+      {visibleGroups.includes("test_parameters") ? <ReferenceGroup title="Referensi Pemeriksaan" rows={options.test_parameters} disabled={readOnly} onToggle={(id) => toggle("test_parameters", id)} /> : null}
+      {visibleGroups.includes("photo_categories") ? <ReferenceGroup title="Kategori Foto / Evidence" rows={options.photo_categories} disabled={readOnly} onToggle={(id) => toggle("photo_categories", id)} /> : null}
     </div> : null}
   </section>;
 }

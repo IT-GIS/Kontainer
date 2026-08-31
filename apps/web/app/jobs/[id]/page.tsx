@@ -13,9 +13,12 @@ import {
   JobSummaryTab,
   JobSurveyResultsTab
 } from "@/components/jobs/job-detail-tabs";
+import { JobCreationStepper, type JobCreationStep } from "@/components/jobs/job-creation-stepper";
 import { AppShell } from "@/components/layout/app-shell";
 import { FormDialog } from "@/components/ui/form-dialog";
 import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { NextActionCard } from "@/components/workflow/next-action-card";
 import { useAuth } from "@/hooks/use-auth";
 import { apiData, apiPaginated, buildQuery } from "@/lib/api-client";
 import { loadOptions } from "@/lib/options";
@@ -71,7 +74,7 @@ const emptyContainer: ContainerForm = {
 const emptySupport: JobDetailSupportingData = { surveys: [], reviews: [], documents: [], versions: {} };
 
 export default function JobDetailPage() {
-  return <ProtectedRoute><AppShell title="Detail Pekerjaan"><JobDetailContent /></AppShell></ProtectedRoute>;
+  return <ProtectedRoute><AppShell title="Detail Pekerjaan" breadcrumbs={[{ label: "Pekerjaan Inspeksi", href: "/jobs" }, { label: "Detail Pekerjaan" }]}><JobDetailContent /></AppShell></ProtectedRoute>;
 }
 
 function JobDetailContent() {
@@ -98,8 +101,10 @@ function JobDetailContent() {
   const [reassignSurveyorID, setReassignSurveyorID] = useState("");
   const [reassignReason, setReassignReason] = useState("");
   const [containerTypes, setContainerTypes] = useState<ContainerTypeOption[]>([]);
+  const [containerTypeSize, setContainerTypeSize] = useState("");
   const [surveyors, setSurveyors] = useState<OptionItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const assignmentOpened = useRef(false);
 
   const canAddContainer = can(user, "job_containers.create.all");
@@ -179,7 +184,8 @@ function JobDetailContent() {
         id: String(row.id),
         label: String(row.type ?? row.type_name ?? row.code ?? row.id),
         code: String(row.code ?? ""),
-        isoCode: String(row.iso_code ?? "")
+        isoCode: String(row.iso_code ?? ""),
+        size: String(row.size ?? "")
       })));
     }).catch(() => setSupportWarning("Pilihan Container Type milik Customer tidak dapat dimuat."));
   }, [accessToken, job?.customer_id]);
@@ -222,6 +228,7 @@ function JobDetailContent() {
       await apiData(`/jobs/${jobID}/containers`, { method: "POST", accessToken, body: JSON.stringify(containerPayload(containerForm)) });
       setContainerDialog(false);
       setContainerForm(emptyContainer);
+      setContainerTypeSize("");
       await loadJob();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menambah peti kemas.");
@@ -251,6 +258,8 @@ function JobDetailContent() {
       setAssignmentInstruction("");
       setSelectedContainers([]);
       await loadJob();
+      setShowConfirmation(true);
+      setActiveTab("ringkasan");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menugaskan Surveyor GIFT.");
     } finally {
@@ -286,21 +295,54 @@ function JobDetailContent() {
   function selectContainerType(value: string) {
     const selected = containerTypes.find((item) => item.id === value);
     setContainerForm((current) => ({ ...current, container_type_id: value, iso_type_code: selected?.isoCode ?? "" }));
+    setContainerTypeSize(selected?.size ?? "");
   }
 
   if (isLoading && !job) return <div className="center-screen">Memuat detail pekerjaan...</div>;
   if (!job) return <div className="page-stack"><div className="alert alert-danger">{error ?? "Pekerjaan tidak ditemukan."}</div></div>;
 
+  const containers = job.containers ?? [];
+  const assignments = job.assignments ?? [];
+  const wizardStep: JobCreationStep = showConfirmation
+    ? "confirmation"
+    : activeTab === "peti-kemas"
+      ? "containers"
+      : activeTab === "penugasan"
+        ? "assignment"
+        : containers.length === 0
+          ? "containers"
+          : assignments.length === 0
+            ? "assignment"
+            : "confirmation";
+  const completedSteps: JobCreationStep[] = [
+    "information",
+    ...(containers.length > 0 ? ["containers" as const] : []),
+    ...(assignments.length > 0 ? ["assignment" as const] : [])
+  ];
+
+  function openWizardStep(step: JobCreationStep) {
+    setShowConfirmation(step === "confirmation");
+    if (step === "information" || step === "confirmation") setActiveTab("ringkasan");
+    if (step === "containers") setActiveTab("peti-kemas");
+    if (step === "assignment") setActiveTab("penugasan");
+  }
+
   return (
     <div className="page-stack job-detail-workspace">
       <PageHeader title={job.job_order_no} description={`${job.customer?.customer_name ?? job.customer_name} — ${job.survey_type?.name ?? job.survey_type_name}`} />
+      <JobCreationStepper completed={completedSteps} current={wizardStep} onStepClick={openWizardStep} />
+      <JobProgressSummary job={job} support={support} />
       {error ? <div className="alert alert-danger">{error}</div> : null}
       {supportWarning ? <div className="alert alert-warning">{supportWarning}</div> : null}
 	  {readiness?.overall_ready === false ? <div className="alert alert-danger"><div><strong>Assignment diblokir: Master Data Customer belum siap.</strong><p>{readiness.checks.filter((item) => !item.ready).map((item) => item.label).join(", ")}</p></div></div> : null}
+      {showConfirmation ? <JobConfirmationPanel job={job} readinessReady={readiness?.overall_ready === true} onFinish={() => { setShowConfirmation(false); setActiveTab("progress"); }} /> : null}
+      {!showConfirmation && containers.length === 0 ? <NextActionCard title="Job tersimpan" description="Tambahkan peti kemas pada Job yang sama. Sistem tidak membuat Job kedua." actionLabel="Tambah Peti Kemas" onClick={() => { setActiveTab("peti-kemas"); setContainerDialog(true); }} /> : null}
+      {!showConfirmation && containers.length > 0 && assignments.length === 0 ? <NextActionCard title="Peti kemas tersedia" description="Pilih peti kemas pada tab Peti Kemas; tombol assignment akan langsung muncul." actionLabel="Pilih & Tugaskan Surveyor" onClick={() => setActiveTab("peti-kemas")} /> : null}
+      {!showConfirmation && assignments.length > 0 ? <NextActionCard title="Assignment sukses" description="Pantau tiap peti kemas tanpa mengubah hasil teknis Surveyor." actionLabel="Lihat Progress" onClick={() => setActiveTab("progress")} /> : null}
       <div aria-label="Tab detail pekerjaan" className="tab-list" role="tablist">{tabs.map((tab) => <button aria-controls={`panel-${tab.id}`} aria-selected={activeTab === tab.id} className={activeTab === tab.id ? "tab-active" : ""} id={`tab-${tab.id}`} key={tab.id} onClick={() => setActiveTab(tab.id)} role="tab" type="button">{tab.label}</button>)}</div>
 
       <TabPanel active={activeTab === "ringkasan"} id="ringkasan"><JobSummaryTab job={job} support={support} /></TabPanel>
-      <TabPanel active={activeTab === "peti-kemas"} id="peti-kemas"><JobContainersTab jobID={jobID} containers={job.containers ?? []} selected={selectedContainers} canAdd={canAddContainer} canImport={canImport} onSelected={setSelectedContainers} onAdd={() => setContainerDialog(true)} /></TabPanel>
+      <TabPanel active={activeTab === "peti-kemas"} id="peti-kemas"><JobContainersTab jobID={jobID} containers={containers} selected={selectedContainers} canAdd={canAddContainer} canImport={canImport} canAssign={canAssign} onSelected={setSelectedContainers} onAdd={() => setContainerDialog(true)} onAssign={() => setAssignDialog(true)} /></TabPanel>
       <TabPanel active={activeTab === "penugasan"} id="penugasan"><JobAssignmentTab assignments={job.assignments ?? []} selectedCount={selectedContainers.length} canAssign={canAssign} canReassign={canReassign} onAssign={() => setAssignDialog(true)} onReassign={() => setReassignDialog(true)} /></TabPanel>
       <TabPanel active={activeTab === "progress"} id="progress"><JobProgressTab containers={job.containers ?? []} support={support} /></TabPanel>
       <TabPanel active={activeTab === "hasil-survey"} id="hasil-survey"><JobSurveyResultsTab support={support} /></TabPanel>
@@ -313,6 +355,7 @@ function JobDetailContent() {
           <Field label="Nomor Peti Kemas"><input value={containerForm.container_no} onChange={(event) => updateContainer(setContainerForm, "container_no", event.target.value.toUpperCase())} /></Field>
           <Field label="Container Type"><select value={containerForm.container_type_id} onChange={(event) => selectContainerType(event.target.value)}><option value="">Pilih Container Type</option>{containerTypes.map((item) => <option key={item.id} value={item.id}>{item.code} - {item.label}</option>)}</select></Field>
           <Field label="ISO Type"><input readOnly value={containerForm.iso_type_code} placeholder="Otomatis dari Container Type" /></Field>
+          <Field label="Size"><input readOnly value={containerTypeSize} placeholder="Otomatis dari Container Type" /></Field>
           <Field label="Seal Number"><input value={containerForm.seal_no} onChange={(event) => updateContainer(setContainerForm, "seal_no", event.target.value)} /></Field>
           <Field label="Cargo Status"><select value={containerForm.cargo_status} onChange={(event) => updateContainer(setContainerForm, "cargo_status", event.target.value)}><option value="unknown">Unknown</option><option value="empty">Empty</option><option value="laden">Laden</option></select></Field>
           <Field label="Gross Weight"><input min="0" step="0.01" type="number" value={containerForm.gross_weight} onChange={(event) => updateContainer(setContainerForm, "gross_weight", event.target.value)} /></Field>
@@ -353,6 +396,42 @@ function JobDetailContent() {
   );
 }
 
+function JobProgressSummary({ job, support }: { job: JobDetail; support: JobDetailSupportingData }) {
+  const containers = job.containers ?? [];
+  const statuses = support.surveys.map((survey) => survey.status);
+  const notStarted = containers.length - support.surveys.length + statuses.filter((status) => status === "assigned" || status === "not_started").length;
+  const inProgress = statuses.filter((status) => status === "draft" || status === "in_progress").length;
+  const waitingReview = statuses.filter((status) => status === "submitted" || status === "resubmitted" || status === "under_review").length;
+  return <section className="metric-grid inspection-summary-grid" aria-label="Ringkasan progress pekerjaan">
+    <Metric label="Peti Kemas" value={containers.length} />
+    <Metric label="Belum Dimulai" value={Math.max(0, notStarted)} />
+    <Metric label="Sedang Dikerjakan" value={inProgress} />
+    <Metric label="Menunggu Review" value={waitingReview} />
+  </section>;
+}
+
+function JobConfirmationPanel({ job, readinessReady, onFinish }: { job: JobDetail; readinessReady: boolean; onFinish: () => void }) {
+  const containers = job.containers ?? [];
+  const assignments = job.assignments ?? [];
+  return <section className="workspace-panel page-stack job-confirmation-panel" aria-labelledby="job-confirmation-title">
+    <div className="section-title-row"><div><p className="page-header-eyebrow">Langkah 4</p><h2 id="job-confirmation-title">Konfirmasi</h2><p className="muted-text">Job yang sama sudah dilengkapi; tidak ada Job kedua yang dibuat.</p></div><StatusBadge tone={readinessReady && containers.length > 0 && assignments.length > 0 ? "success" : "warning"}>{readinessReady && containers.length > 0 && assignments.length > 0 ? "Siap Dipantau" : "Perlu Dilengkapi"}</StatusBadge></div>
+    <div className="detail-grid">
+      <div><span>Customer</span><strong>{job.customer?.customer_name ?? job.customer_name}</strong></div>
+      <div><span>Location</span><strong>{job.location?.location_name ?? job.location_name}</strong></div>
+      <div><span>Survey Type</span><strong>{job.survey_type?.name ?? job.survey_type_name}</strong></div>
+      <div><span>Peti Kemas</span><strong>{containers.length}</strong></div>
+      <div><span>Surveyor</span><strong>{Array.from(new Set(assignments.map((item) => item.surveyor_name))).join(", ") || "Belum ditugaskan"}</strong></div>
+      <div><span>Deadline</span><strong>{formatValue(job.deadline)}</strong></div>
+    </div>
+    <div className="job-confirmation-checks">
+      <StatusBadge tone={readinessReady ? "success" : "warning"}>{readinessReady ? "Customer Ready" : "Customer Belum Siap"}</StatusBadge>
+      <StatusBadge tone={containers.length > 0 ? "success" : "warning"}>{containers.length > 0 ? "Container Valid" : "Container Belum Ada"}</StatusBadge>
+      <StatusBadge tone={assignments.length > 0 ? "success" : "warning"}>{assignments.length > 0 ? "Surveyor Assigned" : "Surveyor Belum Ditugaskan"}</StatusBadge>
+    </div>
+    <button className="primary-button" disabled={!readinessReady || containers.length === 0 || assignments.length === 0} onClick={onFinish} type="button">Selesai & Lihat Progress</button>
+  </section>;
+}
+
 function TabPanel({ id, active, children }: { id: TabID; active: boolean; children: React.ReactNode }) {
   if (!active) return null;
   return <div aria-labelledby={`tab-${id}`} id={`panel-${id}`} role="tabpanel" tabIndex={0}>{children}</div>;
@@ -365,6 +444,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function OptionSelect({ value, options, onChange }: { value: string; options: OptionItem[]; onChange: (value: string) => void }) {
   return <select value={value} onChange={(event) => onChange(event.target.value)}><option value="">Pilih</option>{options.map((item) => <option key={item.id} value={item.id}>{item.code ? `${item.code} - ${item.label}` : item.label}</option>)}</select>;
 }
+
+function Metric({ label, value }: { label: string; value: number }) { return <div className="metric-tile"><p>{label}</p><strong>{value}</strong></div>; }
+function formatValue(value?: string | null) { if (!value) return "Belum tersedia"; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(date); }
 
 function updateContainer(setter: React.Dispatch<React.SetStateAction<ContainerForm>>, key: keyof ContainerForm, value: string) {
   setter((current) => ({ ...current, [key]: value }));

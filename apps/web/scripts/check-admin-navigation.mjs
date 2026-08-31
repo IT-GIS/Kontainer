@@ -8,38 +8,42 @@ const effectiveAdminSource = adminSource.replace(/\/\/.*$/gm, "");
 assert.match(navigationSource, /navigationWorkspaces:[\s\S]*adminWorkspace/);
 assert.doesNotMatch(navigationSource, /containerFitnessAdminWorkspace/);
 
-const requiredGroups = [
+const requiredMainItems = [
   "Dashboard",
+  "Customer & Master",
   "Pekerjaan Inspeksi",
-  "Master Data",
   "Review & Keputusan",
-  "Dokumen & Laporan",
+  "Laporan",
   "Pengaturan"
 ];
-for (const label of requiredGroups) {
+for (const label of requiredMainItems) {
   assert.ok(effectiveAdminSource.includes(`"${label}"`), `Missing canonical label: ${label}`);
 }
 
-const forbiddenCanonicalLabels = [
-  "Finance",
-  "Ready to Invoice",
-  "Price List",
-  "Invoice",
-  "Payment",
-  "Outstanding",
-  "Tindak Lanjut Perbaikan",
-  "Workshop",
-  "Gate-Out",
-  "Arsip Lama"
+const forbiddenSidebarItems = [
+  "Semua Pekerjaan",
+  "Buat Job/SPK",
+  "Monitoring Survey",
+  "Master Data",
+  "Menunggu Review",
+  "Riwayat Keputusan",
+  "Dokumen & Laporan",
+  "Arsip Laporan"
 ];
-for (const label of forbiddenCanonicalLabels) {
-  assert.ok(!effectiveAdminSource.includes(`"${label}"`), `Forbidden canonical label: ${label}`);
+for (const label of forbiddenSidebarItems) {
+  assert.ok(!effectiveAdminSource.includes(`"${label}"`), `Nested workflow item must not remain in Admin sidebar: ${label}`);
 }
 
-assert.match(effectiveAdminSource, /"Referensi Pemeriksaan", "\/master\/inspection-references"/);
-assert.match(effectiveAdminSource, /"Monitoring Survey"/);
+assert.match(effectiveAdminSource, /"Customer & Master", "\/master\/customers"/);
+assert.match(effectiveAdminSource, /"Pekerjaan Inspeksi", "\/jobs"/);
+assert.match(effectiveAdminSource, /"Review & Keputusan", "\/review"/);
+assert.match(effectiveAdminSource, /"Laporan", "\/reports"/);
+assert.match(effectiveAdminSource, /"Pengaturan", "\/settings"/);
 assert.match(effectiveAdminSource, /"\/monitoring\/surveys"/);
-assert.match(effectiveAdminSource, /"ISO CEDEX", "\/master\/iso-cedex"/);
-assert.match(effectiveAdminSource, /"Surveyor GIFT", "\/master\/surveyors"/);
+assert.match(effectiveAdminSource, /"\/master\/iso-cedex"/);
+assert.match(effectiveAdminSource, /"\/master\/inspection-references"/);
 
-console.log("Admin canonical navigation checks passed.");
+const mainLinkCount = (effectiveAdminSource.match(/\bn\("/g) ?? []).length;
+assert.equal(mainLinkCount, 6, `Admin sidebar must contain exactly six high-level links, found ${mainLinkCount}`);
+
+console.log("Admin process-based navigation checks passed.");

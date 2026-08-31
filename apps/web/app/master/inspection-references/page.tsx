@@ -45,7 +45,7 @@ export default async function InspectionReferencesPage({ searchParams }: { searc
       <AppShell
         title="Acuan & Kriteria Pemeriksaan"
         subtitle="Kelola Inspection Reference dan Decision Rule tervalidasi untuk Inspeksi Kelaikan."
-        breadcrumbs={[{ label: "Master Data" }, { label: "Acuan & Kriteria Pemeriksaan" }]}
+        breadcrumbs={[{ label: "Pengaturan", href: "/settings" }, { label: "Master Global", href: "/settings/master-global" }, { label: "Referensi Pemeriksaan" }]}
       >
         <div className="page-stack">
           <Link className="secondary-button" href="/master/iso-cedex">&larr; Kembali ke ISO CEDEX Code</Link>

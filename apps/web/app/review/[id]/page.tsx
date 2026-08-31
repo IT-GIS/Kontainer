@@ -22,7 +22,7 @@ type RevisionDraft = { target_type: "survey" | "finding" | "checklist" | "photo"
 const emptyRevisionItem: RevisionDraft = { target_type: "survey", target_id: "", category: "general", note: "", due_at: "" };
 
 export default function ReviewDetailPage() {
-  return <ProtectedRoute><AppShell title="Review & Keputusan"><ReviewDetailContent /></AppShell></ProtectedRoute>;
+  return <ProtectedRoute><AppShell title="Review & Keputusan" breadcrumbs={[{ label: "Review & Keputusan", href: "/review" }, { label: "Detail Review" }]}><ReviewDetailContent /></AppShell></ProtectedRoute>;
 }
 
 function ReviewDetailContent() {
@@ -95,7 +95,7 @@ function ReviewDetailContent() {
       setNote("");
 	  setRevisionItems([{ ...emptyRevisionItem }]);
       if (dialog === "approve") {
-        router.push("/review/history");
+        router.push("/review?view=history");
         return;
       }
       await loadReview();
