@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, Check, FilePlus2, ImagePlus, Plus, Save, Send, Trash2, TriangleAlert, X } from "lucide-react";
+import { Camera, Check, FilePlus2, ImagePlus, LockKeyhole, Plus, Save, Send, Trash2, TriangleAlert, X } from "lucide-react";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -13,6 +13,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { FormDialog } from "@/components/ui/form-dialog";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { SurveySheetFieldSourceBadge, type SurveySheetFieldSource } from "@/components/ui/survey-sheet-field-source-badge";
 import { useAuth } from "@/hooks/use-auth";
 import { useDialogBehavior } from "@/hooks/use-dialog-behavior";
 import { ApiClientError, apiData } from "@/lib/api-client";
@@ -565,26 +566,41 @@ function JobSummaryTab({ survey }: { survey: SurveyDetail }) {
 }
 
 function SurveySheetSummary({ survey }: { survey: SurveyDetail }) {
-  const rows = [
-    ["Nomor Job/SPK", `${survey.job_order_no}${survey.spk_no ? ` / ${survey.spk_no}` : ""}`],
-    ["Customer", survey.customer_name],
-    ["Jenis Pemeriksaan", survey.survey_type_name || "Inspeksi Kelaikan"],
-    ["Lokasi Pemeriksaan", survey.location_name],
-    ["Tanggal / Due Date", survey.spk_date ?? survey.job_deadline ?? survey.assignment_due_at ?? "-"],
-    ["Nomor Peti Kemas", survey.container_no],
-    ["Container Type", [survey.container_type_code, survey.container_type_name].filter(Boolean).join(" - ") || "-"],
-    ["ISO Type Code", survey.iso_type_code ?? "-"],
-    ["Ukuran", survey.container_size ? `${survey.container_size} feet` : "-"],
-    ["Manufacture Date", survey.manufacture_date ?? "-"],
-    ["CSC Plate", survey.csc_plate_status ?? survey.general_info?.csc_plate_status ?? "-"],
-    ["Surveyor", survey.surveyor_name],
-    ["Instruksi Pekerjaan", survey.job_instruction ?? survey.assignment_instruction ?? "-"],
-    ["Status Survey", surveyStatusLabel(survey.status)]
+  const rows: Array<{ label: string; value: React.ReactNode; source: SurveySheetFieldSource }> = [
+    { label: "Nomor Job/SPK", value: `${survey.job_order_no}${survey.spk_no ? ` / ${survey.spk_no}` : ""}`, source: "Job" },
+    { label: "Customer / Client", value: survey.customer_name, source: "Customer" },
+    { label: "Container Nbrs", value: survey.container_no, source: "Peti Kemas" },
+    { label: "Type of Survey", value: survey.survey_type_name || "Belum tersedia", source: "Job" },
+    { label: "Size", value: survey.container_size ? `${survey.container_size} feet` : "Belum tersedia", source: "Peti Kemas" },
+    { label: "Manufacture", value: survey.manufacture_date ?? "Belum tersedia", source: "Peti Kemas" },
+    { label: "MTY / FULL", value: formatCargoStatus(survey.cargo_status_initial), source: "Peti Kemas" },
+    { label: "Type", value: [survey.container_type_code, survey.container_type_name].filter(Boolean).join(" - ") || "Belum tersedia", source: "Peti Kemas" },
+    { label: "CSC Plate", value: formatCSCPlate(survey), source: "Peti Kemas" },
+    { label: "CSC Program Type", value: survey.csc_program_type ?? "Belum tersedia", source: "Peti Kemas" },
+    { label: "Payload", value: formatWeight(survey.payload), source: "Peti Kemas" },
+    { label: "Survey Location", value: survey.location_name || "Belum tersedia", source: "Job" },
+    { label: "Tare", value: formatWeight(survey.tare_weight), source: "Peti Kemas" },
+    { label: "Date of Survey", value: formatSurveyDate(survey.started_at), source: "Sistem" },
+    { label: "Condition", value: formatCondition(survey.general_info?.general_condition), source: "Surveyor" },
+    { label: "Cleanliness", value: formatCleanliness(survey.general_info?.cleanliness), source: "Surveyor" }
   ];
+  const missing = [
+    !survey.manufacture_date && "Manufacture",
+    survey.payload == null && "Payload",
+    survey.tare_weight == null && "Tare",
+    !survey.csc_plate_number && "CSC Plate Number",
+    !survey.csc_program_type && "CSC Program Type"
+  ].filter(Boolean) as string[];
   return <section className="workspace-panel survey-sheet-summary-panel">
-    <div className="section-title-row"><div><span className="eyebrow">Konteks pekerjaan</span><h2>Informasi Pekerjaan &amp; Identitas Peti Kemas</h2></div><StatusBadge tone={survey.status === "need_revision" ? "danger" : survey.status === "approved" ? "success" : "warning"}>{surveyStatusLabel(survey.status)}</StatusBadge></div>
-    <div className="survey-sheet-summary-grid">{rows.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
+    <div className="section-title-row"><div><span className="eyebrow">Header Survey Sheet</span><h2>Informasi Pekerjaan &amp; Identitas Peti Kemas</h2><p className="muted-text">Nilai administratif berasal dari snapshot saat Survey dimulai. Hanya Condition dan Cleanliness yang menjadi hasil input Surveyor.</p></div><StatusBadge tone={survey.status === "need_revision" ? "danger" : survey.status === "approved" ? "success" : "warning"}>{surveyStatusLabel(survey.status)}</StatusBadge></div>
+    <div className="survey-sheet-summary-grid">{rows.map((row) => <SurveySheetHeaderField key={row.label} {...row} />)}</div>
+    {missing.length > 0 ? <div className="alert alert-warning"><TriangleAlert size={18} /><div><strong>Data opsional belum tersedia</strong><p>{missing.join(", ")}. Lengkapi pada Job â†’ Peti Kemas bila dibutuhkan; Surveyor tidak dapat mengubah source administratif ini.</p></div></div> : null}
+    <div className="alert alert-info"><strong>DOMAIN GAP:</strong>&nbsp; MGM, TCT, 3rd Scty Sys, dan Cu-Cap belum dipetakan karena definisi, tipe data, sumber, dan ownership belum disahkan.</div>
   </section>;
+}
+
+function SurveySheetHeaderField({ label, value, source }: { label: string; value: React.ReactNode; source: SurveySheetFieldSource }) {
+  return <div><span>{label}<SurveySheetFieldSourceBadge source={source} /></span><strong>{value}</strong></div>;
 }
 
 function DamageEditorPanel({ title, children, isSaving, onClose, onSave }: { title: string; children: React.ReactNode; isSaving: boolean; onClose: () => void; onSave: () => void }) {
@@ -613,30 +629,76 @@ function DamageEditorPanel({ title, children, isSaving, onClose, onSave }: { tit
 }
 
 function IdentityTab({ survey, general, readonly, isSaving, onChange, onSave }: { survey: SurveyDetail; general: SurveyGeneralInfo; readonly: boolean; isSaving: boolean; onChange: (value: SurveyGeneralInfo) => void; onSave: () => void }) {
-  return <section className="workspace-panel"><div className="detail-grid identity-summary">
-    <div><span>Nomor peti kemas</span><strong>{survey.container_no}</strong></div>
-    <div><span>Check digit</span><strong>{survey.check_digit ?? "-"} · {survey.check_digit_status ?? "belum diperiksa"}</strong></div>
-    <div><span>Ukuran</span><strong>{survey.container_size ? `${survey.container_size} feet` : "Belum tersedia"}</strong></div>
-    <div><span>ISO Type</span><strong>{survey.iso_type_code ?? "-"}</strong></div>
-    <div><span>Tahun / tanggal pembuatan</span><strong>{survey.manufacture_date ?? "-"}</strong></div>
-    <div><span>Pemilik / operator</span><strong>{survey.owner_code ?? "-"}</strong></div>
-    <div><span>Nomor CSC Plate</span><strong>Belum tersedia pada data Job Container</strong></div>
-    <div><span>Tanggal CSC</span><strong>Belum tersedia pada data Job Container</strong></div>
-    <div><span>Status CSC Plate</span><strong>{survey.csc_plate_status ?? general.csc_plate_status ?? "-"}</strong></div>
-    <div><span>Container Type</span><strong>{survey.container_type_code ?? "-"} · {survey.container_type_name ?? "-"}</strong></div>
-  </div><div className="form-grid">
-    <Field label="Cargo Status"><select disabled={readonly} value={general.cargo_status ?? "unknown"} onChange={(e) => onChange({ ...general, cargo_status: e.target.value })}><option value="unknown">unknown</option><option value="empty">empty</option><option value="laden">laden</option></select></Field>
+  return <section className="workspace-panel page-stack">
+    <div className="section-title-row"><div><span className="eyebrow">Admin / Job / Peti Kemas</span><h2>Data Awal Read-only</h2><p className="muted-text">Snapshot ini menjadi jejak data awal dan tidak dapat dioverride dari workspace Surveyor.</p></div><LockKeyhole aria-label="Read-only" size={20} /></div>
+    <div className="detail-grid identity-summary">
+      <SurveySheetHeaderField label="Container Nbrs" value={survey.container_no} source="Peti Kemas" />
+      <SurveySheetHeaderField label="Check Digit" value={`${survey.check_digit ?? "-"} · ${survey.check_digit_status ?? "belum diperiksa"}`} source="Peti Kemas" />
+      <SurveySheetHeaderField label="Size" value={survey.container_size ? `${survey.container_size} feet` : "Belum tersedia"} source="Peti Kemas" />
+      <SurveySheetHeaderField label="ISO Type" value={survey.iso_type_code ?? "Belum tersedia"} source="Peti Kemas" />
+      <SurveySheetHeaderField label="Manufacture" value={survey.manufacture_date ?? "Belum tersedia"} source="Peti Kemas" />
+      <SurveySheetHeaderField label="Owner / Operator" value={survey.owner_code ?? "Belum tersedia"} source="Peti Kemas" />
+      <SurveySheetHeaderField label="Cargo Status Awal" value={formatCargoStatus(survey.cargo_status_initial)} source="Peti Kemas" />
+      <SurveySheetHeaderField label="Gross Weight" value={formatWeight(survey.gross_weight)} source="Peti Kemas" />
+      <SurveySheetHeaderField label="Tare" value={formatWeight(survey.tare_weight)} source="Peti Kemas" />
+      <SurveySheetHeaderField label="Payload" value={formatWeight(survey.payload)} source="Peti Kemas" />
+      <SurveySheetHeaderField label="CSC Plate Status Awal" value={humanizeSurveyValue(survey.csc_plate_status_initial)} source="Peti Kemas" />
+      <SurveySheetHeaderField label="CSC Plate Number" value={survey.csc_plate_number ?? "Belum tersedia"} source="Peti Kemas" />
+      <SurveySheetHeaderField label="CSC Approval Reference" value={survey.csc_approval_reference ?? "Belum tersedia"} source="Peti Kemas" />
+      <SurveySheetHeaderField label="CSC Manufacture Date" value={survey.csc_manufacture_date ?? "Belum tersedia"} source="Peti Kemas" />
+      <SurveySheetHeaderField label="CSC Next Examination" value={survey.csc_next_examination_date ?? "Belum tersedia"} source="Peti Kemas" />
+      <SurveySheetHeaderField label="CSC Program Type" value={survey.csc_program_type ?? "Belum tersedia"} source="Peti Kemas" />
+      <SurveySheetHeaderField label="Container Type" value={[survey.container_type_code, survey.container_type_name].filter(Boolean).join(" - ") || "Belum tersedia"} source="Peti Kemas" />
+      <SurveySheetHeaderField label="Date of Survey" value={formatSurveyDate(survey.started_at)} source="Sistem" />
+    </div>
+    <div className="section-title-row"><div><span className="eyebrow">Input lapangan</span><h2>Hasil Verifikasi Surveyor</h2><p className="muted-text">Nilai verifikasi disimpan terpisah dari snapshot awal.</p></div><SurveySheetFieldSourceBadge source="Surveyor" /></div>
+    <div className="form-grid">
+    <Field label="Cargo Status Verifikasi (MTY / FULL)"><select disabled={readonly} value={general.cargo_status ?? "unknown"} onChange={(e) => onChange({ ...general, cargo_status: e.target.value })}><option value="unknown">Pilih hasil verifikasi</option><option value="empty">MTY (Empty)</option><option value="laden">FULL (Laden)</option></select></Field>
     <Field label="Container Lifecycle"><select disabled={readonly} value={general.container_lifecycle ?? ""} onChange={(e) => onChange({ ...general, container_lifecycle: (e.target.value || null) as SurveyGeneralInfo["container_lifecycle"] })}><option value="">Select</option><option value="new">Peti Kemas Baru</option><option value="existing">Peti Kemas Lama / Existing</option></select></Field>
     <Field label="Seal No"><input disabled={readonly} value={general.seal_no ?? ""} onChange={(e) => onChange({ ...general, seal_no: e.target.value })} /></Field>
     <Field label="Truck No"><input disabled={readonly} value={general.truck_no ?? ""} onChange={(e) => onChange({ ...general, truck_no: e.target.value })} /></Field>
     <Field label="Driver Name"><input disabled={readonly} value={general.driver_name ?? ""} onChange={(e) => onChange({ ...general, driver_name: e.target.value })} /></Field>
     <Field label="Chassis No"><input disabled={readonly} value={general.chassis_no ?? ""} onChange={(e) => onChange({ ...general, chassis_no: e.target.value })} /></Field>
-    <Field label="CSC Plate"><input disabled={readonly} value={general.csc_plate_status ?? ""} onChange={(e) => onChange({ ...general, csc_plate_status: e.target.value })} /></Field>
+    <Field label="CSC Plate Status Verifikasi"><select disabled={readonly} value={general.csc_plate_status ?? ""} onChange={(e) => onChange({ ...general, csc_plate_status: e.target.value })}><option value="">Pilih hasil verifikasi</option><option value="available">Available</option><option value="missing">Missing</option><option value="damaged">Damaged</option><option value="not_checked">Not Checked</option></select></Field>
     <Field label="Door Status"><input disabled={readonly} value={general.door_status ?? ""} onChange={(e) => onChange({ ...general, door_status: e.target.value })} /></Field>
-    <Field label="General Condition"><select disabled={readonly} value={general.general_condition ?? ""} onChange={(e) => onChange({ ...general, general_condition: e.target.value })}><option value="">Select</option><option value="sound">sound</option><option value="damage">damage</option><option value="dirty">dirty</option></select></Field>
+    <Field label="Condition (DMG / AVL / AR)"><select disabled={readonly} value={general.general_condition ?? ""} onChange={(e) => onChange({ ...general, general_condition: e.target.value })}><option value="">Pilih Condition</option><option value="DMG">DMG</option><option value="AVL">AVL</option><option value="AR">AR</option>{general.general_condition && !["DMG", "AVL", "AR"].includes(general.general_condition.toUpperCase()) ? <option value={general.general_condition}>Legacy: {general.general_condition}</option> : null}</select></Field>
+    <Field label="Cleanliness (DTY / CTM)"><select disabled={readonly} value={general.cleanliness ?? ""} onChange={(e) => onChange({ ...general, cleanliness: e.target.value })}><option value="">Pilih Cleanliness</option><option value="DTY">DTY</option><option value="CTM">CTM</option></select></Field>
     <Field label="Weather"><input disabled={readonly} value={general.weather ?? ""} onChange={(e) => onChange({ ...general, weather: e.target.value })} /></Field>
     <label className="field form-span-2"><span>General Remark</span><textarea disabled={readonly} rows={3} value={general.general_remark ?? ""} onChange={(e) => onChange({ ...general, general_remark: e.target.value })} /></label>
-  </div><div className="alert alert-info">Foto depan, belakang, dan CSC Plate tetap dikelola melalui kategori foto aktif pada tab Foto.</div><StickyActions><button className="primary-button" disabled={readonly || isSaving} onClick={onSave}><Save size={17} /><span>Simpan Identitas</span></button></StickyActions></section>;
+  </div><div className="alert alert-info">Foto depan, belakang, dan CSC Plate tetap dikelola melalui kategori foto aktif pada tab Foto. General Remark tidak digunakan sebagai pengganti Cleanliness.</div><StickyActions><button className="primary-button" disabled={readonly || isSaving} onClick={onSave}><Save size={17} /><span>Simpan Hasil Verifikasi</span></button></StickyActions></section>;
+}
+
+function formatCargoStatus(value?: string | null) {
+  if (value === "empty") return "MTY (Empty)";
+  if (value === "laden") return "FULL (Laden)";
+  return "Belum tersedia";
+}
+
+function formatWeight(value?: number | null) {
+  return value == null ? "Belum tersedia" : `${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 }).format(value)} kg`;
+}
+
+function formatSurveyDate(value?: string | null) {
+  if (!value) return "Belum tersedia";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+
+function formatCSCPlate(survey: SurveyDetail) {
+  const status = humanizeSurveyValue(survey.csc_plate_status_initial);
+  return [status, survey.csc_plate_number].filter((value) => value && value !== "Belum tersedia").join(" · ") || "Belum tersedia";
+}
+
+function humanizeSurveyValue(value?: string | null) {
+  return value ? value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) : "Belum tersedia";
+}
+
+function formatCondition(value?: string | null) {
+  return value && ["DMG", "AVL", "AR"].includes(value.toUpperCase()) ? value.toUpperCase() : "Belum diisi";
+}
+
+function formatCleanliness(value?: string | null) {
+  return value && ["DTY", "CTM"].includes(value.toUpperCase()) ? value.toUpperCase() : "Belum diisi";
 }
 
 function ChecklistTab({ items, readonly, isSaving, onChange, onSave, onFinding }: { items: ChecklistItem[]; readonly: boolean; isSaving: boolean; onChange: (value: ChecklistItem[]) => void; onSave: () => void; onFinding: (item: ChecklistItem) => void }) {
@@ -838,6 +900,7 @@ function DamageBaseFields({ form, setForm, locations, components, damageCodes, d
     });
   }
   return <div className="form-grid">
+    <div className="alert alert-info form-span-2"><SurveySheetFieldSourceBadge source="Master CEDEX" /><span>Location, Component, Damage, Action / Repair, dan Material memakai effective master Customer. Dimension, Quantity, Photo, dan Remark tetap hasil Surveyor.</span></div>
     {hasStructuredSelection ? <div className="selected-location-summary form-span-2"><strong>Lokasi CEDEX terpilih</strong><div className="detail-grid"><div><span>Location Code</span><b>{locations.find((item) => item.id === form.cedex_location_id)?.code ?? "Belum terpetakan"}</b></div><div><span>Face / Vertical</span><b>{form.location_selection_snapshot?.face} / {form.location_selection_snapshot?.vertical_position}</b></div><div><span>Section</span><b>{form.location_selection_snapshot?.section_start === form.location_selection_snapshot?.section_end ? form.location_selection_snapshot?.section_start : `${form.location_selection_snapshot?.section_start}-${form.location_selection_snapshot?.section_end}`}</b></div><div><span>Container Size</span><b>{form.location_selection_snapshot?.container_size} feet</b></div></div></div> : <Field label="Location Code *"><select value={form.cedex_location_id} onChange={(event) => selectLocation(event.target.value)}><option value="">Pilih Location Code aktif</option>{locations.map((item) => <option key={item.id} value={item.id}>{item.code} - {item.description ?? item.grid_code ?? item.name}</option>)}</select></Field>}
     <Field label="Component / Part *"><Select value={form.component_code_id} options={components} onChange={(value) => setDamageValue(setForm, "component_code_id", value)} /></Field>
     <Field label="Damage Type *"><Select value={form.damage_code_id} options={damageCodes} onChange={selectDamage} /></Field>

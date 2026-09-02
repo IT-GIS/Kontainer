@@ -85,6 +85,7 @@ func (r Repository) Detail(ctx context.Context, surveyID uuid.UUID) (map[string]
 	checklist, _ := r.queryRows(ctx, `SELECT id, item_code AS item_key, item_label, response_value AS value, response_text AS note, is_required, is_critical, display_order FROM survey_checklist_responses WHERE survey_id=$1 ORDER BY display_order, item_code`, surveyID)
 	damages, _ := r.queryRows(ctx, `
 		SELECT sd.id, sd.damage_no, sd.face, sd.internal_location,
+		       sd.cedex_location_id, location.code AS cedex_location_code,
 		       sd.checklist_response_id, checklist.item_code AS checklist_item_code,
 		       checklist.item_label AS checklist_item_label,
 		       cc.code AS component_code, cc.component_name AS component_name,
@@ -92,9 +93,12 @@ func (r Repository) Detail(ctx context.Context, surveyID uuid.UUID) (map[string]
 		       cm.code AS material_code, cm.material_name, rc.code AS responsibility_code, rc.name AS responsibility_name,
 		       sd.severity, sd.quantity, sd.length_value AS length, sd.width_value AS width, sd.depth_value AS depth,
 		       sd.unit, sd.is_repair_required, sd.is_cargo_worthy_impact, sd.remark,
+		       sd.decision_result, sd.finding_description, sd.dimension_profile,
+		       sd.location_selection_snapshot,
 		       COUNT(sp.id) AS photo_count
 		FROM survey_damages sd
 		LEFT JOIN survey_checklist_responses checklist ON checklist.id=sd.checklist_response_id
+		LEFT JOIN cedex_locations location ON location.id=sd.cedex_location_id
 		JOIN cedex_components cc ON cc.id=sd.component_id
 		JOIN cedex_damages cd ON cd.id=sd.damage_id
 		LEFT JOIN cedex_repairs cr ON cr.id=sd.repair_id
@@ -102,7 +106,7 @@ func (r Repository) Detail(ctx context.Context, surveyID uuid.UUID) (map[string]
 		LEFT JOIN responsibility_codes rc ON rc.id=sd.responsibility_id
 		LEFT JOIN survey_photos sp ON sp.damage_id=sd.id AND sp.deleted_at IS NULL
 		WHERE sd.survey_id=$1 AND sd.deleted_at IS NULL
-		GROUP BY sd.id, checklist.id, cc.id, cd.id, cr.id, cm.id, rc.id
+		GROUP BY sd.id, checklist.id, location.id, cc.id, cd.id, cr.id, cm.id, rc.id
 		ORDER BY sd.damage_no
 	`, surveyID)
 	photos, _ := r.queryRows(ctx, `
@@ -403,19 +407,67 @@ func (r Repository) ListReports(ctx context.Context, params ListParams) (ListRes
 
 func (r Repository) ReportDetail(ctx context.Context, reportID uuid.UUID) (map[string]any, error) {
 	item, err := r.queryOne(ctx, `
-		SELECT r.id, r.report_no, r.report_type, r.status, r.current_version_no, r.qr_token, r.created_at, r.updated_at,
-		       jo.job_order_no, s.id AS survey_id, s.survey_no, jc.container_no, c.customer_name
+		SELECT r.id, r.report_no, r.report_type, r.status, r.current_version_no,
+		       r.current_version_no AS revision_no, r.qr_token, r.created_at, r.updated_at,
+		       COALESCE(sgi.job_order_no_snapshot,jo.job_order_no) AS job_order_no,
+		       s.id AS survey_id, s.survey_no, s.started_at, s.survey_result,
+		       COALESCE(sgi.container_no,jc.container_no) AS container_no,
+		       COALESCE(sgi.customer_name_snapshot,c.customer_name) AS customer_name,
+		       COALESCE(sgi.location_name_snapshot,l.location_name) AS location_name,
+		       COALESCE(sgi.survey_type_name_snapshot,st.name) AS survey_type_name,
+		       COALESCE(sgi.container_type_code_snapshot,ct.code) AS container_type_code,
+		       COALESCE(sgi.container_type_name_snapshot,ct.type_name) AS container_type_name,
+		       COALESCE(sgi.container_size_snapshot,ct.size) AS container_size,
+		       sgi.iso_type_code, sgi.manufacture_date, sgi.gross_weight, sgi.tare_weight, sgi.payload,
+		       sgi.cargo_status_initial, sgi.cargo_status AS cargo_status_verified,
+		       sgi.csc_plate_status_initial, sgi.csc_plate_status AS csc_plate_status_verified,
+		       sgi.csc_plate_number, sgi.csc_approval_reference, sgi.csc_manufacture_date,
+		       sgi.csc_next_examination_date, sgi.csc_program_type,
+		       sgi.general_condition, sgi.cleanliness
 		FROM reports r
 		JOIN surveys s ON s.id=r.survey_id
 		JOIN job_orders jo ON jo.id=r.job_order_id
 		JOIN job_containers jc ON jc.id=s.job_container_id
+		JOIN survey_general_infos sgi ON sgi.survey_id=s.id
 		JOIN customers c ON c.id=r.customer_id
+		JOIN locations l ON l.id=jo.location_id
+		JOIN survey_types st ON st.id=s.survey_type_id
+		LEFT JOIN container_types ct ON ct.id=sgi.container_type_id
 		WHERE r.id=$1
 	`, reportID)
 	if err != nil {
 		return nil, err
 	}
+	surveyID := parseUUIDString(item["survey_id"])
+	damages, _ := r.queryRows(ctx, `
+		SELECT sd.id, sd.damage_no, location.code AS cedex_location_code,
+		       component.code AS component_code, component.component_name,
+		       damage.code AS damage_code, damage.damage_name,
+		       repair.code AS repair_code, repair.repair_name,
+		       material.code AS material_code, material.material_name,
+		       sd.finding_description, sd.decision_result, sd.severity,
+		       sd.quantity, sd.quantity_unit, sd.length_value AS length,
+		       sd.width_value AS width, sd.depth_value AS depth, sd.unit, sd.remark
+		FROM survey_damages sd
+		LEFT JOIN cedex_locations location ON location.id=sd.cedex_location_id
+		JOIN cedex_components component ON component.id=sd.component_id
+		JOIN cedex_damages damage ON damage.id=sd.damage_id
+		LEFT JOIN cedex_repairs repair ON repair.id=sd.repair_id
+		LEFT JOIN cedex_materials material ON material.id=sd.material_id
+		WHERE sd.survey_id=$1 AND sd.deleted_at IS NULL
+		ORDER BY sd.damage_no
+	`, surveyID)
+	photos, _ := r.queryRows(ctx, `
+		SELECT photo.id, photo.damage_id, photo.photo_type, photo.photo_category,
+		       photo.caption, fo.original_file_name, photo.created_at
+		FROM survey_photos photo
+		JOIN file_objects fo ON fo.id=photo.file_id
+		WHERE photo.survey_id=$1 AND photo.deleted_at IS NULL
+		ORDER BY photo.created_at
+	`, surveyID)
 	versions, _ := r.ReportVersions(ctx, reportID)
+	item["damages"] = damages
+	item["photos"] = photos
 	item["versions"] = versions
 	return item, nil
 }

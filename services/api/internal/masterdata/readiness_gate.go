@@ -22,7 +22,7 @@ type ReadinessGate struct {
 // EvaluateReadinessTx is the backend hard gate used by Job creation,
 // assignment, and Survey start. It is intentionally survey-type aware.
 func EvaluateReadinessTx(ctx context.Context, tx database.Tx, customerID, surveyTypeID uuid.UUID) (ReadinessGate, error) {
-	var profile, personnel, location, surveyType, containerType int
+	var profile, personnel, location, locationPICMapping, surveyType, containerType int
 	var checklistTemplate, checklistItem, inspectionReference, photoCategory int
 	var cedexLocation, cedexComponent, cedexDamage, cedexRepair, cedexMaterial, responsibility int
 	var decisionRuleRequired, decisionRule int
@@ -33,6 +33,10 @@ func EvaluateReadinessTx(ctx context.Context, tx database.Tx, customerID, survey
 		    AND NULLIF(TRIM(c.address),'') IS NOT NULL),
 		  (SELECT COUNT(*) FROM customer_personnel p WHERE p.customer_id=$1 AND p.status='active' AND p.deleted_at IS NULL),
 		  (SELECT COUNT(*) FROM locations l WHERE l.customer_id=$1 AND l.status='active'),
+		  (SELECT COUNT(*) FROM customer_personnel_locations mapping
+		    JOIN customer_personnel p ON p.id=mapping.customer_personnel_id
+		      AND p.customer_id=$1 AND p.status='active' AND p.deleted_at IS NULL
+		    JOIN locations l ON l.id=mapping.location_id AND l.customer_id=$1 AND l.status='active'),
 		  (SELECT COUNT(*) FROM survey_types st WHERE st.id=$2 AND st.customer_id=$1 AND st.status='active'),
 		  (SELECT COUNT(*) FROM container_types ct WHERE ct.customer_id=$1 AND ct.status='active'),
 		  (SELECT COUNT(*) FROM fitness_checklist_templates template
@@ -66,7 +70,7 @@ func EvaluateReadinessTx(ctx context.Context, tx database.Tx, customerID, survey
 		EffectiveDecisionRuleScopeSQL("rule", "$1"),
 	)
 	err := tx.QueryRow(ctx, query, customerID, surveyTypeID).Scan(
-		&profile, &personnel, &location, &surveyType, &containerType,
+		&profile, &personnel, &location, &locationPICMapping, &surveyType, &containerType,
 		&checklistTemplate, &checklistItem, &inspectionReference, &photoCategory,
 		&cedexLocation, &cedexComponent, &cedexDamage, &cedexRepair, &cedexMaterial, &responsibility,
 		&decisionRuleRequired, &decisionRule,
@@ -84,6 +88,7 @@ func EvaluateReadinessTx(ctx context.Context, tx database.Tx, customerID, survey
 	add(profile, "CUSTOMER_PROFILE", "Profil Customer aktif belum lengkap")
 	add(personnel, "CUSTOMER_PIC", "Personel/PIC Customer aktif belum tersedia")
 	add(location, "INSPECTION_LOCATION", "Location pemeriksaan aktif belum tersedia")
+	add(locationPICMapping, "LOCATION_PIC_MAPPING", "Mapping aktif antara Location pemeriksaan dan Personel/PIC belum tersedia")
 	add(surveyType, "SURVEY_TYPE", "Survey Type aktif tidak valid untuk Customer")
 	add(containerType, "CONTAINER_TYPE", "Container Type aktif belum tersedia")
 	add(checklistTemplate, "CHECKLIST_TEMPLATE", "Checklist Template aktif belum tersedia")

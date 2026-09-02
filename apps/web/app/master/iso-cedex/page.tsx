@@ -35,9 +35,9 @@ export default async function IsoCedexPage({ searchParams }: { searchParams: Que
   return (
     <ProtectedRoute roles={["super_admin", "admin", "supervisor", "management"]}>
       <AppShell
-        title={legacyResponsibility ? "Responsibility Code (Legacy)" : "ISO CEDEX Code"}
-        subtitle="Kamus kode untuk temuan Inspeksi Kelaikan."
-        breadcrumbs={[{ label: "Pengaturan", href: "/settings" }, { label: "Master Global", href: "/settings/master-global" }, { label: legacyResponsibility ? "Responsibility Code" : "CEDEX" }]}
+        title={legacyResponsibility ? "Responsibility Code (Legacy)" : "Master CEDEX"}
+        subtitle="Kamus teknis global dan override Customer untuk Temuan Surveyor."
+        breadcrumbs={[{ label: "Customer & Master", href: "/master/customers" }, { label: legacyResponsibility ? "Responsibility Code" : "Master CEDEX" }]}
       >
         {legacyResponsibility && !customerId ? (
           <CustomerScopedMasterIndex

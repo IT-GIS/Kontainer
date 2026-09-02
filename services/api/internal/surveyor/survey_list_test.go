@@ -164,6 +164,31 @@ func TestSubmitValidationIgnoresUnrelatedPhotoScope(t *testing.T) {
 	}
 }
 
+func TestSubmitValidationRequiresCanonicalConditionAndCleanliness(t *testing.T) {
+	repo := Repository{}
+	survey := map[string]any{
+		"customer_name": "PT Example", "container_no": "MSKU1234567",
+		"survey_type_name": "Container Fitness", "location_name": "Jakarta",
+		"container_type_id": uuid.NewString(), "container_size": "20", "started_at": "2026-09-02T08:00:00Z",
+		"general_info": map[string]any{
+			"cargo_status": "empty", "general_condition": "DMG", "cleanliness": "DTY",
+		},
+		"checklist": []map[string]any{{"item_key": "identity", "is_required": false}},
+	}
+	warnings := repo.validateSurvey(survey)
+	if hasWarningCode(warnings, "SURVEY_CONDITION_REQUIRED") || hasWarningCode(warnings, "CLEANLINESS_REQUIRED") {
+		t.Fatalf("canonical Survey Sheet values must pass: %#v", warnings)
+	}
+
+	survey["general_info"] = map[string]any{
+		"cargo_status": "empty", "general_condition": "damage", "cleanliness": "dirty",
+	}
+	warnings = repo.validateSurvey(survey)
+	if !hasWarningCode(warnings, "SURVEY_CONDITION_REQUIRED") || !hasWarningCode(warnings, "CLEANLINESS_REQUIRED") {
+		t.Fatalf("legacy/general values must not satisfy canonical Survey Sheet fields: %#v", warnings)
+	}
+}
+
 func hasWarningCode(warnings []ValidationWarning, code string) bool {
 	for _, warning := range warnings {
 		if warning.Code == code {

@@ -26,7 +26,10 @@ export const adminWorkspace: NavigationWorkspace = {
       { path: "/master/customers", mode: "prefix" },
       { path: "/master/locations", mode: "prefix" },
       { path: "/master/container-types", mode: "prefix" },
-      { path: "/master/survey-types", mode: "prefix" }
+      { path: "/master/survey-types", mode: "prefix" },
+      { path: "/master/iso-cedex", mode: "prefix" },
+      { path: "/master/cedex", mode: "prefix" },
+      { path: "/master/inspection-references", mode: "prefix" }
     ]),
     n("Pekerjaan Inspeksi", "/jobs", ClipboardList, admin, ["jobs.view.all", "jobs.manage.all"], [
       { path: "/jobs", mode: "prefix" },
@@ -49,10 +52,7 @@ export const adminWorkspace: NavigationWorkspace = {
     ], [
       { path: "/settings", mode: "prefix" },
       { path: "/master/surveyors", mode: "prefix" },
-      { path: "/master/iso-cedex", mode: "prefix" },
-      { path: "/master/cedex", mode: "prefix" },
-      { path: "/master/responsibility-codes", mode: "prefix" },
-      { path: "/master/inspection-references", mode: "prefix" }
+      { path: "/master/responsibility-codes", mode: "prefix" }
     ])
   ]
 };

@@ -43,13 +43,13 @@ export default async function InspectionReferencesPage({ searchParams }: { searc
   return (
     <ProtectedRoute>
       <AppShell
-        title="Acuan & Kriteria Pemeriksaan"
-        subtitle="Kelola Inspection Reference dan Decision Rule tervalidasi untuk Inspeksi Kelaikan."
-        breadcrumbs={[{ label: "Pengaturan", href: "/settings" }, { label: "Master Global", href: "/settings/master-global" }, { label: "Referensi Pemeriksaan" }]}
+        title="Master Pemeriksaan"
+        subtitle="Kelola Survey Type, Container Type, Checklist, referensi, Decision Rule, dan Foto / Evidence."
+        breadcrumbs={[{ label: "Customer & Master", href: "/master/customers" }, { label: "Master Pemeriksaan" }]}
       >
         <div className="page-stack">
-          <Link className="secondary-button" href="/master/iso-cedex">&larr; Kembali ke ISO CEDEX Code</Link>
-          <PageHeader title="Acuan & Kriteria Pemeriksaan" description="Inspection Reference menyediakan dasar pemeriksaan; Tolerance & Decision Rule hanya boleh diisi dari sumber teknis yang telah diverifikasi." />
+          <Link className="secondary-button" href="/master/customers">&larr; Kembali ke Customer &amp; Master</Link>
+          <PageHeader title="Master Pemeriksaan" description="Menentukan apa yang diperiksa dan data pendukungnya. CEDEX tetap dikelola terpisah sebagai kamus teknis Temuan." />
           <WorkspaceTabs
             activeID={active.id}
             label="Jenis Referensi Pemeriksaan"

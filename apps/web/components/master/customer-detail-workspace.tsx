@@ -8,6 +8,7 @@ import { CustomerReadinessPanel, type CustomerReadiness } from "@/components/mas
 import { CustomerScopedMasterDetail, SurveyTypeReferenceConfiguration } from "@/components/master/customer-scoped-master-data";
 import { CustomerSetupStepper, type CustomerSetupTab } from "@/components/master/customer-setup-stepper";
 import { MasterSourceSelector } from "@/components/master/master-source-selector";
+import { SurveySheetConfiguration, type SurveySheetConfigurationSection } from "@/components/master/survey-sheet-configuration";
 import type { IsoCedexTab } from "@/components/master/iso-cedex-workspace";
 import { MasterDataPage } from "@/components/master/master-data-page";
 import { PersonnelLocationMapping } from "@/components/master/personnel-location-mapping";
@@ -48,11 +49,13 @@ const cedexTabs: Array<{ id: IsoCedexTab; label: string; category: FitnessMaster
 export function CustomerDetailWorkspace({
   customerId,
   activeTab,
-  cedexSection
+  cedexSection,
+  surveySheetSection
 }: {
   customerId: string;
   activeTab: CustomerSetupTab;
   cedexSection: IsoCedexTab;
+  surveySheetSection: SurveySheetConfigurationSection;
 }) {
   const { accessToken } = useAuth();
   const [customer, setCustomer] = useState<CustomerRecord | null>(null);
@@ -103,10 +106,9 @@ export function CustomerDetailWorkspace({
 
       {activeTab === "profile" ? <CustomerProfile customer={customer} jobs={jobs} lastJob={lastJob} onSaved={setCustomer} nextHref={`${baseHref}?tab=location-pic`} /> : null}
       {activeTab === "location-pic" ? <LocationAndPic customer={customer} customerId={customerId} /> : null}
-      {activeTab === "survey-type" ? <CustomerScopedMasterDetail category="survey-type" customerId={customerId} hideBackLink routeFamily="actual" showReferenceConfiguration={false} /> : null}
-      {activeTab === "container-type" ? <CustomerScopedMasterDetail category="container-type" customerId={customerId} hideBackLink routeFamily="actual" /> : null}
+      {activeTab === "survey-sheet" ? <SurveySheetConfiguration customer={customer} customerId={customerId} readiness={readiness} section={surveySheetSection} /> : null}
       {activeTab === "checklist" ? <ChecklistReferenceTab baseHref={`${baseHref}?tab=checklist`} customerId={customerId} /> : null}
-      {activeTab === "cedex" ? <CustomerCedexSetup baseHref={baseHref} customerId={customerId} section={cedexSection} /> : null}
+      {activeTab === "cedex" ? <CustomerCedexSetup baseHref={baseHref} customerId={customerId} readiness={readiness} section={cedexSection} /> : null}
       {activeTab === "references" ? <ReferenceSetup customer={customer} customerId={customerId} mode="references" /> : null}
       {activeTab === "photo-evidence" ? <ReferenceSetup customer={customer} customerId={customerId} mode="photos" /> : null}
       {activeTab === "readiness" ? <ReadinessStep baseHref={baseHref} customer={customer} customerId={customerId} readiness={readiness} /> : null}
@@ -193,11 +195,22 @@ function LocationAndPic({ customer, customerId }: { customer: CustomerRecord; cu
   </div>;
 }
 
-function CustomerCedexSetup({ customerId, baseHref, section }: { customerId: string; baseHref: string; section: IsoCedexTab }) {
+function CustomerCedexSetup({ customerId, baseHref, readiness, section }: { customerId: string; baseHref: string; readiness: CustomerReadiness | null; section: IsoCedexTab }) {
   const active = cedexTabs.find((tab) => tab.id === section) ?? cedexTabs[0];
+  const checks = new Map(readiness?.checks.map((check) => [check.key, check]) ?? []);
+  const source = (readiness?.cedex_override_count ?? 0) > 0 ? "Global + Override Customer" : "Master CEDEX Global";
+  const counts = [
+    ["Damage Location", checks.get("cedex_location")?.count ?? 0],
+    ["Component / Part", checks.get("cedex_component")?.count ?? 0],
+    ["Damage Type", checks.get("cedex_damage")?.count ?? 0],
+    ["Action / Repair", checks.get("cedex_action_repair")?.count ?? 0],
+    ["Material Type", checks.get("cedex_material")?.count ?? 0]
+  ] as const;
   return <div className="page-stack">
-    <MasterSourceSelector title="Sumber Master CEDEX" note="Backend effective-master memprioritaskan override Customer aktif dan memakai Global fallback tanpa menduplikasi seluruh master." />
-    <WorkspaceTabs activeID={section} label="Master CEDEX Customer" tabs={cedexTabs.map((tab) => ({ id: tab.id, label: tab.label, href: `${baseHref}?tab=cedex&section=${tab.id}` }))} />
+    <PageHeader eyebrow="Customer configuration" title="Konfigurasi CEDEX Customer" description="Tentukan kamus teknis efektif untuk Temuan tanpa menyalin seluruh Master CEDEX Global." meta={<StatusBadge tone="success">{source}</StatusBadge>} />
+    <MasterSourceSelector title="Sumber CEDEX" customerLabel="Override Customer aktif" globalLabel="Master CEDEX Global" note="Backend effective-master memprioritaskan override Customer aktif per code dan memakai Global fallback untuk code lainnya." />
+    <section className="workspace-panel page-stack"><div className="section-title-row"><div><h2>Master CEDEX efektif</h2><p className="muted-text">Jumlah ini adalah pilihan aktif yang diterima Surveyor melalui endpoint master-options.</p></div><Link className="secondary-button" href="/master/iso-cedex">Kelola Master CEDEX Global</Link></div><div className="detail-grid">{counts.map(([label, count]) => <div key={label}><span>{label}</span><strong>{count} aktif</strong></div>)}</div></section>
+    <WorkspaceTabs activeID={section} label="Konfigurasi CEDEX Customer" tabs={cedexTabs.map((tab) => ({ id: tab.id, label: tab.label, href: `${baseHref}?tab=cedex&section=${tab.id}` }))} />
     <CustomerScopedMasterDetail category={active.category} customerId={customerId} hideBackLink routeFamily="actual" />
   </div>;
 }
@@ -259,9 +272,8 @@ function firstIncompleteTab(readiness: CustomerReadiness | null): CustomerSetupT
   if (!readiness) return "profile";
   const missing = new Set(readiness.checks.filter((check) => !check.ready).map((check) => check.key));
   if (missing.has("profile")) return "profile";
-  if (missing.has("personnel") || missing.has("location")) return "location-pic";
-  if (missing.has("survey_type")) return "survey-type";
-  if (missing.has("container_type")) return "container-type";
+  if (missing.has("personnel") || missing.has("location") || missing.has("location_pic_mapping")) return "location-pic";
+  if (missing.has("survey_type") || missing.has("container_type")) return "survey-sheet";
   if (missing.has("checklist_template") || missing.has("checklist_item")) return "checklist";
   if (["cedex_location", "cedex_component", "cedex_damage", "cedex_action_repair", "cedex_material", "responsibility"].some((key) => missing.has(key))) return "cedex";
   if (missing.has("test_parameter_mapping") || missing.has("severity_mapping")) return "references";

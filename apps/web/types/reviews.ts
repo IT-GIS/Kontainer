@@ -18,6 +18,23 @@ export type PendingReview = {
 export type ReviewDetail = PendingReview & {
   id: string;
   location_name?: string;
+  started_at?: string | null;
+  container_type_id?: string | null;
+  container_type_code?: string | null;
+  container_type_name?: string | null;
+  container_size?: string | null;
+  iso_type_code?: string | null;
+  manufacture_date?: string | null;
+  gross_weight?: number | null;
+  tare_weight?: number | null;
+  payload?: number | null;
+  cargo_status_initial?: string | null;
+  csc_plate_status_initial?: string | null;
+  csc_plate_number?: string | null;
+  csc_approval_reference?: string | null;
+  csc_manufacture_date?: string | null;
+  csc_next_examination_date?: string | null;
+  csc_program_type?: string | null;
   survey_result?: string | null;
   survey_result_recommendation?: string;
   general_info?: Record<string, unknown>;
@@ -75,6 +92,31 @@ export type ReportDetail = ReportSummary & {
   current_version_no: number;
   updated_at?: string;
   versions?: ReportVersion[];
+  location_name?: string | null;
+  survey_type_name?: string | null;
+  started_at?: string | null;
+  container_type_code?: string | null;
+  container_type_name?: string | null;
+  container_size?: string | null;
+  iso_type_code?: string | null;
+  manufacture_date?: string | null;
+  gross_weight?: number | null;
+  tare_weight?: number | null;
+  payload?: number | null;
+  cargo_status_initial?: string | null;
+  cargo_status_verified?: string | null;
+  csc_plate_status_initial?: string | null;
+  csc_plate_status_verified?: string | null;
+  csc_plate_number?: string | null;
+  csc_approval_reference?: string | null;
+  csc_manufacture_date?: string | null;
+  csc_next_examination_date?: string | null;
+  csc_program_type?: string | null;
+  general_condition?: string | null;
+  cleanliness?: string | null;
+  survey_result?: string | null;
+  damages?: Array<Record<string, unknown>>;
+  photos?: Array<Record<string, unknown>>;
 };
 
 export type ReportVersion = {

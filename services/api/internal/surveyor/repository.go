@@ -385,9 +385,29 @@ func (r Repository) StartSurvey(ctx context.Context, input StartSurveyInput, act
 	_, err = tx.Exec(ctx, `
 		INSERT INTO survey_general_infos (
 		  survey_id, container_no, container_type_id, iso_type_code, customer_id, location_id,
-		  cargo_status, seal_no, truck_no, driver_name, csc_plate_status
-		) VALUES ($1,$2,$3,NULLIF($4,''),$5,$6,$7,NULLIF($8,''),NULLIF($9,''),NULLIF($10,''),NULLIF($11,''))
-	`, surveyID, container["container_no"], nullableUUID(container["container_type_id"]), container["iso_type_code"], parseUUIDString(container["customer_id"]), parseUUIDString(container["location_id"]), defaultString(container["cargo_status"], "unknown"), container["seal_no"], container["truck_no"], container["driver_name"], container["csc_plate_status"])
+		  customer_name_snapshot, location_name_snapshot, survey_type_name_snapshot,
+		  job_order_no_snapshot, spk_no_snapshot, container_type_code_snapshot,
+		  container_type_name_snapshot, container_size_snapshot, manufacture_date,
+		  gross_weight, tare_weight, payload, cargo_status, cargo_status_initial,
+		  seal_no, truck_no, driver_name, csc_plate_status, csc_plate_status_initial,
+		  csc_plate_number, csc_approval_reference, csc_manufacture_date,
+		  csc_next_examination_date, csc_program_type
+		) VALUES (
+		  $1,$2,$3,NULLIF($4,''),$5,$6,NULLIF($7,''),NULLIF($8,''),NULLIF($9,''),
+		  NULLIF($10,''),NULLIF($11,''),NULLIF($12,''),NULLIF($13,''),NULLIF($14,''),$15,
+		  $16,$17,$18,$19,$19,NULLIF($20,''),NULLIF($21,''),NULLIF($22,''),
+		  NULLIF($23,''),NULLIF($23,''),NULLIF($24,''),NULLIF($25,''),$26,$27,NULLIF($28,'')
+		)
+	`, surveyID, container["container_no"], nullableUUID(container["container_type_id"]), container["iso_type_code"],
+		parseUUIDString(container["customer_id"]), parseUUIDString(container["location_id"]),
+		container["customer_name"], container["location_name"], container["survey_type_name"],
+		container["job_order_no"], container["spk_no"], container["container_type_code"],
+		container["container_type_name"], container["container_size"], container["manufacture_date"],
+		container["gross_weight"], container["tare_weight"], container["payload"],
+		defaultString(container["cargo_status"], "unknown"), container["seal_no"], container["truck_no"],
+		container["driver_name"], container["csc_plate_status"], container["csc_plate_number"],
+		container["csc_approval_reference"], container["csc_manufacture_date"], container["csc_next_examination_date"],
+		container["csc_program_type"])
 	if err != nil {
 		return nil, err
 	}
@@ -466,6 +486,14 @@ func (r Repository) UpdateGeneralInfo(ctx context.Context, surveyID uuid.UUID, i
 	if strings.TrimSpace(input.CargoStatus) == "" || strings.TrimSpace(input.GeneralCondition) == "" {
 		return nil, ErrInvalidInput
 	}
+	condition := strings.ToUpper(strings.TrimSpace(input.GeneralCondition))
+	if !oneOfString(condition, "DMG", "AVL", "AR", "SOUND", "DAMAGE", "DIRTY") {
+		return nil, validationError("SURVEY_CONDITION_INVALID", "Condition harus DMG, AVL, atau AR.")
+	}
+	cleanliness := strings.ToUpper(strings.TrimSpace(input.Cleanliness))
+	if cleanliness != "" && !oneOfString(cleanliness, "DTY", "CTM") {
+		return nil, validationError("CLEANLINESS_INVALID", "Cleanliness harus DTY atau CTM.")
+	}
 	surveyDate, err := parseOptionalTime(input.SurveyDateTime)
 	if err != nil {
 		return nil, ErrInvalidInput
@@ -496,11 +524,11 @@ func (r Repository) UpdateGeneralInfo(ctx context.Context, surveyID uuid.UUID, i
 	item, err := scanRow(tx.QueryRow(ctx, `
 		UPDATE survey_general_infos SET survey_date_time=$2, cargo_status=$3, seal_no=NULLIF($4,''), truck_no=NULLIF($5,''), driver_name=NULLIF($6,''),
 		  chassis_no=NULLIF($7,''), csc_plate_status=NULLIF($8,''), door_status=NULLIF($9,''), general_condition=NULLIF($10,''),
-		  container_lifecycle=NULLIF($11,''), weather=NULLIF($12,''),
-		  gps_latitude=$13, gps_longitude=$14, general_remark=NULLIF($15,''), updated_at=now()
+		  cleanliness=NULLIF($11,''), container_lifecycle=NULLIF($12,''), weather=NULLIF($13,''),
+		  gps_latitude=$14, gps_longitude=$15, general_remark=NULLIF($16,''), updated_at=now()
 		WHERE survey_id=$1
 		RETURNING id, survey_id, cargo_status, seal_no, general_condition, survey_date_time
-	`, surveyID, surveyDate, input.CargoStatus, input.SealNo, input.TruckNo, input.DriverName, input.ChassisNo, input.CSCPlateStatus, input.DoorStatus, input.GeneralCondition, lifecycle, input.Weather, input.GPSLatitude, input.GPSLongitude, input.GeneralRemark), []string{"id", "survey_id", "cargo_status", "seal_no", "general_condition", "survey_date_time"})
+	`, surveyID, surveyDate, input.CargoStatus, input.SealNo, input.TruckNo, input.DriverName, input.ChassisNo, input.CSCPlateStatus, input.DoorStatus, condition, cleanliness, lifecycle, input.Weather, input.GPSLatitude, input.GPSLongitude, input.GeneralRemark), []string{"id", "survey_id", "cargo_status", "seal_no", "general_condition", "survey_date_time"})
 	if err != nil {
 		return nil, err
 	}

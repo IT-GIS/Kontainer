@@ -5,18 +5,21 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AppShell } from "@/components/layout/app-shell";
+import { InteractiveSurveySheet } from "@/components/surveys/interactive-survey-sheet";
 import { PhotoEvidence } from "@/components/surveys/photo-evidence";
 import { DataTable } from "@/components/ui/data-table";
 import { FormDialog } from "@/components/ui/form-dialog";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { SurveySheetFieldSourceBadge, type SurveySheetFieldSource } from "@/components/ui/survey-sheet-field-source-badge";
 import { revisionStatusLabel, surveyStatusLabel } from "@/lib/status-labels";
 import { useAuth } from "@/hooks/use-auth";
 import { apiData } from "@/lib/api-client";
 import { can } from "@/lib/permissions";
 import type { ReviewDetail } from "@/types/reviews";
+import type { SurveyDamage } from "@/types/surveyor";
 
-const tabs = ["Ringkasan", "Informasi Umum", "Checklist", "Daftar Kerusakan", "Foto", "Riwayat"] as const;
+const tabs = ["Ringkasan", "Header Survey Sheet", "Informasi Umum", "Checklist", "Survey Sheet", "Daftar Kerusakan", "Foto", "Riwayat"] as const;
 type Tab = (typeof tabs)[number];
 type RevisionDraft = { target_type: "survey" | "finding" | "checklist" | "photo"; target_id: string; category: string; note: string; due_at: string };
 const emptyRevisionItem: RevisionDraft = { target_type: "survey", target_id: "", category: "general", note: "", due_at: "" };
@@ -31,6 +34,7 @@ function ReviewDetailContent() {
   const { accessToken, user } = useAuth();
   const [review, setReview] = useState<ReviewDetail | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("Ringkasan");
+  const [activeFace, setActiveFace] = useState("right");
   const [dialog, setDialog] = useState<"revision" | "approve" | "reject" | null>(null);
   const [note, setNote] = useState("");
   const [finalResult, setFinalResult] = useState("damage");
@@ -132,8 +136,10 @@ function ReviewDetailContent() {
       {error ? <div className="alert alert-danger" role="alert">{error}</div> : null}
       <div className="tab-list">{tabs.map((tab) => <button className={activeTab === tab ? "tab-active" : ""} key={tab} onClick={() => setActiveTab(tab)}>{tab}</button>)}</div>
       {activeTab === "Ringkasan" ? <Summary review={review} /> : null}
+      {activeTab === "Header Survey Sheet" ? <SurveySheetHeader review={review} /> : null}
       {activeTab === "Informasi Umum" ? <ObjectPanel data={review.general_info ?? {}} /> : null}
       {activeTab === "Checklist" ? <Checklist rows={review.checklist ?? []} /> : null}
+      {activeTab === "Survey Sheet" ? <ReviewSurveySheet review={review} activeFace={activeFace} onFace={setActiveFace} /> : null}
       {activeTab === "Daftar Kerusakan" ? <Damage rows={review.damages ?? []} /> : null}
       {activeTab === "Foto" ? <Photos rows={review.photos ?? []} /> : null}
       {activeTab === "Riwayat" ? <History approvals={review.approval_history ?? []} revisions={review.revision_history ?? []} /> : null}
@@ -176,8 +182,53 @@ function Summary({ review }: { review: ReviewDetail }) {
   return <section className="workspace-panel detail-grid">{rows.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</section>;
 }
 
+function SurveySheetHeader({ review }: { review: ReviewDetail }) {
+  const general = review.general_info ?? {};
+  const rows: Array<{ label: string; value: React.ReactNode; source: SurveySheetFieldSource }> = [
+    { label: "Customer / Client", value: review.customer_name, source: "Customer" },
+    { label: "Container Nbrs", value: review.container_no, source: "Peti Kemas" },
+    { label: "Type of Survey", value: review.survey_type_name || "Belum tersedia", source: "Job" },
+    { label: "Size", value: review.container_size ? `${review.container_size} feet` : "Belum tersedia", source: "Peti Kemas" },
+    { label: "Manufacture", value: displayValue(review.manufacture_date), source: "Peti Kemas" },
+    { label: "MTY / FULL (Data Awal)", value: formatCargoStatus(review.cargo_status_initial), source: "Peti Kemas" },
+    { label: "Cargo Status Verifikasi", value: formatCargoStatus(stringValue(general.cargo_status)), source: "Surveyor" },
+    { label: "Type", value: [review.container_type_code, review.container_type_name].filter(Boolean).join(" - ") || "Belum tersedia", source: "Peti Kemas" },
+    { label: "CSC Plate Status Awal", value: humanizeValue(review.csc_plate_status_initial), source: "Peti Kemas" },
+    { label: "CSC Plate Status Verifikasi", value: humanizeValue(stringValue(general.csc_plate_status)), source: "Surveyor" },
+    { label: "CSC Plate Number", value: displayValue(review.csc_plate_number), source: "Peti Kemas" },
+    { label: "CSC Program Type", value: displayValue(review.csc_program_type), source: "Peti Kemas" },
+    { label: "Payload", value: formatWeight(review.payload), source: "Peti Kemas" },
+    { label: "Survey Location", value: displayValue(review.location_name), source: "Job" },
+    { label: "Tare", value: formatWeight(review.tare_weight), source: "Peti Kemas" },
+    { label: "Date of Survey", value: formatDateTime(review.started_at), source: "Sistem" },
+    { label: "Condition", value: canonicalValue(general.general_condition, ["DMG", "AVL", "AR"]), source: "Surveyor" },
+    { label: "Cleanliness", value: canonicalValue(general.cleanliness, ["DTY", "CTM"]), source: "Surveyor" }
+  ];
+  return <section className="workspace-panel page-stack">
+    <div className="section-title-row"><div><span className="eyebrow">Read-only reviewer</span><h2>Header Survey Sheet dan Provenance</h2><p className="muted-text">Data administratif membaca snapshot Survey. Reviewer dapat membandingkan data awal dengan hasil verifikasi tanpa mengubah source.</p></div></div>
+    <div className="survey-sheet-summary-grid">{rows.map((row) => <div key={row.label}><span>{row.label}<SurveySheetFieldSourceBadge source={row.source} /></span><strong>{row.value}</strong></div>)}</div>
+    <div className="alert alert-info"><strong>DOMAIN GAP:</strong>&nbsp; MGM, TCT, 3rd Scty Sys, dan Cu-Cap tetap tidak ditampilkan sebagai field final sampai definisi dan ownership disahkan.</div>
+  </section>;
+}
+
+function stringValue(value: unknown) { return typeof value === "string" ? value : null; }
+function displayValue(value: unknown) { return value == null || value === "" ? "Belum tersedia" : String(value); }
+function formatCargoStatus(value?: string | null) { return value === "empty" ? "MTY (Empty)" : value === "laden" ? "FULL (Laden)" : "Belum tersedia"; }
+function formatWeight(value?: number | null) { return value == null ? "Belum tersedia" : `${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 }).format(value)} kg`; }
+function humanizeValue(value?: string | null) { return value ? value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) : "Belum tersedia"; }
+function canonicalValue(value: unknown, allowed: string[]) { const normalized = stringValue(value)?.toUpperCase(); return normalized && allowed.includes(normalized) ? normalized : "Belum diisi"; }
+function formatDateTime(value?: string | null) { if (!value) return "Belum tersedia"; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(date); }
+
 function ObjectPanel({ data }: { data: Record<string, unknown> }) {
   return <section className="workspace-panel detail-grid">{Object.entries(data).filter(([key]) => !key.endsWith("_id")).map(([key, value]) => <div key={key}><span>{key.replaceAll("_", " ")}</span><strong>{String(value ?? "-")}</strong></div>)}</section>;
+}
+
+function ReviewSurveySheet({ review, activeFace, onFace }: { review: ReviewDetail; activeFace: string; onFace: (face: string) => void }) {
+  const damages = (review.damages ?? []) as unknown as SurveyDamage[];
+  return <div className="page-stack">
+    <div className="alert alert-info">Diagram dan marker Temuan adalah snapshot read-only dari Surveyor. Reviewer tidak dapat memindahkan marker atau mengubah data CEDEX.</div>
+    <InteractiveSurveySheet containerSize={review.container_size} activeFace={activeFace} locations={[]} damages={damages} selection={null} readonly preview onFace={onFace} />
+  </div>;
 }
 
 function Checklist({ rows }: { rows: Array<Record<string, unknown>> }) {

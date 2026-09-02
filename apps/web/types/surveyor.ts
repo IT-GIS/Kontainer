@@ -102,16 +102,28 @@ export type SurveyorJobDetail = SurveyorJob & {
 export type SurveyGeneralInfo = {
   survey_date_time?: string;
   cargo_status?: string;
+  cargo_status_initial?: string | null;
   seal_no?: string | null;
   truck_no?: string | null;
   driver_name?: string | null;
   chassis_no?: string | null;
   csc_plate_status?: string | null;
+  csc_plate_status_initial?: string | null;
+  csc_plate_number?: string | null;
+  csc_approval_reference?: string | null;
+  csc_manufacture_date?: string | null;
+  csc_next_examination_date?: string | null;
+  csc_program_type?: string | null;
   door_status?: string | null;
   general_condition?: string | null;
+  cleanliness?: string | null;
   container_lifecycle?: "new" | "existing" | null;
   weather?: string | null;
   general_remark?: string | null;
+  gross_weight?: number | null;
+  tare_weight?: number | null;
+  payload?: number | null;
+  manufacture_date?: string | null;
 };
 
 export type ChecklistItem = {
@@ -223,11 +235,22 @@ export type SurveyDetail = {
   check_digit?: string | null;
   check_digit_status?: string | null;
   manufacture_date?: string | null;
+  gross_weight?: number | null;
+  tare_weight?: number | null;
+  payload?: number | null;
+  cargo_status_initial?: string | null;
   csc_plate_status?: string | null;
+  csc_plate_status_initial?: string | null;
+  csc_plate_number?: string | null;
+  csc_approval_reference?: string | null;
+  csc_manufacture_date?: string | null;
+  csc_next_examination_date?: string | null;
+  csc_program_type?: string | null;
   job_instruction?: string | null;
   job_deadline?: string | null;
   assignment_instruction?: string | null;
   assignment_due_at?: string | null;
+  started_at?: string | null;
   general_info?: SurveyGeneralInfo;
   checklist?: ChecklistItem[];
   damages?: SurveyDamage[];

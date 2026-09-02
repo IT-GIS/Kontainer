@@ -8,23 +8,21 @@ import type { CustomerReadiness } from "@/components/master/customer-readiness";
 export type CustomerSetupTab =
   | "profile"
   | "location-pic"
-  | "survey-type"
-  | "container-type"
+  | "survey-sheet"
   | "checklist"
-  | "cedex"
   | "references"
   | "photo-evidence"
+  | "cedex"
   | "readiness";
 
 export const customerSetupTabs: Array<{ id: CustomerSetupTab; label: string; description: string }> = [
   { id: "profile", label: "Profil", description: "Identitas dan status Customer" },
   { id: "location-pic", label: "Lokasi & PIC", description: "Location, Personel/PIC, dan mapping" },
-  { id: "survey-type", label: "Jenis Pemeriksaan", description: "Survey Type aktif Customer" },
-  { id: "container-type", label: "Tipe Peti Kemas", description: "Container Type, ISO Type, dan size" },
+  { id: "survey-sheet", label: "Konfigurasi Survey Sheet", description: "Survey Type, Container Type, lokasi, dan sumber field" },
   { id: "checklist", label: "Checklist", description: "Template dan item pemeriksaan" },
-  { id: "cedex", label: "Master CEDEX", description: "Override Customer dan Global fallback" },
   { id: "references", label: "Referensi Pemeriksaan", description: "Mapping referensi per Survey Type" },
   { id: "photo-evidence", label: "Foto / Evidence", description: "Kategori foto dari master aktif" },
+  { id: "cedex", label: "Konfigurasi CEDEX Customer", description: "Override Customer dan Global fallback" },
   { id: "readiness", label: "Kesiapan", description: "Validasi backend dan CTA pekerjaan" }
 ];
 
@@ -63,9 +61,8 @@ function stepReady(step: CustomerSetupTab, readiness: CustomerReadiness | null) 
   const checks = new Map(readiness.checks.map((check) => [check.key, check.ready]));
   const all = (...keys: string[]) => keys.every((key) => checks.get(key) === true);
   if (step === "profile") return all("profile");
-  if (step === "location-pic") return all("location", "personnel");
-  if (step === "survey-type") return all("survey_type");
-  if (step === "container-type") return all("container_type");
+  if (step === "location-pic") return all("location", "personnel", "location_pic_mapping");
+  if (step === "survey-sheet") return all("survey_type", "container_type", "location");
   if (step === "checklist") return all("checklist_template", "checklist_item");
   if (step === "cedex") return all("cedex_location", "cedex_component", "cedex_damage", "cedex_action_repair", "cedex_material", "responsibility");
   if (step === "references") return all("test_parameter_mapping", "severity_mapping");

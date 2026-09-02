@@ -27,18 +27,35 @@ func (r Repository) surveyorID(ctx context.Context, userID uuid.UUID) (uuid.UUID
 func (r Repository) assignedContainerTx(ctx context.Context, tx database.Tx, containerID uuid.UUID, surveyorID uuid.UUID) (map[string]any, error) {
 	item, err := scanRow(tx.QueryRow(ctx, `
 		SELECT jc.id, jc.job_order_id, jc.container_no, jc.container_type_id, jc.iso_type_code, jc.seal_no,
-		       jc.cargo_status, jc.truck_no, jc.driver_name, jc.csc_plate_status, jc.status,
-		       jo.job_order_no, jo.customer_id, jo.location_id, jo.survey_type_id,
+		       jc.cargo_status, jc.gross_weight, jc.tare_weight, jc.payload, jc.manufacture_date,
+		       jc.truck_no, jc.driver_name, jc.csc_plate_status, jc.csc_plate_number,
+		       jc.csc_approval_reference, jc.csc_manufacture_date, jc.csc_next_examination_date,
+		       jc.csc_program_type, jc.status,
+		       jo.job_order_no, jo.spk_no, jo.customer_id, jo.location_id, jo.survey_type_id,
+		       c.customer_name, l.location_name, st.name AS survey_type_name,
+		       ct.code AS container_type_code, ct.type_name AS container_type_name, ct.size AS container_size,
 		       a.id AS assignment_id
 		FROM assignment_containers ac
 		JOIN assignments a ON a.id=ac.assignment_id
 		JOIN job_containers jc ON jc.id=ac.job_container_id AND jc.deleted_at IS NULL
 		JOIN job_orders jo ON jo.id=jc.job_order_id AND jo.deleted_at IS NULL
+		JOIN customers c ON c.id=jo.customer_id
+		JOIN locations l ON l.id=jo.location_id
+		JOIN survey_types st ON st.id=jo.survey_type_id
+		LEFT JOIN container_types ct ON ct.id=jc.container_type_id
 		WHERE ac.job_container_id=$1 AND ac.unassigned_at IS NULL AND a.surveyor_id=$2
 		  AND a.status NOT IN ('cancelled','reassigned')
 		  AND jc.status NOT IN ('cancelled','closed') AND jo.status<>'cancelled'
 		FOR UPDATE
-	`, containerID, surveyorID), []string{"id", "job_order_id", "container_no", "container_type_id", "iso_type_code", "seal_no", "cargo_status", "truck_no", "driver_name", "csc_plate_status", "status", "job_order_no", "customer_id", "location_id", "survey_type_id", "assignment_id"})
+	`, containerID, surveyorID), []string{
+		"id", "job_order_id", "container_no", "container_type_id", "iso_type_code", "seal_no",
+		"cargo_status", "gross_weight", "tare_weight", "payload", "manufacture_date",
+		"truck_no", "driver_name", "csc_plate_status", "csc_plate_number", "csc_approval_reference",
+		"csc_manufacture_date", "csc_next_examination_date", "csc_program_type", "status",
+		"job_order_no", "spk_no", "customer_id", "location_id", "survey_type_id",
+		"customer_name", "location_name", "survey_type_name", "container_type_code",
+		"container_type_name", "container_size", "assignment_id",
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -95,20 +112,36 @@ func surveyBaseQuery() string {
 		       s.survey_type_id, s.phase, s.survey_round, s.is_active, s.checklist_template_id,
 		       s.current_revision_no, s.current_reviewer_id, reviewer.name AS current_reviewer_name,
 		       s.review_started_at, s.started_at, s.submitted_at, s.resubmitted_at, s.approved_at, s.rejected_at, s.final_remark,
-		       jo.job_order_no, jo.spk_no, jo.spk_date,
+		       COALESCE(sgi.job_order_no_snapshot,jo.job_order_no) AS job_order_no,
+		       COALESCE(sgi.spk_no_snapshot,jo.spk_no) AS spk_no, jo.spk_date,
 		       jo.pic_customer_name, jo.pic_customer_phone, jo.pic_customer_email,
 		       jo.customer_id, jo.location_id, jo.instruction AS job_instruction,
-		       jo.deadline AS job_deadline, jc.container_no, jc.container_type_id, jc.iso_type_code,
+		       jo.deadline AS job_deadline, sgi.container_no, sgi.container_type_id, sgi.iso_type_code,
 		       jc.owner_code, jc.serial_number, jc.check_digit, jc.check_digit_status,
-		       jc.manufacture_date, jc.csc_plate_status,
-		       c.customer_code, c.customer_name, l.location_code, l.location_name,
-		       st.code AS survey_type_code, st.name AS survey_type_name,
-		       ct.code AS container_type_code, ct.type_name AS container_type_name, ct.size AS container_size,
+		       COALESCE(sgi.manufacture_date,jc.manufacture_date) AS manufacture_date,
+		       COALESCE(sgi.gross_weight,jc.gross_weight) AS gross_weight,
+		       COALESCE(sgi.tare_weight,jc.tare_weight) AS tare_weight,
+		       COALESCE(sgi.payload,jc.payload) AS payload,
+		       COALESCE(sgi.cargo_status_initial,jc.cargo_status) AS cargo_status_initial,
+		       COALESCE(sgi.csc_plate_status_initial,jc.csc_plate_status) AS csc_plate_status,
+		       COALESCE(sgi.csc_plate_status_initial,jc.csc_plate_status) AS csc_plate_status_initial,
+		       COALESCE(sgi.csc_plate_number,jc.csc_plate_number) AS csc_plate_number,
+		       COALESCE(sgi.csc_approval_reference,jc.csc_approval_reference) AS csc_approval_reference,
+		       COALESCE(sgi.csc_manufacture_date,jc.csc_manufacture_date) AS csc_manufacture_date,
+		       COALESCE(sgi.csc_next_examination_date,jc.csc_next_examination_date) AS csc_next_examination_date,
+		       COALESCE(sgi.csc_program_type,jc.csc_program_type) AS csc_program_type,
+		       c.customer_code, COALESCE(sgi.customer_name_snapshot,c.customer_name) AS customer_name,
+		       l.location_code, COALESCE(sgi.location_name_snapshot,l.location_name) AS location_name,
+		       st.code AS survey_type_code, COALESCE(sgi.survey_type_name_snapshot,st.name) AS survey_type_name,
+		       COALESCE(sgi.container_type_code_snapshot,ct.code) AS container_type_code,
+		       COALESCE(sgi.container_type_name_snapshot,ct.type_name) AS container_type_name,
+		       COALESCE(sgi.container_size_snapshot,ct.size) AS container_size,
 		       a.instruction AS assignment_instruction, a.due_date AS assignment_due_at,
 		       sp.full_name AS surveyor_name
 		FROM surveys s
 		JOIN job_orders jo ON jo.id=s.job_order_id
 		JOIN job_containers jc ON jc.id=s.job_container_id
+		JOIN survey_general_infos sgi ON sgi.survey_id=s.id
 		JOIN customers c ON c.id=jo.customer_id
 		JOIN locations l ON l.id=jo.location_id
 		JOIN survey_types st ON st.id=s.survey_type_id
@@ -517,14 +550,30 @@ func (r Repository) validateSurvey(survey map[string]any) []ValidationWarning {
 	} else {
 		cargo := fmt.Sprint(general["cargo_status"])
 		condition := fmt.Sprint(general["general_condition"])
+		cleanliness := fmt.Sprint(general["cleanliness"])
 		if cargo == "" || cargo == "<nil>" || cargo == "unknown" {
 			warnings = append(warnings, ValidationWarning{Code: "CARGO_STATUS_REQUIRED", Message: "Cargo status wajib diisi."})
 		}
-		if condition == "" || condition == "<nil>" {
-			warnings = append(warnings, ValidationWarning{Code: "GENERAL_CONDITION_REQUIRED", Message: "General condition wajib diisi."})
+		if !oneOfString(strings.ToUpper(strings.TrimSpace(condition)), "DMG", "AVL", "AR") {
+			warnings = append(warnings, ValidationWarning{Code: "SURVEY_CONDITION_REQUIRED", Message: "Condition Survey Sheet wajib dipilih: DMG, AVL, atau AR."})
+		}
+		if !oneOfString(strings.ToUpper(strings.TrimSpace(cleanliness)), "DTY", "CTM") {
+			warnings = append(warnings, ValidationWarning{Code: "CLEANLINESS_REQUIRED", Message: "Cleanliness Survey Sheet wajib dipilih: DTY atau CTM."})
 		}
 		if cargo == "laden" && strings.TrimSpace(fmt.Sprint(general["seal_no"])) == "" {
 			warnings = append(warnings, ValidationWarning{Code: "SEAL_REQUIRED", Message: "Seal no wajib untuk laden container."})
+		}
+	}
+	for _, field := range []struct {
+		key, label string
+	}{
+		{"customer_name", "Customer / Client"}, {"container_no", "Container Number"},
+		{"survey_type_name", "Type of Survey"}, {"location_name", "Survey Location"},
+		{"container_type_id", "Container Type"}, {"container_size", "Size"}, {"started_at", "Date of Survey"},
+	} {
+		value := strings.TrimSpace(fmt.Sprint(survey[field.key]))
+		if value == "" || value == "<nil>" {
+			warnings = append(warnings, ValidationWarning{Code: "SURVEY_SHEET_HEADER_REQUIRED", Message: "Header Survey Sheet belum lengkap: " + field.label + ". Hubungi Admin untuk melengkapi sumber data."})
 		}
 	}
 	checklist, _ := survey["checklist"].([]map[string]any)

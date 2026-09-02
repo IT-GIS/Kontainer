@@ -37,15 +37,29 @@ func surveyBaseQuery() string {
 		SELECT s.id, s.survey_no, s.status, s.job_order_id, s.job_container_id, s.surveyor_id,
 		       s.survey_type_id, s.current_revision_no, s.current_reviewer_id,
 		       reviewer.name AS current_reviewer_name, s.survey_result, s.submitted_at,
-		       s.review_started_at, s.resubmitted_at, s.approved_at, s.rejected_at,
-		       jo.job_order_no, jo.customer_id, jc.container_no, c.customer_name, l.location_name,
-		       st.name AS survey_type_name, sp.full_name AS surveyor_name
+		       s.started_at, s.review_started_at, s.resubmitted_at, s.approved_at, s.rejected_at,
+		       COALESCE(sgi.job_order_no_snapshot,jo.job_order_no) AS job_order_no,
+		       jo.customer_id, COALESCE(sgi.container_no,jc.container_no) AS container_no,
+		       COALESCE(sgi.customer_name_snapshot,c.customer_name) AS customer_name,
+		       COALESCE(sgi.location_name_snapshot,l.location_name) AS location_name,
+		       COALESCE(sgi.survey_type_name_snapshot,st.name) AS survey_type_name,
+		       sgi.container_type_id,
+		       COALESCE(sgi.container_type_code_snapshot,ct.code) AS container_type_code,
+		       COALESCE(sgi.container_type_name_snapshot,ct.type_name) AS container_type_name,
+		       COALESCE(sgi.container_size_snapshot,ct.size) AS container_size,
+		       sgi.iso_type_code, sgi.manufacture_date, sgi.gross_weight, sgi.tare_weight, sgi.payload,
+		       sgi.cargo_status_initial, sgi.csc_plate_status_initial, sgi.csc_plate_number,
+		       sgi.csc_approval_reference, sgi.csc_manufacture_date,
+		       sgi.csc_next_examination_date, sgi.csc_program_type,
+		       sp.full_name AS surveyor_name
 		FROM surveys s
 		JOIN job_orders jo ON jo.id=s.job_order_id
 		JOIN job_containers jc ON jc.id=s.job_container_id
+		JOIN survey_general_infos sgi ON sgi.survey_id=s.id
 		JOIN customers c ON c.id=jo.customer_id
 		JOIN locations l ON l.id=jo.location_id
 		JOIN survey_types st ON st.id=s.survey_type_id
+		LEFT JOIN container_types ct ON ct.id=sgi.container_type_id
 		JOIN surveyor_profiles sp ON sp.id=s.surveyor_id
 		LEFT JOIN users reviewer ON reviewer.id=s.current_reviewer_id
 		WHERE s.id=$1 AND s.deleted_at IS NULL

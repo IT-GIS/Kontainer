@@ -13,7 +13,7 @@ import (
 func TestSurveyBaseQueryUsesActualMySQLColumns(t *testing.T) {
 	query := surveyBaseQuery()
 	for _, expected := range []string{
-		"ct.type_name AS container_type_name",
+		"COALESCE(sgi.container_type_name_snapshot,ct.type_name) AS container_type_name",
 		"a.due_date AS assignment_due_at",
 	} {
 		if !strings.Contains(query, expected) {

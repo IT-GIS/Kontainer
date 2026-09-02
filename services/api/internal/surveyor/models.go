@@ -92,6 +92,7 @@ type GeneralInfoInput struct {
 	CSCPlateStatus     string   `json:"csc_plate_status"`
 	DoorStatus         string   `json:"door_status"`
 	GeneralCondition   string   `json:"general_condition"`
+	Cleanliness        string   `json:"cleanliness"`
 	ContainerLifecycle string   `json:"container_lifecycle"`
 	Weather            string   `json:"weather"`
 	GPSLatitude        *float64 `json:"gps_latitude"`

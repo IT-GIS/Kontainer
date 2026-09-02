@@ -18,26 +18,29 @@ type CustomerReadinessCheck struct {
 }
 
 type CustomerReadiness struct {
-	ID             string                   `json:"id"`
-	CustomerCode   string                   `json:"customer_code"`
-	CustomerName   string                   `json:"customer_name"`
-	Status         string                   `json:"status"`
-	PersonnelCount int                      `json:"personnel_count"`
-	LocationCount  int                      `json:"location_count"`
-	JobCount       int                      `json:"job_count"`
-	ReadyCount     int                      `json:"ready_count"`
-	TotalChecks    int                      `json:"total_checks"`
-	OverallReady   bool                     `json:"overall_ready"`
-	Checks         []CustomerReadinessCheck `json:"checks"`
+	ID                      string                   `json:"id"`
+	CustomerCode            string                   `json:"customer_code"`
+	CustomerName            string                   `json:"customer_name"`
+	Status                  string                   `json:"status"`
+	PersonnelCount          int                      `json:"personnel_count"`
+	LocationCount           int                      `json:"location_count"`
+	LocationPICMappingCount int                      `json:"location_pic_mapping_count"`
+	CEDEXOverrideCount      int                      `json:"cedex_override_count"`
+	CEDEXSource             string                   `json:"cedex_source"`
+	JobCount                int                      `json:"job_count"`
+	ReadyCount              int                      `json:"ready_count"`
+	TotalChecks             int                      `json:"total_checks"`
+	OverallReady            bool                     `json:"overall_ready"`
+	Checks                  []CustomerReadinessCheck `json:"checks"`
 }
 
 type customerReadinessCounts struct {
 	id, code, name, status, address                                                        string
-	personnel, location, surveyType, containerType                                         int
+	personnel, location, locationPICMapping, surveyType, containerType                     int
 	checklistTemplate, checklistItem                                                       int
 	severityMapping, testMapping, photoMapping                                             int
 	cedexLocation, cedexComponent, cedexDamage, cedexRepair, cedexMaterial, responsibility int
-	jobs                                                                                   int
+	cedexOverride, jobs                                                                    int
 }
 
 func (r Repository) ListCustomerReadiness(ctx context.Context, customerID *uuid.UUID) ([]CustomerReadiness, error) {
@@ -51,6 +54,10 @@ func (r Repository) ListCustomerReadiness(ctx context.Context, customerID *uuid.
 		SELECT c.id, c.customer_code, c.customer_name, c.status, COALESCE(c.address,''),
 		  (SELECT COUNT(*) FROM customer_personnel p WHERE p.customer_id=c.id AND p.status='active' AND p.deleted_at IS NULL),
 		  (SELECT COUNT(*) FROM locations l WHERE l.customer_id=c.id AND l.status='active'),
+		  (SELECT COUNT(*) FROM customer_personnel_locations mapping
+		    JOIN customer_personnel p ON p.id=mapping.customer_personnel_id
+		      AND p.customer_id=c.id AND p.status='active' AND p.deleted_at IS NULL
+		    JOIN locations l ON l.id=mapping.location_id AND l.customer_id=c.id AND l.status='active'),
 		  (SELECT COUNT(*) FROM survey_types st WHERE st.customer_id=c.id AND st.status='active'),
 		  (SELECT COUNT(*) FROM container_types ct WHERE ct.customer_id=c.id AND ct.status='active'),
 		  (SELECT COUNT(*) FROM fitness_checklist_templates t WHERE t.customer_id=c.id AND t.status='active' AND t.deleted_at IS NULL
@@ -69,6 +76,11 @@ func (r Repository) ListCustomerReadiness(ctx context.Context, customerID *uuid.
 		  %s,
 		  %s,
 		  %s,
+		  ((SELECT COUNT(*) FROM cedex_locations x WHERE x.customer_id=c.id AND x.status='active') +
+		   (SELECT COUNT(*) FROM cedex_components x WHERE x.customer_id=c.id AND x.status='active') +
+		   (SELECT COUNT(*) FROM cedex_damages x WHERE x.customer_id=c.id AND x.status='active') +
+		   (SELECT COUNT(*) FROM cedex_repairs x WHERE x.customer_id=c.id AND x.status='active') +
+		   (SELECT COUNT(*) FROM cedex_materials x WHERE x.customer_id=c.id AND x.status='active')),
 		  (SELECT COUNT(*) FROM job_orders jo WHERE jo.customer_id=c.id AND jo.deleted_at IS NULL)
 		FROM customers c
 		`+where+`
@@ -92,10 +104,11 @@ func (r Repository) ListCustomerReadiness(ctx context.Context, customerID *uuid.
 		var item customerReadinessCounts
 		if err := rows.Scan(
 			&item.id, &item.code, &item.name, &item.status, &item.address,
-			&item.personnel, &item.location, &item.surveyType, &item.containerType,
+			&item.personnel, &item.location, &item.locationPICMapping, &item.surveyType, &item.containerType,
 			&item.checklistTemplate, &item.checklistItem,
 			&item.severityMapping, &item.testMapping, &item.photoMapping,
 			&item.cedexLocation, &item.cedexComponent, &item.cedexDamage, &item.cedexRepair, &item.cedexMaterial, &item.responsibility,
+			&item.cedexOverride,
 			&item.jobs,
 		); err != nil {
 			return nil, err
@@ -110,6 +123,7 @@ func buildCustomerReadiness(item customerReadinessCounts) CustomerReadiness {
 		readinessCheck("profile", "Profil", boolCount(strings.TrimSpace(item.code) != "" && strings.TrimSpace(item.name) != "" && strings.TrimSpace(item.address) != "")),
 		readinessCheck("personnel", "Personel/PIC aktif", item.personnel),
 		readinessCheck("location", "Location aktif", item.location),
+		readinessCheck("location_pic_mapping", "Mapping Location–PIC aktif", item.locationPICMapping),
 		readinessCheck("survey_type", "Survey Type aktif", item.surveyType),
 		readinessCheck("container_type", "Container Type aktif", item.containerType),
 		readinessCheck("checklist_template", "Checklist Template siap", item.checklistTemplate),
@@ -130,9 +144,14 @@ func buildCustomerReadiness(item customerReadinessCounts) CustomerReadiness {
 			ready++
 		}
 	}
+	cedexSource := "global"
+	if item.cedexOverride > 0 {
+		cedexSource = "global_with_customer_override"
+	}
 	return CustomerReadiness{
 		ID: item.id, CustomerCode: item.code, CustomerName: item.name, Status: item.status,
-		PersonnelCount: item.personnel, LocationCount: item.location, JobCount: item.jobs,
+		PersonnelCount: item.personnel, LocationCount: item.location, LocationPICMappingCount: item.locationPICMapping,
+		CEDEXOverrideCount: item.cedexOverride, CEDEXSource: cedexSource, JobCount: item.jobs,
 		ReadyCount: ready, TotalChecks: len(checks), OverallReady: ready == len(checks), Checks: checks,
 	}
 }
