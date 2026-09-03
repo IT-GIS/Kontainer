@@ -33,6 +33,7 @@ export type MasterDataPageProps = {
   startInCreateMode?: boolean;
   addButtonLabelOverride?: string;
   dialogTitleOverride?: string;
+  submitLabelOverride?: string;
   showResourceHeader?: boolean;
   showToolbarAdd?: boolean;
   showRichEmptyState?: boolean;
@@ -72,6 +73,7 @@ export function MasterDataPage({
   startInCreateMode = false,
   addButtonLabelOverride,
   dialogTitleOverride,
+  submitLabelOverride,
   showResourceHeader = true,
   showToolbarAdd = false,
   showRichEmptyState = false,
@@ -610,7 +612,7 @@ export function MasterDataPage({
         onClose={closeDialog}
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
-        submitLabel={dialogMode === "create" ? "Simpan" : "Update"}
+        submitLabel={dialogMode === "create" ? submitLabelOverride ?? "Simpan" : "Update"}
         onSaveAndNew={enableSaveAndNew && dialogMode === "create" ? () => void handleSaveAndNew() : undefined}
         saveAndNewLabel="Simpan & Tambah Lagi"
         size={dialogSize}

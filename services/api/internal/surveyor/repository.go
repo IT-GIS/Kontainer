@@ -483,11 +483,15 @@ func (r Repository) GetSurvey(ctx context.Context, surveyID uuid.UUID, actor Act
 }
 
 func (r Repository) UpdateGeneralInfo(ctx context.Context, surveyID uuid.UUID, input GeneralInfoInput, actor Actor) (map[string]any, error) {
-	if strings.TrimSpace(input.CargoStatus) == "" || strings.TrimSpace(input.GeneralCondition) == "" {
+	cargoStatus := strings.ToLower(strings.TrimSpace(input.CargoStatus))
+	if cargoStatus == "" || strings.TrimSpace(input.GeneralCondition) == "" {
 		return nil, ErrInvalidInput
 	}
+	if !oneOfString(cargoStatus, "empty", "laden", "unknown") {
+		return nil, validationError("CARGO_STATUS_INVALID", "Cargo Status harus MTY, FULL, atau belum diverifikasi.")
+	}
 	condition := strings.ToUpper(strings.TrimSpace(input.GeneralCondition))
-	if !oneOfString(condition, "DMG", "AVL", "AR", "SOUND", "DAMAGE", "DIRTY") {
+	if !oneOfString(condition, "DMG", "AVL", "AR") {
 		return nil, validationError("SURVEY_CONDITION_INVALID", "Condition harus DMG, AVL, atau AR.")
 	}
 	cleanliness := strings.ToUpper(strings.TrimSpace(input.Cleanliness))
@@ -514,11 +518,18 @@ func (r Repository) UpdateGeneralInfo(ctx context.Context, surveyID uuid.UUID, i
 	if !editableStatus(fmt.Sprint(base["status"])) {
 		return nil, ErrInvalidStatus
 	}
+	cscPlateStatus := strings.ToLower(strings.TrimSpace(input.CSCPlateStatus))
+	if cscPlateStatus != "" && !oneOfString(cscPlateStatus, "available", "missing", "damaged", "not_checked") {
+		return nil, validationError("CSC_PLATE_STATUS_INVALID", "CSC Plate Status verifikasi tidak valid.")
+	}
+	if (verificationMismatch(base["cargo_status_initial"], cargoStatus) || verificationMismatch(base["csc_plate_status_initial"], cscPlateStatus)) && strings.TrimSpace(input.GeneralRemark) == "" {
+		return nil, validationError("VERIFICATION_MISMATCH_NOTE_REQUIRED", "Catatan verifikasi wajib diisi ketika hasil Surveyor berbeda dari data awal Admin.")
+	}
 	lifecycle := strings.ToLower(strings.TrimSpace(input.ContainerLifecycle))
 	if lifecycle != "" && lifecycle != "new" && lifecycle != "existing" {
 		return nil, validationError("CONTAINER_LIFECYCLE_INVALID", "Kategori peti kemas harus New atau Existing.")
 	}
-	if input.CargoStatus == "laden" && strings.TrimSpace(input.SealNo) == "" {
+	if cargoStatus == "laden" && strings.TrimSpace(input.SealNo) == "" {
 		return nil, ErrInvalidInput
 	}
 	item, err := scanRow(tx.QueryRow(ctx, `
@@ -527,8 +538,9 @@ func (r Repository) UpdateGeneralInfo(ctx context.Context, surveyID uuid.UUID, i
 		  cleanliness=NULLIF($11,''), container_lifecycle=NULLIF($12,''), weather=NULLIF($13,''),
 		  gps_latitude=$14, gps_longitude=$15, general_remark=NULLIF($16,''), updated_at=now()
 		WHERE survey_id=$1
-		RETURNING id, survey_id, cargo_status, seal_no, general_condition, survey_date_time
-	`, surveyID, surveyDate, input.CargoStatus, input.SealNo, input.TruckNo, input.DriverName, input.ChassisNo, input.CSCPlateStatus, input.DoorStatus, condition, cleanliness, lifecycle, input.Weather, input.GPSLatitude, input.GPSLongitude, input.GeneralRemark), []string{"id", "survey_id", "cargo_status", "seal_no", "general_condition", "survey_date_time"})
+		RETURNING id, survey_id, cargo_status, cargo_status_initial, csc_plate_status, csc_plate_status_initial,
+		          general_condition, cleanliness, general_remark, survey_date_time
+	`, surveyID, surveyDate, cargoStatus, input.SealNo, input.TruckNo, input.DriverName, input.ChassisNo, cscPlateStatus, input.DoorStatus, condition, cleanliness, lifecycle, input.Weather, input.GPSLatitude, input.GPSLongitude, input.GeneralRemark), []string{"id", "survey_id", "cargo_status", "cargo_status_initial", "csc_plate_status", "csc_plate_status_initial", "general_condition", "cleanliness", "general_remark", "survey_date_time"})
 	if err != nil {
 		return nil, err
 	}

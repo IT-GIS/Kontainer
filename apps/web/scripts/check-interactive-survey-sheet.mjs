@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import ts from "typescript";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const [source, component, route, styles, dataTable, navigation, repository, surveyorHandler, surveyorHelpers, reviewRepository, migration, workflowMigration, adminConfiguration, reviewRoute, reportRoute, readinessGate, snapshotMigration] = await Promise.all([
+const [source, component, route, styles, dataTable, navigation, repository, surveyorHandler, surveyorHelpers, reviewRepository, migration, workflowMigration, adminConfiguration, reviewRoute, reportRoute, readinessGate, snapshotMigration, createCustomerRoute, masterDataPage, customerSetupTabsSource, jobCreateRoute] = await Promise.all([
   read("../lib/survey-sheet.ts"),
   read("../components/surveys/interactive-survey-sheet.tsx"),
   read("../app/surveyor/surveys/[id]/page.tsx"),
@@ -20,7 +20,11 @@ const [source, component, route, styles, dataTable, navigation, repository, surv
   read("../app/review/[id]/page.tsx"),
   read("../app/reports/[id]/page.tsx"),
   read("../../../services/api/internal/masterdata/readiness_gate.go"),
-  read("../../../services/api/migrations/0019_survey_sheet_data_flow.up.sql")
+  read("../../../services/api/migrations/0019_survey_sheet_data_flow.up.sql"),
+  read("../app/master/customers/create/page.tsx"),
+  read("../components/master/master-data-page.tsx"),
+  read("../components/master/customer-setup-tabs.ts"),
+  read("../app/jobs/create/page.tsx")
 ]);
 
 const output = ts.transpileModule(source, {
@@ -158,6 +162,8 @@ assert.match(repository, /checklist_response_id/);
 assert.match(repository, /CreateSurveyPhotoMetadata/);
 assert.match(repository, /damageValue/);
 assert.match(repository, /survey_photos\.upload_general/);
+assert.match(repository, /VERIFICATION_MISMATCH_NOTE_REQUIRED/);
+assert.match(repository, /"DMG", "AVL", "AR"/);
 assert.match(surveyorHandler, /POST\("\/surveys\/:id\/photos"/);
 assert.match(surveyorHandler, /survey_photos\.upload\.assigned/);
 assert.match(surveyorHelpers, /CHECKLIST_FINDING_REQUIRED/);
@@ -170,6 +176,8 @@ assert.match(reviewRepository, /csc_plate_status_initial/);
 assert.match(reviewRepository, /sgi\.cleanliness/);
 assert.match(reviewRepository, /item\["damages"\] = damages/);
 assert.match(reviewRepository, /item\["photos"\] = photos/);
+assert.match(reviewRepository, /item\["checklist"\] = checklist/);
+assert.match(reviewRepository, /item\["review_history"\] = reviewHistory/);
 assert.match(migration, /ADD COLUMN location_selection_snapshot JSON/);
 assert.match(migration, /survey_photos\.delete\.assigned/);
 
@@ -179,18 +187,28 @@ assert.match(adminConfiguration, /Konfigurasi Survey Sheet/);
 assert.match(adminConfiguration, /Job .* Peti Kemas/);
 assert.match(adminConfiguration, /Master CEDEX Global/);
 assert.match(adminConfiguration, /Global \+ Override Customer/);
+assert.match(adminConfiguration, /Kebutuhan Foto \/ Evidence/);
 assert.match(adminConfiguration, /DOMAIN GAP/);
 assert.match(reviewRoute, /Header Survey Sheet/);
 assert.match(reviewRoute, /InteractiveSurveySheet/);
 assert.match(reviewRoute, /Data Awal/);
 assert.match(reviewRoute, /Status Verifikasi/);
+assert.match(reviewRoute, /Mismatch data awal dan hasil verifikasi/);
 assert.match(reportRoute, /Data Survey Sheet untuk Laporan/);
 assert.match(reportRoute, /Tidak ada input ulang pada modul Reports/);
+assert.match(reportRoute, /Checklist Pemeriksaan/);
 assert.match(reportRoute, /Temuan Survey/);
 assert.match(reportRoute, /Foto \/ Evidence/);
+assert.match(reportRoute, /Keputusan Reviewer/);
 assert.match(readinessGate, /LOCATION_PIC_MAPPING/);
 assert.match(snapshotMigration, /customer_name_snapshot/);
 assert.match(snapshotMigration, /cargo_status_initial/);
 assert.match(snapshotMigration, /csc_plate_status_initial/);
 assert.match(snapshotMigration, /ADD COLUMN cleanliness VARCHAR\(10\)/);
+assert.match(createCustomerRoute, /onSaved=\{continueOnboarding\}/);
+assert.match(createCustomerRoute, /router\.replace\(`\/master\/customers\/customer\/\$\{encodeURIComponent\(String\(row\.id\)\)\}\?tab=location-pic`\)/);
+assert.match(createCustomerRoute, /submitLabelOverride="Simpan & Lanjut"/);
+assert.match(masterDataPage, /submitLabelOverride/);
+assert.match(customerSetupTabsSource, /Kebutuhan Foto \/ Evidence/);
+assert.match(jobCreateRoute, /Lengkapi Customer/);
 console.log("Interactive Survey Sheet contract checks passed.");

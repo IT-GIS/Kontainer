@@ -1,7 +1,7 @@
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AppShell } from "@/components/layout/app-shell";
 import { CustomerDetailWorkspace } from "@/components/master/customer-detail-workspace";
-import { customerSetupTabs, type CustomerSetupTab } from "@/components/master/customer-setup-stepper";
+import { customerSetupTabs, type CustomerSetupTab } from "@/components/master/customer-setup-tabs";
 import type { SurveySheetConfigurationSection } from "@/components/master/survey-sheet-configuration";
 import type { IsoCedexTab } from "@/components/master/iso-cedex-workspace";
 

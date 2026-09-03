@@ -111,7 +111,7 @@ test.describe("@operational workflow real-case", () => {
     await page.getByLabel("Hasil Akhir").selectOption("cargo_worthy");
     await page.getByLabel("Catatan Persetujuan").fill("Disetujui pada UAT real-case.");
     await page.getByRole("button", { name: "Approve", exact: true }).click();
-    await expect(page).toHaveURL(/\/review\/history/);
+    await expect(page).toHaveURL(/\/review(?:\/history|\?view=history)/);
     await attachScreenshot(page, testInfo, "review-approved-history");
   });
 

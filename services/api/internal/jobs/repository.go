@@ -277,7 +277,7 @@ func (r Repository) CancelJob(ctx context.Context, id uuid.UUID, reason string, 
 	if err != nil {
 		return nil, err
 	}
-	_, _ = tx.Exec(ctx, `UPDATE job_containers SET status='cancelled', updated_at=now() WHERE job_order_id=$1 AND status IN ('not_started','assigned','draft') AND deleted_at IS NULL`, id)
+	_, _ = tx.Exec(ctx, `UPDATE job_containers SET status='cancelled', updated_at=now() WHERE job_order_id=$1 AND status IN ('unassigned','not_started','assigned','draft') AND deleted_at IS NULL`, id)
 	if err := r.insertJobEvent(ctx, tx, id, "job_cancelled", "Job order dibatalkan.", reason, actor.UserID, item); err != nil {
 		return nil, err
 	}
@@ -500,13 +500,13 @@ func (r Repository) Assign(ctx context.Context, jobID uuid.UUID, input AssignInp
 	}
 	for _, containerID := range containerIDs {
 		var lockedContainerID uuid.UUID
-		if err := tx.QueryRow(ctx, `SELECT id FROM job_containers WHERE id=$1 AND job_order_id=$2 AND status IN ('not_started','assigned') AND deleted_at IS NULL FOR UPDATE`, containerID, jobID).Scan(&lockedContainerID); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT id FROM job_containers WHERE id=$1 AND job_order_id=$2 AND status IN ('unassigned','not_started','assigned') AND deleted_at IS NULL FOR UPDATE`, containerID, jobID).Scan(&lockedContainerID); err != nil {
 			return nil, FieldValidationError{Fields: map[string]string{"container_ids": "Satu atau lebih peti kemas tidak berasal dari Job atau tidak dapat ditugaskan."}}
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO assignment_containers (assignment_id,job_container_id) VALUES ($1,$2)`, assignmentID, containerID); err != nil {
 			return nil, ErrDuplicate
 		}
-		if _, err := tx.Exec(ctx, `UPDATE job_containers SET status='assigned', updated_at=now() WHERE id=$1 AND job_order_id=$2 AND status IN ('not_started','assigned') AND deleted_at IS NULL`, containerID, jobID); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE job_containers SET status='assigned', updated_at=now() WHERE id=$1 AND job_order_id=$2 AND status IN ('unassigned','not_started','assigned') AND deleted_at IS NULL`, containerID, jobID); err != nil {
 			return nil, err
 		}
 	}

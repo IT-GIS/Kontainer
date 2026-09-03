@@ -114,9 +114,12 @@ export type ReportDetail = ReportSummary & {
   csc_program_type?: string | null;
   general_condition?: string | null;
   cleanliness?: string | null;
+  general_remark?: string | null;
   survey_result?: string | null;
+  checklist?: Array<Record<string, unknown>>;
   damages?: Array<Record<string, unknown>>;
   photos?: Array<Record<string, unknown>>;
+  review_history?: Array<Record<string, unknown>>;
 };
 
 export type ReportVersion = {

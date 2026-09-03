@@ -99,6 +99,7 @@
       - ../../services/api/migrations/0016_survey_workflow_integrity.up.sql:/docker-entrypoint-initdb.d/0016_survey_workflow_integrity.sql:ro
       - ../../services/api/migrations/0017_workflow_operational_closure.up.sql:/docker-entrypoint-initdb.d/0017_workflow_operational_closure.sql:ro
       - ../../services/api/migrations/0018_final_repository_hardening.up.sql:/docker-entrypoint-initdb.d/0018_final_repository_hardening.sql:ro
+      - ../../services/api/migrations/0019_survey_sheet_data_flow.up.sql:/docker-entrypoint-initdb.d/0019_survey_sheet_data_flow.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$${MYSQL_ROOT_PASSWORD}"]
       interval: 10s

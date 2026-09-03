@@ -309,7 +309,7 @@ export function SurveyTypeReferenceConfiguration({
     {options ? <div className="detail-grid">
       {visibleGroups.includes("finding_severities") ? <ReferenceGroup title="Severity" rows={options.finding_severities} disabled={readOnly} onToggle={(id) => toggle("finding_severities", id)} /> : null}
       {visibleGroups.includes("test_parameters") ? <ReferenceGroup title="Referensi Pemeriksaan" rows={options.test_parameters} disabled={readOnly} onToggle={(id) => toggle("test_parameters", id)} /> : null}
-      {visibleGroups.includes("photo_categories") ? <ReferenceGroup title="Kategori Foto / Evidence" rows={options.photo_categories} disabled={readOnly} onToggle={(id) => toggle("photo_categories", id)} /> : null}
+      {visibleGroups.includes("photo_categories") ? <ReferenceGroup title="Kebutuhan Foto / Evidence" rows={options.photo_categories} disabled={readOnly} onToggle={(id) => toggle("photo_categories", id)} /> : null}
     </div> : null}
   </section>;
 }

@@ -184,6 +184,7 @@ function Summary({ review }: { review: ReviewDetail }) {
 
 function SurveySheetHeader({ review }: { review: ReviewDetail }) {
   const general = review.general_info ?? {};
+  const mismatches = verificationMismatches(review.cargo_status_initial, stringValue(general.cargo_status), review.csc_plate_status_initial, stringValue(general.csc_plate_status));
   const rows: Array<{ label: string; value: React.ReactNode; source: SurveySheetFieldSource }> = [
     { label: "Customer / Client", value: review.customer_name, source: "Customer" },
     { label: "Container Nbrs", value: review.container_no, source: "Peti Kemas" },
@@ -207,6 +208,7 @@ function SurveySheetHeader({ review }: { review: ReviewDetail }) {
   return <section className="workspace-panel page-stack">
     <div className="section-title-row"><div><span className="eyebrow">Read-only reviewer</span><h2>Header Survey Sheet dan Provenance</h2><p className="muted-text">Data administratif membaca snapshot Survey. Reviewer dapat membandingkan data awal dengan hasil verifikasi tanpa mengubah source.</p></div></div>
     <div className="survey-sheet-summary-grid">{rows.map((row) => <div key={row.label}><span>{row.label}<SurveySheetFieldSourceBadge source={row.source} /></span><strong>{row.value}</strong></div>)}</div>
+    {mismatches.length > 0 ? <div className="alert alert-warning"><div><strong>Mismatch data awal dan hasil verifikasi: {mismatches.join(", ")}</strong><p>Catatan Surveyor: {displayValue(general.general_remark)}</p></div></div> : null}
     <div className="alert alert-info"><strong>DOMAIN GAP:</strong>&nbsp; MGM, TCT, 3rd Scty Sys, dan Cu-Cap tetap tidak ditampilkan sebagai field final sampai definisi dan ownership disahkan.</div>
   </section>;
 }
@@ -218,6 +220,8 @@ function formatWeight(value?: number | null) { return value == null ? "Belum ter
 function humanizeValue(value?: string | null) { return value ? value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) : "Belum tersedia"; }
 function canonicalValue(value: unknown, allowed: string[]) { const normalized = stringValue(value)?.toUpperCase(); return normalized && allowed.includes(normalized) ? normalized : "Belum diisi"; }
 function formatDateTime(value?: string | null) { if (!value) return "Belum tersedia"; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(date); }
+function verificationMismatches(cargoInitial?: string | null, cargoVerified?: string | null, cscInitial?: string | null, cscVerified?: string | null) { const result: string[] = []; if (isKnownMismatch(cargoInitial, cargoVerified)) result.push("Cargo Status"); if (isKnownMismatch(cscInitial, cscVerified)) result.push("CSC Plate Status"); return result; }
+function isKnownMismatch(initial?: string | null, verified?: string | null) { const normalize = (value?: string | null) => { const normalized = value?.trim().toLowerCase() ?? ""; return ["", "unknown", "not_checked"].includes(normalized) ? "" : normalized; }; const initialValue = normalize(initial); const verifiedValue = normalize(verified); return Boolean(initialValue && verifiedValue && initialValue !== verifiedValue); }
 
 function ObjectPanel({ data }: { data: Record<string, unknown> }) {
   return <section className="workspace-panel detail-grid">{Object.entries(data).filter(([key]) => !key.endsWith("_id")).map(([key, value]) => <div key={key}><span>{key.replaceAll("_", " ")}</span><strong>{String(value ?? "-")}</strong></div>)}</section>;

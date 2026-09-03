@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, Save } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
@@ -216,7 +217,7 @@ function CreateJobContent() {
       <JobCreationStepper current="information" />
       <div className="job-actions"><button className="secondary-button" onClick={leavePage} type="button"><ArrowLeft size={17} /><span>Kembali ke Semua Pekerjaan</span></button></div>
       {error ? <div className="alert alert-danger" role="alert">{error}</div> : null}
-      {dependencyNotice ? <div className="alert alert-warning">{dependencyNotice}</div> : null}
+      {readiness?.overall_ready === false && selectedCustomer ? <div className="alert alert-warning"><div><strong>Customer belum siap.</strong><p>Lengkapi: {readiness.checks.filter((item) => !item.ready).map((item) => item.label).join(", ")}.</p><Link className="secondary-button" href={`/master/customers/customer/${selectedCustomer.id}?tab=readiness`}>Lengkapi Customer</Link></div></div> : dependencyNotice ? <div className="alert alert-warning">{dependencyNotice}</div> : null}
       {personnelNotice ? <div className="alert alert-warning">{personnelNotice}</div> : null}
       <section className="workspace-panel">
         <div className="form-grid form-grid-wide">

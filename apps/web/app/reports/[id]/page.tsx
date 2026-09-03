@@ -66,6 +66,15 @@ function ReportDetailContent() {
     </section>
     <SurveySheetReportHeader report={report} />
     <section className="workspace-panel job-tab-stack">
+      <div><h2>Checklist Pemeriksaan</h2><p className="muted-text">Jawaban langsung dari snapshot checklist Survey; tidak diinput ulang pada Laporan.</p></div>
+      <DataTable responsiveCards rows={report.checklist ?? []} emptyText="Checklist Survey belum tersedia." columns={[
+        { key: "item", header: "Item", render: (row) => String(row.item_label ?? row.item_key ?? "-") },
+        { key: "result", header: "Hasil", render: (row) => checklistResult(row) },
+        { key: "reference", header: "Referensi", render: (row) => String(row.standard_reference ?? "-") },
+        { key: "note", header: "Catatan Surveyor", render: (row) => String(row.note ?? "-") }
+      ]} />
+    </section>
+    <section className="workspace-panel job-tab-stack">
       <div><h2>Temuan Survey</h2><p className="muted-text">Data langsung dari survey_damages; tidak disalin atau diinput ulang pada Report.</p></div>
       <DataTable responsiveCards rows={report.damages ?? []} emptyText="Tidak ada Temuan pada Survey ini." columns={[
         { key: "no", header: "No.", render: (row) => String(row.damage_no ?? "-") },
@@ -88,6 +97,17 @@ function ReportDetailContent() {
       ]} />
     </section>
     <section className="workspace-panel job-tab-stack">
+      <div><h2>Keputusan Reviewer</h2><p className="muted-text">Riwayat keputusan langsung dari workflow Review, termasuk siklus revisi; Laporan tidak membuat keputusan baru.</p></div>
+      <DataTable responsiveCards rows={report.review_history ?? []} emptyText="Keputusan Reviewer belum tersedia." columns={[
+        { key: "decision", header: "Keputusan", render: (row) => humanize(String(row.decision ?? "belum tersedia")) },
+        { key: "result", header: "Hasil Akhir", render: (row) => row.final_result ? humanize(String(row.final_result)) : "-" },
+        { key: "note", header: "Catatan", render: (row) => String(row.review_note ?? "-") },
+        { key: "reviewer", header: "Reviewer", render: (row) => String(row.reviewer_name ?? "-") },
+        { key: "revision", header: "Revisi", render: (row) => `R${String(row.revision_no ?? 0)}` },
+        { key: "time", header: "Waktu", render: (row) => formatDateTime(typeof row.reviewed_at === "string" ? row.reviewed_at : null) }
+      ]} />
+    </section>
+    <section className="workspace-panel job-tab-stack">
       <div><h2>Riwayat Versi</h2><p className="muted-text">Metadata versi existing tanpa file PDF final.</p></div>
       <DataTable rows={versions} emptyText="Riwayat versi belum tersedia." columns={[
         { key: "version", header: "Versi", render: (row) => `Rev. ${row.version_no}` },
@@ -102,6 +122,7 @@ function ReportDetailContent() {
 }
 
 function SurveySheetReportHeader({ report }: { report: ReportDetail }) {
+  const mismatches = verificationMismatches(report.cargo_status_initial, report.cargo_status_verified, report.csc_plate_status_initial, report.csc_plate_status_verified);
   const rows: Array<{ label: string; value: string; source: SurveySheetFieldSource }> = [
     { label: "Customer / Client", value: report.customer_name, source: "Customer" },
     { label: "Container Nbrs", value: report.container_no, source: "Peti Kemas" },
@@ -125,6 +146,7 @@ function SurveySheetReportHeader({ report }: { report: ReportDetail }) {
   return <section className="workspace-panel page-stack">
     <div className="section-title-row"><div><span className="eyebrow">Sumber existing</span><h2>Data Survey Sheet untuk Laporan</h2><p className="muted-text">Laporan hanya membaca snapshot Survey dan hasil verifikasi yang telah melalui workflow. Tidak ada input ulang pada modul Reports.</p></div></div>
     <div className="survey-sheet-summary-grid">{rows.map((row) => <div key={row.label}><span>{row.label}<SurveySheetFieldSourceBadge source={row.source} /></span><strong>{row.value}</strong></div>)}</div>
+    {mismatches.length > 0 ? <div className="alert alert-warning"><div><strong>Mismatch terverifikasi: {mismatches.join(", ")}</strong><p>Catatan Surveyor: {report.general_remark || "Belum tersedia"}</p></div></div> : null}
   </section>;
 }
 
@@ -135,3 +157,6 @@ function formatWeight(value?: number | null) { return value == null ? "Belum ter
 function humanizeValue(value?: string | null) { return value ? value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) : "Belum tersedia"; }
 function canonicalValue(value: unknown, allowed: string[]) { const normalized = typeof value === "string" ? value.toUpperCase() : ""; return normalized && allowed.includes(normalized) ? normalized : "Belum diisi"; }
 function humanize(value: string) { return value.replaceAll("_", " ").replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
+function checklistResult(row: Record<string, unknown>) { if (row.numeric_value != null) return `${String(row.numeric_value)}${row.unit ? ` ${String(row.unit)}` : ""}`; return String(row.value ?? "-").toUpperCase(); }
+function verificationMismatches(cargoInitial?: string | null, cargoVerified?: string | null, cscInitial?: string | null, cscVerified?: string | null) { const result: string[] = []; if (isKnownMismatch(cargoInitial, cargoVerified)) result.push("Cargo Status"); if (isKnownMismatch(cscInitial, cscVerified)) result.push("CSC Plate Status"); return result; }
+function isKnownMismatch(initial?: string | null, verified?: string | null) { const normalize = (value?: string | null) => { const normalized = value?.trim().toLowerCase() ?? ""; return ["", "unknown", "not_checked"].includes(normalized) ? "" : normalized; }; const initialValue = normalize(initial); const verifiedValue = normalize(verified); return Boolean(initialValue && verifiedValue && initialValue !== verifiedValue); }

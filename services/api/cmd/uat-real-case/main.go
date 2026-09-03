@@ -133,6 +133,7 @@ func schemaGate(ctx context.Context, db *sql.DB) error {
 		{"survey_damages", "checklist_response_id"},
 		{"object_deletion_queue", "locked_at"},
 		{"object_deletion_queue", "retry_count"},
+		{"survey_general_infos", "cleanliness"},
 	}
 	for _, marker := range required {
 		var count int
@@ -146,7 +147,7 @@ func schemaGate(ctx context.Context, db *sql.DB) error {
 			return err
 		}
 		if count != 1 {
-			return fmt.Errorf("schema gate failed: missing %s.%s; apply complete migrations 0013-0018", marker[0], marker[1])
+			return fmt.Errorf("schema gate failed: missing %s.%s; apply complete migrations 0013-0019", marker[0], marker[1])
 		}
 	}
 	return nil
@@ -223,7 +224,7 @@ func bootstrap(ctx context.Context, db *sql.DB, opt options) error {
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	fmt.Printf("PASS schema_gate migrations=0013-0018\n")
+	fmt.Printf("PASS schema_gate migrations=0013-0019\n")
 	fmt.Printf("PASS users_bootstrapped count=%d password=REDACTED reviewer_role=supervisor management_role=management customer_pic_role=none\n", len(users))
 	fmt.Printf("PASS master_source code=%s fingerprint=%s\n", opt.masterCustomer, fingerprint)
 	fmt.Printf("PASS domain_fixture jobs=3 containers=6 multi_job_id=%s revision_survey_id=%s rejection_survey_id=%s isolation_survey_id=%s\n",

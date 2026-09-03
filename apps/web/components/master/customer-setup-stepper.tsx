@@ -4,27 +4,9 @@ import { useRouter } from "next/navigation";
 import { CompletionBadge } from "@/components/ui/completion-badge";
 import { Stepper, type StepperItem } from "@/components/ui/stepper";
 import type { CustomerReadiness } from "@/components/master/customer-readiness";
+import { customerSetupTabs, type CustomerSetupTab } from "@/components/master/customer-setup-tabs";
 
-export type CustomerSetupTab =
-  | "profile"
-  | "location-pic"
-  | "survey-sheet"
-  | "checklist"
-  | "references"
-  | "photo-evidence"
-  | "cedex"
-  | "readiness";
-
-export const customerSetupTabs: Array<{ id: CustomerSetupTab; label: string; description: string }> = [
-  { id: "profile", label: "Profil", description: "Identitas dan status Customer" },
-  { id: "location-pic", label: "Lokasi & PIC", description: "Location, Personel/PIC, dan mapping" },
-  { id: "survey-sheet", label: "Konfigurasi Survey Sheet", description: "Survey Type, Container Type, lokasi, dan sumber field" },
-  { id: "checklist", label: "Checklist", description: "Template dan item pemeriksaan" },
-  { id: "references", label: "Referensi Pemeriksaan", description: "Mapping referensi per Survey Type" },
-  { id: "photo-evidence", label: "Foto / Evidence", description: "Kategori foto dari master aktif" },
-  { id: "cedex", label: "Konfigurasi CEDEX Customer", description: "Override Customer dan Global fallback" },
-  { id: "readiness", label: "Kesiapan", description: "Validasi backend dan CTA pekerjaan" }
-];
+export type { CustomerSetupTab } from "@/components/master/customer-setup-tabs";
 
 export function CustomerSetupStepper({
   customerId,

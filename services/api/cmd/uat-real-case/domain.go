@@ -39,9 +39,9 @@ func fixtureManifest() domainFixture {
 }
 
 type primaryFixtureRefs struct {
-	customerID, surveyTypeID, containerTypeID, locationID, templateID, templateItemID      string
-	adminUserID, surveyorUserID, surveyorProfileID, otherSurveyorProfileID, reviewerUserID string
-	cedexLocationID, componentID, damageID, repairID, materialID, responsibilityID         string
+	customerID, personnelID, surveyTypeID, containerTypeID, locationID, templateID, templateItemID string
+	adminUserID, surveyorUserID, surveyorProfileID, otherSurveyorProfileID, reviewerUserID         string
+	cedexLocationID, componentID, damageID, repairID, materialID, responsibilityID                 string
 }
 
 func bootstrapDomain(ctx context.Context, tx *sql.Tx, opt options) (domainFixture, error) {
@@ -55,6 +55,13 @@ func bootstrapDomain(ctx context.Context, tx *sql.Tx, opt options) (domainFixtur
 	}
 	if existingJobs != 0 && existingJobs != 3 {
 		return fixture, fmt.Errorf("partial UAT domain fixture detected: jobs=%d", existingJobs)
+	}
+	refs, err := loadPrimaryFixtureRefs(ctx, tx, opt.masterCustomer)
+	if err != nil {
+		return fixture, err
+	}
+	if err := ensurePrimaryFixtureCompatibility(ctx, tx, refs); err != nil {
+		return fixture, err
 	}
 	if existingJobs == 3 {
 		var fixtureRows int
@@ -70,10 +77,6 @@ func bootstrapDomain(ctx context.Context, tx *sql.Tx, opt options) (domainFixtur
 		return fixture, nil
 	}
 
-	refs, err := loadPrimaryFixtureRefs(ctx, tx, opt.masterCustomer)
-	if err != nil {
-		return fixture, err
-	}
 	if err := insertPrimaryJobs(ctx, tx, refs); err != nil {
 		return fixture, err
 	}
@@ -86,8 +89,10 @@ func bootstrapDomain(ctx context.Context, tx *sql.Tx, opt options) (domainFixtur
 func loadPrimaryFixtureRefs(ctx context.Context, tx *sql.Tx, customerCode string) (primaryFixtureRefs, error) {
 	var refs primaryFixtureRefs
 	err := tx.QueryRowContext(ctx, `
-		SELECT customer.id, survey_type.id, container_type.id, location.id, template.id, item.id
+		SELECT customer.id, personnel.id, survey_type.id, container_type.id, location.id, template.id, item.id
 		FROM customers customer
+		JOIN customer_personnel personnel
+		  ON personnel.customer_id=customer.id AND personnel.status='active' AND personnel.deleted_at IS NULL
 		JOIN survey_types survey_type ON survey_type.customer_id=customer.id AND survey_type.status='active'
 		JOIN container_types container_type ON container_type.customer_id=customer.id AND container_type.status='active'
 		JOIN locations location ON location.customer_id=customer.id AND location.status='active' AND location.deleted_at IS NULL
@@ -99,7 +104,7 @@ func loadPrimaryFixtureRefs(ctx context.Context, tx *sql.Tx, customerCode string
 		ORDER BY template.version_no DESC,item.display_order,item.item_code
 		LIMIT 1
 	`, customerCode).Scan(
-		&refs.customerID, &refs.surveyTypeID, &refs.containerTypeID,
+		&refs.customerID, &refs.personnelID, &refs.surveyTypeID, &refs.containerTypeID,
 		&refs.locationID, &refs.templateID, &refs.templateItemID,
 	)
 	if err != nil {
@@ -145,6 +150,29 @@ func loadPrimaryFixtureRefs(ctx context.Context, tx *sql.Tx, customerCode string
 		return refs, fmt.Errorf("primary UAT CEDEX references unavailable: %w", err)
 	}
 	return refs, nil
+}
+
+func ensurePrimaryFixtureCompatibility(ctx context.Context, tx *sql.Tx, refs primaryFixtureRefs) error {
+	if _, err := tx.ExecContext(ctx, `
+		INSERT IGNORE INTO customer_personnel_locations (customer_personnel_id,location_id)
+		VALUES (?,?)
+	`, refs.personnelID, refs.locationID); err != nil {
+		return fmt.Errorf("ensure UAT Location-PIC mapping: %w", err)
+	}
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE survey_general_infos info
+		JOIN surveys survey ON survey.id=info.survey_id
+		JOIN job_orders job ON job.id=survey.job_order_id
+		SET info.general_condition=CASE
+		      WHEN info.general_condition IN ('DMG','AVL','AR') THEN info.general_condition
+		      ELSE 'AVL'
+		    END,
+		    info.cleanliness=COALESCE(NULLIF(info.cleanliness,''),'DTY')
+		WHERE job.instruction=?
+	`, "Dataset "+datasetID+" - bukan data operasional"); err != nil {
+		return fmt.Errorf("normalize canonical UAT Survey Sheet values: %w", err)
+	}
+	return nil
 }
 
 type jobFixtureSpec struct {
@@ -246,8 +274,8 @@ func insertSurveyFixture(ctx context.Context, tx *sql.Tx, refs primaryFixtureRef
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO survey_general_infos (
 		 survey_id,container_no,container_type_id,iso_type_code,customer_id,location_id,
-		 survey_date_time,cargo_status,general_condition,container_lifecycle,weather,general_remark
-		) VALUES (?,?,?,'22G1',?,?,NOW(),'empty','serviceable','existing','Cerah',?)
+		 survey_date_time,cargo_status,general_condition,cleanliness,container_lifecycle,weather,general_remark
+		) VALUES (?,?,?,'22G1',?,?,NOW(),'empty','AVL','DTY','existing','Cerah',?)
 	`, container.surveyID, container.number, refs.containerTypeID, refs.customerID, refs.locationID, datasetID); err != nil {
 		return err
 	}
@@ -323,7 +351,7 @@ func insertIsolationFixture(ctx context.Context, tx *sql.Tx, refs primaryFixture
 		{`INSERT INTO assignments (id,assignment_no,job_order_id,surveyor_id,assigned_by,start_date,due_date,instruction,status) VALUES (?,? ,?,?,?,NOW(),DATE_ADD(NOW(),INTERVAL 14 DAY),?,'in_progress')`, []any{assignmentID, "UAT-ASG-ISOLATION-001", isolationJobID, refs.otherSurveyorProfileID, refs.adminUserID, datasetID}},
 		{`INSERT INTO assignment_containers (id,assignment_id,job_container_id) VALUES (UUID(),?,?)`, []any{assignmentID, containerID}},
 		{`INSERT INTO surveys (id,survey_no,job_order_id,job_container_id,assignment_id,surveyor_id,survey_type_id,phase,survey_round,is_active,checklist_template_id,status,started_at) VALUES (?,? ,?,?,?,?,?,'initial',1,1,?,'draft',NOW())`, []any{isolationSurveyID, "UAT-SURVEY-ISOLATION-001", isolationJobID, containerID, assignmentID, refs.otherSurveyorProfileID, surveyTypeID, templateID}},
-		{`INSERT INTO survey_general_infos (survey_id,container_no,container_type_id,iso_type_code,customer_id,location_id,cargo_status,general_condition,container_lifecycle,general_remark) VALUES (?,? ,?,'22G1',?,?,'empty','serviceable','existing',?)`, []any{isolationSurveyID, "UATU0000015", containerTypeID, customerID, locationID, datasetID}},
+		{`INSERT INTO survey_general_infos (survey_id,container_no,container_type_id,iso_type_code,customer_id,location_id,cargo_status,general_condition,cleanliness,container_lifecycle,general_remark) VALUES (?,? ,?,'22G1',?,?,'empty','AVL','DTY','existing',?)`, []any{isolationSurveyID, "UATU0000015", containerTypeID, customerID, locationID, datasetID}},
 		{`INSERT INTO survey_checklist_responses (id,survey_id,template_item_id,item_code,item_label,response_value,response_type,is_required,is_critical,requires_attachment,display_order) VALUES (?,?,?,'UAT-ISO-ITEM','Item Isolation UAT','yes','ok_not_ok',1,0,0,1)`, []any{checklistID, isolationSurveyID, templateItemID}},
 	}
 	for _, statement := range statements {

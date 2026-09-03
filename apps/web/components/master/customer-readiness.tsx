@@ -62,7 +62,7 @@ export function CustomerReadinessIndex() {
     <section className="customer-master-entry-grid" aria-label="Customer dan Master">
       <MasterEntryCard icon={UsersRound} title="Customer" description="Kelola siapa yang diperiksa dan konfigurasi operasionalnya." action="Buka Customer" href="#customer-readiness-list" />
       <MasterEntryCard icon={Database} title="Master CEDEX" description="Kamus teknis Surveyor untuk Location, Component, Damage, Action, dan Material." action="Kelola Master CEDEX" href="/master/iso-cedex" />
-      <MasterEntryCard icon={BookOpenCheck} title="Master Pemeriksaan" description="Kelola apa yang diperiksa: Survey Type, Container Type, Checklist, referensi, dan Foto / Evidence." action="Kelola Master Pemeriksaan" href="/master/inspection-references" />
+      <MasterEntryCard icon={BookOpenCheck} title="Master Pemeriksaan" description="Kelola apa yang diperiksa: Survey Type, Container Type, Checklist, referensi, dan Kebutuhan Foto / Evidence." action="Kelola Master Pemeriksaan" href="/master/inspection-references" />
     </section>
     <div className="toolbar">
       <label className="search-box"><Search size={17} /><span className="sr-only">Cari Customer</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari nama atau kode Customer" /></label>

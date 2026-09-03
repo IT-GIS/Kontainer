@@ -17,7 +17,7 @@ const tabs: Array<{ id: TabID; label: string }> = [
   { id: "checklist", label: "Checklist" },
   { id: "test-parameter", label: "Test Parameter" },
   { id: "decision-rule", label: "Tolerance & Decision Rule" },
-  { id: "photo-category", label: "Photo Category" },
+  { id: "photo-category", label: "Kebutuhan Foto / Evidence" },
   { id: "finding-severity", label: "Finding Severity" }
 ];
 
@@ -44,7 +44,7 @@ export default async function InspectionReferencesPage({ searchParams }: { searc
     <ProtectedRoute>
       <AppShell
         title="Master Pemeriksaan"
-        subtitle="Kelola Survey Type, Container Type, Checklist, referensi, Decision Rule, dan Foto / Evidence."
+        subtitle="Kelola Survey Type, Container Type, Checklist, referensi, Decision Rule, dan Kebutuhan Foto / Evidence."
         breadcrumbs={[{ label: "Customer & Master", href: "/master/customers" }, { label: "Master Pemeriksaan" }]}
       >
         <div className="page-stack">

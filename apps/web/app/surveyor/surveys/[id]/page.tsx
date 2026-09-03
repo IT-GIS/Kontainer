@@ -318,6 +318,11 @@ function SurveyDetailContent() {
 
   async function saveGeneral() {
     if (!accessToken) return;
+    const mismatches = survey ? verificationMismatches(survey, general) : [];
+    if (mismatches.length > 0 && !general.general_remark?.trim()) {
+      setError(`Catatan verifikasi wajib diisi untuk mismatch: ${mismatches.join(", ")}.`);
+      return;
+    }
     await runSave(async () => {
       await apiData(`/surveys/${params.id}/general-info`, { method: "PUT", accessToken, body: JSON.stringify(general) });
       setMessage("General info tersimpan.");
@@ -629,6 +634,7 @@ function DamageEditorPanel({ title, children, isSaving, onClose, onSave }: { tit
 }
 
 function IdentityTab({ survey, general, readonly, isSaving, onChange, onSave }: { survey: SurveyDetail; general: SurveyGeneralInfo; readonly: boolean; isSaving: boolean; onChange: (value: SurveyGeneralInfo) => void; onSave: () => void }) {
+  const mismatches = verificationMismatches(survey, general);
   return <section className="workspace-panel page-stack">
     <div className="section-title-row"><div><span className="eyebrow">Admin / Job / Peti Kemas</span><h2>Data Awal Read-only</h2><p className="muted-text">Snapshot ini menjadi jejak data awal dan tidak dapat dioverride dari workspace Surveyor.</p></div><LockKeyhole aria-label="Read-only" size={20} /></div>
     <div className="detail-grid identity-summary">
@@ -652,6 +658,7 @@ function IdentityTab({ survey, general, readonly, isSaving, onChange, onSave }: 
       <SurveySheetHeaderField label="Date of Survey" value={formatSurveyDate(survey.started_at)} source="Sistem" />
     </div>
     <div className="section-title-row"><div><span className="eyebrow">Input lapangan</span><h2>Hasil Verifikasi Surveyor</h2><p className="muted-text">Nilai verifikasi disimpan terpisah dari snapshot awal.</p></div><SurveySheetFieldSourceBadge source="Surveyor" /></div>
+    {mismatches.length > 0 ? <div className="alert alert-warning"><div><strong>Mismatch data awal dan hasil verifikasi</strong><p>{mismatches.join(", ")}. Isi Catatan Verifikasi agar perbedaan tercatat pada audit.</p></div></div> : null}
     <div className="form-grid">
     <Field label="Cargo Status Verifikasi (MTY / FULL)"><select disabled={readonly} value={general.cargo_status ?? "unknown"} onChange={(e) => onChange({ ...general, cargo_status: e.target.value })}><option value="unknown">Pilih hasil verifikasi</option><option value="empty">MTY (Empty)</option><option value="laden">FULL (Laden)</option></select></Field>
     <Field label="Container Lifecycle"><select disabled={readonly} value={general.container_lifecycle ?? ""} onChange={(e) => onChange({ ...general, container_lifecycle: (e.target.value || null) as SurveyGeneralInfo["container_lifecycle"] })}><option value="">Select</option><option value="new">Peti Kemas Baru</option><option value="existing">Peti Kemas Lama / Existing</option></select></Field>
@@ -664,7 +671,7 @@ function IdentityTab({ survey, general, readonly, isSaving, onChange, onSave }: 
     <Field label="Condition (DMG / AVL / AR)"><select disabled={readonly} value={general.general_condition ?? ""} onChange={(e) => onChange({ ...general, general_condition: e.target.value })}><option value="">Pilih Condition</option><option value="DMG">DMG</option><option value="AVL">AVL</option><option value="AR">AR</option>{general.general_condition && !["DMG", "AVL", "AR"].includes(general.general_condition.toUpperCase()) ? <option value={general.general_condition}>Legacy: {general.general_condition}</option> : null}</select></Field>
     <Field label="Cleanliness (DTY / CTM)"><select disabled={readonly} value={general.cleanliness ?? ""} onChange={(e) => onChange({ ...general, cleanliness: e.target.value })}><option value="">Pilih Cleanliness</option><option value="DTY">DTY</option><option value="CTM">CTM</option></select></Field>
     <Field label="Weather"><input disabled={readonly} value={general.weather ?? ""} onChange={(e) => onChange({ ...general, weather: e.target.value })} /></Field>
-    <label className="field form-span-2"><span>General Remark</span><textarea disabled={readonly} rows={3} value={general.general_remark ?? ""} onChange={(e) => onChange({ ...general, general_remark: e.target.value })} /></label>
+    <label className="field form-span-2"><span>Catatan Verifikasi / General Remark{mismatches.length > 0 ? " *" : ""}</span><textarea disabled={readonly} required={mismatches.length > 0} rows={3} value={general.general_remark ?? ""} onChange={(e) => onChange({ ...general, general_remark: e.target.value })} /></label>
   </div><div className="alert alert-info">Foto depan, belakang, dan CSC Plate tetap dikelola melalui kategori foto aktif pada tab Foto. General Remark tidak digunakan sebagai pengganti Cleanliness.</div><StickyActions><button className="primary-button" disabled={readonly || isSaving} onClick={onSave}><Save size={17} /><span>Simpan Hasil Verifikasi</span></button></StickyActions></section>;
 }
 
@@ -699,6 +706,23 @@ function formatCondition(value?: string | null) {
 
 function formatCleanliness(value?: string | null) {
   return value && ["DTY", "CTM"].includes(value.toUpperCase()) ? value.toUpperCase() : "Belum diisi";
+}
+
+function verificationMismatches(survey: SurveyDetail, general: SurveyGeneralInfo) {
+  const mismatches: string[] = [];
+  if (isKnownMismatch(survey.cargo_status_initial, general.cargo_status)) mismatches.push("Cargo Status");
+  if (isKnownMismatch(survey.csc_plate_status_initial, general.csc_plate_status)) mismatches.push("CSC Plate Status");
+  return mismatches;
+}
+
+function isKnownMismatch(initial?: string | null, verified?: string | null) {
+  const normalize = (value?: string | null) => {
+    const normalized = value?.trim().toLowerCase() ?? "";
+    return ["", "unknown", "not_checked"].includes(normalized) ? "" : normalized;
+  };
+  const initialValue = normalize(initial);
+  const verifiedValue = normalize(verified);
+  return Boolean(initialValue && verifiedValue && initialValue !== verifiedValue);
 }
 
 function ChecklistTab({ items, readonly, isSaving, onChange, onSave, onFinding }: { items: ChecklistItem[]; readonly: boolean; isSaving: boolean; onChange: (value: ChecklistItem[]) => void; onSave: () => void; onFinding: (item: ChecklistItem) => void }) {

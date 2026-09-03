@@ -57,7 +57,8 @@ $migrationMarkers = @(
     @{ File = "0015_interactive_survey_sheet.up.sql"; Query = "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='$DatabaseName' AND table_name='survey_damages' AND column_name='location_selection_snapshot'" },
     @{ File = "0016_survey_workflow_integrity.up.sql"; Query = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$DatabaseName' AND table_name='survey_revisions'" },
     @{ File = "0017_workflow_operational_closure.up.sql"; Query = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$DatabaseName' AND table_name='object_deletion_queue'" },
-    @{ File = "0018_final_repository_hardening.up.sql"; Query = "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='$DatabaseName' AND table_name='object_deletion_queue' AND column_name='retry_count'" }
+    @{ File = "0018_final_repository_hardening.up.sql"; Query = "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='$DatabaseName' AND table_name='object_deletion_queue' AND column_name='retry_count'" },
+    @{ File = "0019_survey_sheet_data_flow.up.sql"; Query = "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='$DatabaseName' AND table_name='survey_general_infos' AND column_name='cleanliness'" }
 )
 foreach ($marker in $migrationMarkers) {
     $present = & $mysql -uroot -N -e $marker.Query

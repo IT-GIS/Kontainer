@@ -6,7 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ChecklistReferenceTab } from "@/components/master/checklist-reference-tab";
 import { CustomerReadinessPanel, type CustomerReadiness } from "@/components/master/customer-readiness";
 import { CustomerScopedMasterDetail, SurveyTypeReferenceConfiguration } from "@/components/master/customer-scoped-master-data";
-import { CustomerSetupStepper, type CustomerSetupTab } from "@/components/master/customer-setup-stepper";
+import { CustomerSetupStepper } from "@/components/master/customer-setup-stepper";
+import type { CustomerSetupTab } from "@/components/master/customer-setup-tabs";
 import { MasterSourceSelector } from "@/components/master/master-source-selector";
 import { SurveySheetConfiguration, type SurveySheetConfigurationSection } from "@/components/master/survey-sheet-configuration";
 import type { IsoCedexTab } from "@/components/master/iso-cedex-workspace";
@@ -219,10 +220,10 @@ function ReferenceSetup({ customer, customerId, mode }: { customer: CustomerReco
   const photos = mode === "photos";
   return <div className="page-stack">
     <MasterSourceSelector
-      title={photos ? "Foto / Evidence" : "Referensi Pemeriksaan"}
+      title={photos ? "Kebutuhan Foto / Evidence" : "Referensi Pemeriksaan"}
       customerLabel="Mapping Customer"
       globalLabel="Master Global"
-      note={photos ? "Kategori yang ditampilkan berasal dari active master existing; UI tidak menambahkan requirement foto baru." : "Survey Type memetakan referensi aktif existing; standard, clause, dan rule tidak dibuat secara fiktif."}
+      note={photos ? "Admin hanya memilih requirement dari kategori master aktif. Foto inspeksi aktual tetap diambil atau diunggah Surveyor." : "Survey Type memetakan referensi aktif existing; standard, clause, dan rule tidak dibuat secara fiktif."}
     />
     <SurveyTypeReferenceConfiguration customerId={customerId} readOnly={customer.status !== "active"} visibleGroups={photos ? ["photo_categories"] : ["finding_severities", "test_parameters"]} />
   </div>;

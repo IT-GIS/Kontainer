@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
@@ -334,7 +335,7 @@ function JobDetailContent() {
       <JobProgressSummary job={job} support={support} />
       {error ? <div className="alert alert-danger">{error}</div> : null}
       {supportWarning ? <div className="alert alert-warning">{supportWarning}</div> : null}
-	  {readiness?.overall_ready === false ? <div className="alert alert-danger"><div><strong>Assignment diblokir: Master Data Customer belum siap.</strong><p>{readiness.checks.filter((item) => !item.ready).map((item) => item.label).join(", ")}</p></div></div> : null}
+	  {readiness?.overall_ready === false ? <div className="alert alert-danger"><div><strong>Assignment diblokir: Customer belum siap.</strong><p>Lengkapi: {readiness.checks.filter((item) => !item.ready).map((item) => item.label).join(", ")}.</p><Link className="secondary-button" href={`/master/customers/customer/${job.customer_id}?tab=readiness`}>Lengkapi Customer</Link></div></div> : null}
       {showConfirmation ? <JobConfirmationPanel job={job} readinessReady={readiness?.overall_ready === true} onFinish={() => { setShowConfirmation(false); setActiveTab("progress"); }} /> : null}
       {!showConfirmation && containers.length === 0 ? <NextActionCard title="Job tersimpan" description="Tambahkan peti kemas pada Job yang sama. Sistem tidak membuat Job kedua." actionLabel="Tambah Peti Kemas" onClick={() => { setActiveTab("peti-kemas"); setContainerDialog(true); }} /> : null}
       {!showConfirmation && containers.length > 0 && assignments.length === 0 ? <NextActionCard title="Peti kemas tersedia" description="Pilih peti kemas pada tab Peti Kemas; tombol assignment akan langsung muncul." actionLabel="Pilih & Tugaskan Surveyor" onClick={() => setActiveTab("peti-kemas")} /> : null}

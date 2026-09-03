@@ -423,7 +423,7 @@ func (r Repository) ReportDetail(ctx context.Context, reportID uuid.UUID) (map[s
 		       sgi.csc_plate_status_initial, sgi.csc_plate_status AS csc_plate_status_verified,
 		       sgi.csc_plate_number, sgi.csc_approval_reference, sgi.csc_manufacture_date,
 		       sgi.csc_next_examination_date, sgi.csc_program_type,
-		       sgi.general_condition, sgi.cleanliness
+		       sgi.general_condition, sgi.cleanliness, sgi.general_remark
 		FROM reports r
 		JOIN surveys s ON s.id=r.survey_id
 		JOIN job_orders jo ON jo.id=r.job_order_id
@@ -439,6 +439,16 @@ func (r Repository) ReportDetail(ctx context.Context, reportID uuid.UUID) (map[s
 		return nil, err
 	}
 	surveyID := parseUUIDString(item["survey_id"])
+	checklist, _ := r.queryRows(ctx, `
+		SELECT response.id, response.item_code AS item_key, response.item_label,
+		       response.response_value AS value, response.response_numeric AS numeric_value,
+		       response.response_text AS note, response.response_type, response.unit,
+		       response.standard_reference, response.is_required, response.is_critical,
+		       response.display_order
+		FROM survey_checklist_responses response
+		WHERE response.survey_id=$1
+		ORDER BY response.display_order, response.item_code
+	`, surveyID)
 	damages, _ := r.queryRows(ctx, `
 		SELECT sd.id, sd.damage_no, location.code AS cedex_location_code,
 		       component.code AS component_code, component.component_name,
@@ -465,9 +475,19 @@ func (r Repository) ReportDetail(ctx context.Context, reportID uuid.UUID) (map[s
 		WHERE photo.survey_id=$1 AND photo.deleted_at IS NULL
 		ORDER BY photo.created_at
 	`, surveyID)
+	reviewHistory, _ := r.queryRows(ctx, `
+		SELECT approval.id, approval.decision, approval.review_note, approval.final_result,
+		       approval.revision_no, approval.reviewed_at, reviewer.name AS reviewer_name
+		FROM survey_approvals approval
+		JOIN users reviewer ON reviewer.id=approval.reviewer_id
+		WHERE approval.survey_id=$1
+		ORDER BY approval.reviewed_at, approval.id
+	`, surveyID)
 	versions, _ := r.ReportVersions(ctx, reportID)
+	item["checklist"] = checklist
 	item["damages"] = damages
 	item["photos"] = photos
+	item["review_history"] = reviewHistory
 	item["versions"] = versions
 	return item, nil
 }

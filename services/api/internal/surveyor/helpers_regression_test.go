@@ -38,6 +38,28 @@ func TestSurveyMutationRoleRejectsNonSurveyor(t *testing.T) {
 	}
 }
 
+func TestVerificationMismatchOnlyComparesKnownValues(t *testing.T) {
+	if !verificationMismatch("empty", "laden") {
+		t.Fatal("different known cargo values must be marked as mismatch")
+	}
+	if !verificationMismatch("available", "missing") {
+		t.Fatal("different known CSC values must be marked as mismatch")
+	}
+	for _, test := range []struct {
+		initial  any
+		verified string
+	}{
+		{initial: "empty", verified: "empty"},
+		{initial: "unknown", verified: "laden"},
+		{initial: nil, verified: "laden"},
+		{initial: "available", verified: "not_checked"},
+	} {
+		if verificationMismatch(test.initial, test.verified) {
+			t.Fatalf("values must not be marked as mismatch: initial=%v verified=%q", test.initial, test.verified)
+		}
+	}
+}
+
 func TestNextDamageNoUsesMySQLCounterSequenceWithoutIDColumn(t *testing.T) {
 	tx := &damageCounterTx{next: 7}
 	number, err := (Repository{}).nextDamageNo(context.Background(), tx, uuid.New())

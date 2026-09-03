@@ -671,6 +671,22 @@ func intFromValue(value any) int {
 	return result
 }
 
+func verificationMismatch(initial any, verified string) bool {
+	initialValue := normalizedVerificationValue(fmt.Sprint(initial))
+	verifiedValue := normalizedVerificationValue(verified)
+	return initialValue != "" && verifiedValue != "" && initialValue != verifiedValue
+}
+
+func normalizedVerificationValue(value string) string {
+	normalized := strings.ToLower(strings.TrimSpace(value))
+	switch normalized {
+	case "", "<nil>", "unknown", "not_checked":
+		return ""
+	default:
+		return normalized
+	}
+}
+
 func truthy(value any) bool {
 	switch typed := value.(type) {
 	case bool:

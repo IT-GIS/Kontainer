@@ -74,7 +74,6 @@ function SurveySheetConfigurationOverview({ customer, customerId, readiness }: {
   }, [accessToken, customerId]);
 
   const checks = new Map(readiness?.checks.map((check) => [check.key, check]) ?? []);
-  const sizes = unique(containerTypes.map((item) => normalizeSize(item.size)).filter(Boolean));
   const cedexKeys = ["cedex_location", "cedex_component", "cedex_damage", "cedex_action_repair", "cedex_material"];
   const cedexReady = cedexKeys.every((key) => checks.get(key)?.ready);
   const cedexSource = (readiness?.cedex_override_count ?? 0) > 0 ? "Global + Override Customer" : "Master CEDEX Global";
@@ -86,11 +85,11 @@ function SurveySheetConfigurationOverview({ customer, customerId, readiness }: {
       <div className="survey-sheet-config-grid">
         <ConfigurationItem label="Customer / Client" source="Customer" values={[customer.customer_name]} ready={customer.status === "active"} locked />
         <ConfigurationItem label="Type of Survey" source="Customer" values={surveyTypes.map((item) => `${item.code} — ${item.name}`)} ready={Boolean(checks.get("survey_type")?.ready)} manageHref={`/master/customers/customer/${customerId}?tab=survey-sheet&section=survey-types`} />
-        <ConfigurationItem label="Container Size yang digunakan" source="Customer" values={sizes.map((size) => `${size} ft`)} ready={Boolean(checks.get("container_type")?.ready)} manageHref={`/master/customers/customer/${customerId}?tab=survey-sheet&section=container-types`} />
+        <ConfigurationItem label="Container Type / Size" source="Customer" values={containerTypes.map((item) => `${item.code} - ${item.type_name ?? item.type ?? "Belum tersedia"}${item.size ? ` (${normalizeSize(item.size)} ft)` : ""}`)} ready={Boolean(checks.get("container_type")?.ready)} manageHref={`/master/customers/customer/${customerId}?tab=survey-sheet&section=container-types`} />
         <ConfigurationItem label="Survey Location" source="Customer" values={locations.map((item) => `${item.location_code} — ${item.location_name}`)} ready={Boolean(checks.get("location")?.ready && checks.get("location_pic_mapping")?.ready)} manageHref={`/master/customers/customer/${customerId}?tab=location-pic`} />
         <ConfigurationItem label="Checklist" source="Customer" values={[configuredText(checks.get("checklist_template")?.ready && checks.get("checklist_item")?.ready)]} ready={Boolean(checks.get("checklist_template")?.ready && checks.get("checklist_item")?.ready)} manageHref={`/master/customers/customer/${customerId}?tab=checklist`} />
         <ConfigurationItem label="Referensi Pemeriksaan" source="Customer" values={[configuredText(checks.get("test_parameter_mapping")?.ready)]} ready={Boolean(checks.get("test_parameter_mapping")?.ready)} manageHref={`/master/customers/customer/${customerId}?tab=references`} />
-        <ConfigurationItem label="Photo / Evidence" source="Customer" values={[configuredText(checks.get("photo_category_mapping")?.ready)]} ready={Boolean(checks.get("photo_category_mapping")?.ready)} manageHref={`/master/customers/customer/${customerId}?tab=photo-evidence`} />
+        <ConfigurationItem label="Kebutuhan Foto / Evidence" source="Customer" values={[configuredText(checks.get("photo_category_mapping")?.ready)]} ready={Boolean(checks.get("photo_category_mapping")?.ready)} manageHref={`/master/customers/customer/${customerId}?tab=photo-evidence`} />
         <ConfigurationItem label="CEDEX" source="Master CEDEX" values={[cedexSource]} ready={cedexReady} manageHref={`/master/customers/customer/${customerId}?tab=cedex`} />
       </div>
     </section>
@@ -139,4 +138,3 @@ const fieldOwnership: Array<{ label: string; source: SurveySheetFieldSource; loc
 
 function configuredText(value?: boolean) { return value ? "Sudah dikonfigurasi" : "Belum dikonfigurasi"; }
 function normalizeSize(value?: string | null) { return (value ?? "").replace(/\s*(feet|foot|ft)$/i, "").trim(); }
-function unique(values: string[]) { return Array.from(new Set(values)); }
