@@ -58,6 +58,10 @@ type ListResult struct {
 type JobInput struct {
 	JobDate                string  `json:"job_date"`
 	CustomerID             string  `json:"customer_id"`
+	ApprovalCategoryID     string  `json:"approval_category_id"`
+	OwnerID                string  `json:"owner_id"`
+	ApplicantOwnerRelation string  `json:"applicant_owner_relationship"`
+	ManufacturerID         *string `json:"manufacturer_id"`
 	SurveyTypeID           string  `json:"survey_type_id"`
 	LocationID             string  `json:"location_id"`
 	PICCustomerPersonnelID string  `json:"pic_customer_personnel_id"`
@@ -77,7 +81,9 @@ type JobInput struct {
 	TruckingCompany        string  `json:"trucking_company"`
 	Priority               string  `json:"priority"`
 	Deadline               *string `json:"deadline"`
+	PlannedInspectionDate  *string `json:"planned_inspection_date"`
 	Instruction            string  `json:"instruction"`
+	SpecialNotes           string  `json:"special_notes"`
 }
 
 type ContainerInput struct {
@@ -97,6 +103,13 @@ type ContainerInput struct {
 	CSCManufactureDate       *string  `json:"csc_manufacture_date"`
 	CSCNextExaminationDate   *string  `json:"csc_next_examination_date"`
 	CSCProgramType           string   `json:"csc_program_type"`
+	ManufacturerID           *string  `json:"manufacturer_id"`
+	ManufacturerSerialNo     string   `json:"manufacturer_serial_no"`
+	TypeModel                string   `json:"type_model"`
+	CubeCapacityM3           *float64 `json:"cube_capacity_m3"`
+	AllowableStackingWeight  *float64 `json:"allowable_stacking_weight_kg"`
+	RackingTestLoad          *float64 `json:"racking_test_load_kg"`
+	MaintenanceSchemeID      *string  `json:"maintenance_scheme_id"`
 	TruckNo                  string   `json:"truck_no"`
 	DriverName               string   `json:"driver_name"`
 	Remark                   string   `json:"remark"`
@@ -161,4 +174,27 @@ type ImportPreview struct {
 
 type ImportConfirmInput struct {
 	Rows []ContainerInput `json:"rows"`
+}
+
+type InspectionReadinessCheck struct {
+	Code  string `json:"code"`
+	Label string `json:"label"`
+	Ready bool   `json:"ready"`
+}
+
+type InspectionReadiness struct {
+	JobID       string                     `json:"job_id"`
+	ContainerID string                     `json:"container_id"`
+	ContainerNo string                     `json:"container_no"`
+	Status      string                     `json:"status"`
+	Blockers    []InspectionReadinessCheck `json:"blockers"`
+	Warnings    []InspectionReadinessCheck `json:"warnings"`
+}
+
+type JobInspectionReadiness struct {
+	JobID        string                `json:"job_id"`
+	OverallReady bool                  `json:"overall_ready"`
+	ReadyCount   int                   `json:"ready_count"`
+	Total        int                   `json:"total"`
+	Containers   []InspectionReadiness `json:"containers"`
 }

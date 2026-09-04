@@ -355,6 +355,13 @@ func (r Repository) StartSurvey(ctx context.Context, input StartSurveyInput, act
 	if containerTypeID == uuid.Nil {
 		return nil, validationError("CONTAINER_TYPE_REQUIRED", "Container Type pada Job Container belum dikonfigurasi.")
 	}
+	if strings.TrimSpace(fmt.Sprint(container["container_size"])) == "" {
+		return nil, validationError("CONTAINER_SIZE_REQUIRED", "Ukuran peti kemas belum dikonfigurasi.")
+	}
+	checkDigitStatus := strings.TrimSpace(fmt.Sprint(container["check_digit_status"]))
+	if checkDigitStatus != "valid" && !(checkDigitStatus == "override" && strings.TrimSpace(fmt.Sprint(container["check_digit_override_reason"])) != "") {
+		return nil, validationError("CONTAINER_CHECK_DIGIT_REQUIRED", "Check digit harus valid atau memiliki alasan override yang diaudit.")
+	}
 	checklistTemplateID, err := r.checklistTemplateTx(
 		ctx,
 		tx,
@@ -385,29 +392,36 @@ func (r Repository) StartSurvey(ctx context.Context, input StartSurveyInput, act
 	_, err = tx.Exec(ctx, `
 		INSERT INTO survey_general_infos (
 		  survey_id, container_no, container_type_id, iso_type_code, customer_id, location_id,
-		  customer_name_snapshot, location_name_snapshot, survey_type_name_snapshot,
+		  customer_name_snapshot, owner_name_snapshot, approval_category_name_snapshot,
+		  manufacturer_name_snapshot, manufacturer_serial_no_snapshot, type_model_snapshot,
+		  location_name_snapshot, survey_type_name_snapshot,
 		  job_order_no_snapshot, spk_no_snapshot, container_type_code_snapshot,
 		  container_type_name_snapshot, container_size_snapshot, manufacture_date,
-		  gross_weight, tare_weight, payload, cargo_status, cargo_status_initial,
+		  gross_weight, tare_weight, payload, cube_capacity_m3_snapshot,
+		  allowable_stacking_weight_kg_snapshot, racking_test_load_kg_snapshot,
+		  cargo_status, cargo_status_initial,
 		  seal_no, truck_no, driver_name, csc_plate_status, csc_plate_status_initial,
 		  csc_plate_number, csc_approval_reference, csc_manufacture_date,
-		  csc_next_examination_date, csc_program_type
+		  csc_next_examination_date, csc_program_type, maintenance_scheme_snapshot
 		) VALUES (
 		  $1,$2,$3,NULLIF($4,''),$5,$6,NULLIF($7,''),NULLIF($8,''),NULLIF($9,''),
-		  NULLIF($10,''),NULLIF($11,''),NULLIF($12,''),NULLIF($13,''),NULLIF($14,''),$15,
-		  $16,$17,$18,$19,$19,NULLIF($20,''),NULLIF($21,''),NULLIF($22,''),
-		  NULLIF($23,''),NULLIF($23,''),NULLIF($24,''),NULLIF($25,''),$26,$27,NULLIF($28,'')
+		  NULLIF($10,''),NULLIF($11,''),NULLIF($12,''),NULLIF($13,''),NULLIF($14,''),
+		  NULLIF($15,''),NULLIF($16,''),NULLIF($17,''),NULLIF($18,''),NULLIF($19,''),$20,
+		  $21,$22,$23,$24,$25,$26,$27,$27,NULLIF($28,''),NULLIF($29,''),NULLIF($30,''),
+		  NULLIF($31,''),NULLIF($31,''),NULLIF($32,''),NULLIF($33,''),$34,$35,NULLIF($36,''),NULLIF($37,'')
 		)
 	`, surveyID, container["container_no"], nullableUUID(container["container_type_id"]), container["iso_type_code"],
 		parseUUIDString(container["customer_id"]), parseUUIDString(container["location_id"]),
-		container["customer_name"], container["location_name"], container["survey_type_name"],
-		container["job_order_no"], container["spk_no"], container["container_type_code"],
-		container["container_type_name"], container["container_size"], container["manufacture_date"],
-		container["gross_weight"], container["tare_weight"], container["payload"],
+		container["customer_name"], container["owner_name"], container["approval_category_name"],
+		container["manufacturer_name"], container["manufacturer_serial_no"], container["type_model"],
+		container["location_name"], container["survey_type_name"], container["job_order_no"], container["spk_no"],
+		container["container_type_code"], container["container_type_name"], container["container_size"], container["manufacture_date"],
+		container["gross_weight"], container["tare_weight"], container["payload"], container["cube_capacity_m3"],
+		container["allowable_stacking_weight_kg"], container["racking_test_load_kg"],
 		defaultString(container["cargo_status"], "unknown"), container["seal_no"], container["truck_no"],
 		container["driver_name"], container["csc_plate_status"], container["csc_plate_number"],
 		container["csc_approval_reference"], container["csc_manufacture_date"], container["csc_next_examination_date"],
-		container["csc_program_type"])
+		container["csc_program_type"], container["maintenance_scheme_name"])
 	if err != nil {
 		return nil, err
 	}
@@ -522,7 +536,25 @@ func (r Repository) UpdateGeneralInfo(ctx context.Context, surveyID uuid.UUID, i
 	if cscPlateStatus != "" && !oneOfString(cscPlateStatus, "available", "missing", "damaged", "not_checked") {
 		return nil, validationError("CSC_PLATE_STATUS_INVALID", "CSC Plate Status verifikasi tidak valid.")
 	}
-	if (verificationMismatch(base["cargo_status_initial"], cargoStatus) || verificationMismatch(base["csc_plate_status_initial"], cscPlateStatus)) && strings.TrimSpace(input.GeneralRemark) == "" {
+	cscManufactureDate, err := parseOptionalSurveyDate(input.CSCManufactureDate)
+	if err != nil {
+		return nil, validationError("CSC_MANUFACTURE_DATE_INVALID", "Tanggal produksi CSC tidak valid.")
+	}
+	cscNextExaminationDate, err := parseOptionalSurveyDate(input.CSCNextExaminationDate)
+	if err != nil {
+		return nil, validationError("CSC_NEXT_EXAMINATION_DATE_INVALID", "Tanggal pemeriksaan CSC berikutnya tidak valid.")
+	}
+	if cscManufactureDate != nil && cscNextExaminationDate != nil && cscNextExaminationDate.Before(*cscManufactureDate) {
+		return nil, validationError("CSC_DATE_ORDER_INVALID", "Tanggal pemeriksaan CSC berikutnya tidak boleh sebelum tanggal produksi CSC.")
+	}
+	verificationDiffers := verificationMismatch(base["cargo_status_initial"], cargoStatus) ||
+		verificationMismatch(base["csc_plate_status_initial"], cscPlateStatus) ||
+		verificationMismatch(base["csc_plate_number_initial"], input.CSCPlateNumber) ||
+		verificationMismatch(base["csc_approval_reference_initial"], input.CSCApprovalReference) ||
+		verificationDateMismatch(base["csc_manufacture_date_initial"], input.CSCManufactureDate) ||
+		verificationDateMismatch(base["csc_next_examination_date_initial"], input.CSCNextExaminationDate) ||
+		verificationMismatch(base["csc_program_type_initial"], input.CSCProgramType)
+	if verificationDiffers && strings.TrimSpace(input.GeneralRemark) == "" {
 		return nil, validationError("VERIFICATION_MISMATCH_NOTE_REQUIRED", "Catatan verifikasi wajib diisi ketika hasil Surveyor berbeda dari data awal Admin.")
 	}
 	lifecycle := strings.ToLower(strings.TrimSpace(input.ContainerLifecycle))
@@ -536,11 +568,17 @@ func (r Repository) UpdateGeneralInfo(ctx context.Context, surveyID uuid.UUID, i
 		UPDATE survey_general_infos SET survey_date_time=$2, cargo_status=$3, seal_no=NULLIF($4,''), truck_no=NULLIF($5,''), driver_name=NULLIF($6,''),
 		  chassis_no=NULLIF($7,''), csc_plate_status=NULLIF($8,''), door_status=NULLIF($9,''), general_condition=NULLIF($10,''),
 		  cleanliness=NULLIF($11,''), container_lifecycle=NULLIF($12,''), weather=NULLIF($13,''),
-		  gps_latitude=$14, gps_longitude=$15, general_remark=NULLIF($16,''), updated_at=now()
+		  gps_latitude=$14, gps_longitude=$15, general_remark=NULLIF($16,''),
+		  csc_plate_number_verified=NULLIF($17,''), csc_approval_reference_verified=NULLIF($18,''),
+		  csc_manufacture_date_verified=$19, csc_next_examination_date_verified=$20,
+		  csc_program_type_verified=NULLIF($21,''), updated_at=now()
 		WHERE survey_id=$1
 		RETURNING id, survey_id, cargo_status, cargo_status_initial, csc_plate_status, csc_plate_status_initial,
+		          csc_plate_number_verified, csc_approval_reference_verified, csc_manufacture_date_verified,
+		          csc_next_examination_date_verified, csc_program_type_verified,
 		          general_condition, cleanliness, general_remark, survey_date_time
-	`, surveyID, surveyDate, cargoStatus, input.SealNo, input.TruckNo, input.DriverName, input.ChassisNo, cscPlateStatus, input.DoorStatus, condition, cleanliness, lifecycle, input.Weather, input.GPSLatitude, input.GPSLongitude, input.GeneralRemark), []string{"id", "survey_id", "cargo_status", "cargo_status_initial", "csc_plate_status", "csc_plate_status_initial", "general_condition", "cleanliness", "general_remark", "survey_date_time"})
+	`, surveyID, surveyDate, cargoStatus, input.SealNo, input.TruckNo, input.DriverName, input.ChassisNo, cscPlateStatus, input.DoorStatus, condition, cleanliness, lifecycle, input.Weather, input.GPSLatitude, input.GPSLongitude, input.GeneralRemark,
+		input.CSCPlateNumber, input.CSCApprovalReference, cscManufactureDate, cscNextExaminationDate, input.CSCProgramType), []string{"id", "survey_id", "cargo_status", "cargo_status_initial", "csc_plate_status", "csc_plate_status_initial", "csc_plate_number_verified", "csc_approval_reference_verified", "csc_manufacture_date_verified", "csc_next_examination_date_verified", "csc_program_type_verified", "general_condition", "cleanliness", "general_remark", "survey_date_time"})
 	if err != nil {
 		return nil, err
 	}

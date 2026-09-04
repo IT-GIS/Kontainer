@@ -35,12 +35,12 @@ type CustomerReadiness struct {
 }
 
 type customerReadinessCounts struct {
-	id, code, name, status, address                                                        string
-	personnel, location, locationPICMapping, surveyType, containerType                     int
-	checklistTemplate, checklistItem                                                       int
-	severityMapping, testMapping, photoMapping                                             int
-	cedexLocation, cedexComponent, cedexDamage, cedexRepair, cedexMaterial, responsibility int
-	cedexOverride, jobs                                                                    int
+	id, code, name, status, address                                        string
+	personnel, location, locationPICMapping, surveyType, containerType     int
+	checklistTemplate, checklistItem                                       int
+	severityMapping, testMapping, photoMapping                             int
+	cedexLocation, cedexComponent, cedexDamage, cedexRepair, cedexMaterial int
+	cedexOverride, jobs                                                    int
 }
 
 func (r Repository) ListCustomerReadiness(ctx context.Context, customerID *uuid.UUID) ([]CustomerReadiness, error) {
@@ -75,7 +75,6 @@ func (r Repository) ListCustomerReadiness(ctx context.Context, customerID *uuid.
 		  %s,
 		  %s,
 		  %s,
-		  %s,
 		  ((SELECT COUNT(*) FROM cedex_locations x WHERE x.customer_id=c.id AND x.status='active') +
 		   (SELECT COUNT(*) FROM cedex_components x WHERE x.customer_id=c.id AND x.status='active') +
 		   (SELECT COUNT(*) FROM cedex_damages x WHERE x.customer_id=c.id AND x.status='active') +
@@ -91,7 +90,6 @@ func (r Repository) ListCustomerReadiness(ctx context.Context, customerID *uuid.
 		effectiveMasterCountSQL("cedex_damages", "x", "c.id"),
 		effectiveMasterCountSQL("cedex_repairs", "x", "c.id"),
 		effectiveMasterCountSQL("cedex_materials", "x", "c.id"),
-		effectiveMasterCountSQL("responsibility_codes", "x", "c.id"),
 	)
 	rows, err := r.runner().Query(ctx, query, args...)
 	if err != nil {
@@ -107,7 +105,7 @@ func (r Repository) ListCustomerReadiness(ctx context.Context, customerID *uuid.
 			&item.personnel, &item.location, &item.locationPICMapping, &item.surveyType, &item.containerType,
 			&item.checklistTemplate, &item.checklistItem,
 			&item.severityMapping, &item.testMapping, &item.photoMapping,
-			&item.cedexLocation, &item.cedexComponent, &item.cedexDamage, &item.cedexRepair, &item.cedexMaterial, &item.responsibility,
+			&item.cedexLocation, &item.cedexComponent, &item.cedexDamage, &item.cedexRepair, &item.cedexMaterial,
 			&item.cedexOverride,
 			&item.jobs,
 		); err != nil {
@@ -136,7 +134,6 @@ func buildCustomerReadiness(item customerReadinessCounts) CustomerReadiness {
 		readinessCheck("cedex_damage", "CEDEX Damage", item.cedexDamage),
 		readinessCheck("cedex_action_repair", "CEDEX Action Repair", item.cedexRepair),
 		readinessCheck("cedex_material", "CEDEX Material", item.cedexMaterial),
-		readinessCheck("responsibility", "Responsibility Code", item.responsibility),
 	}
 	ready := 0
 	for _, check := range checks {

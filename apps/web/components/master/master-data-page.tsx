@@ -620,7 +620,7 @@ export function MasterDataPage({
         {formError ? <div className="alert alert-danger" id={formErrorID} role="alert">{formError}</div> : null}
         {locationGenerator ? <LocationCodeGenerator formData={formData} setFormData={setFormData} /> : null}
         <div className="form-grid">
-          {visibleFormFields(resource, formData, locationGenerator).map((field) => (
+		  {visibleFormFields(resource, formData, locationGenerator, dialogMode).map((field) => (
             <FieldInput
               field={field}
               key={field.name}
@@ -837,12 +837,13 @@ function createFormData(resource: MasterResource, fixedValues: MasterRow, locati
   };
 }
 
-function visibleFormFields(resource: MasterResource, data: MasterRow, locationGenerator: boolean) {
-  if (!locationGenerator) return resource.fields;
+function visibleFormFields(resource: MasterResource, data: MasterRow, locationGenerator: boolean, dialogMode?: "create" | "edit" | null) {
+	const fields = resource.fields.filter((field) => dialogMode !== "create" || !field.createHidden);
+	if (!locationGenerator) return fields;
   const mode = String(data.input_mode ?? "structured");
   const structuredFields = new Set(["description", "source_type", "source_reason", "display_order", "status"]);
   const manualFields = new Set(["input_mode", "code", "container_size", "description", "source_type", "source_reason", "display_order", "status"]);
-  return resource.fields.filter((field) => (mode === "structured" ? structuredFields : manualFields).has(field.name));
+	return fields.filter((field) => (mode === "structured" ? structuredFields : manualFields).has(field.name));
 }
 
 function updateLocationManualField(current: MasterRow, fieldName: string, value: MasterRow[string]) {

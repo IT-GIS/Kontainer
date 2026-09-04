@@ -83,21 +83,26 @@ type StartSurveyInput struct {
 }
 
 type GeneralInfoInput struct {
-	SurveyDateTime     string   `json:"survey_date_time"`
-	CargoStatus        string   `json:"cargo_status"`
-	SealNo             string   `json:"seal_no"`
-	TruckNo            string   `json:"truck_no"`
-	DriverName         string   `json:"driver_name"`
-	ChassisNo          string   `json:"chassis_no"`
-	CSCPlateStatus     string   `json:"csc_plate_status"`
-	DoorStatus         string   `json:"door_status"`
-	GeneralCondition   string   `json:"general_condition"`
-	Cleanliness        string   `json:"cleanliness"`
-	ContainerLifecycle string   `json:"container_lifecycle"`
-	Weather            string   `json:"weather"`
-	GPSLatitude        *float64 `json:"gps_latitude"`
-	GPSLongitude       *float64 `json:"gps_longitude"`
-	GeneralRemark      string   `json:"general_remark"`
+	SurveyDateTime         string   `json:"survey_date_time"`
+	CargoStatus            string   `json:"cargo_status"`
+	SealNo                 string   `json:"seal_no"`
+	TruckNo                string   `json:"truck_no"`
+	DriverName             string   `json:"driver_name"`
+	ChassisNo              string   `json:"chassis_no"`
+	CSCPlateStatus         string   `json:"csc_plate_status"`
+	CSCPlateNumber         string   `json:"csc_plate_number_verified"`
+	CSCApprovalReference   string   `json:"csc_approval_reference_verified"`
+	CSCManufactureDate     *string  `json:"csc_manufacture_date_verified"`
+	CSCNextExaminationDate *string  `json:"csc_next_examination_date_verified"`
+	CSCProgramType         string   `json:"csc_program_type_verified"`
+	DoorStatus             string   `json:"door_status"`
+	GeneralCondition       string   `json:"general_condition"`
+	Cleanliness            string   `json:"cleanliness"`
+	ContainerLifecycle     string   `json:"container_lifecycle"`
+	Weather                string   `json:"weather"`
+	GPSLatitude            *float64 `json:"gps_latitude"`
+	GPSLongitude           *float64 `json:"gps_longitude"`
+	GeneralRemark          string   `json:"general_remark"`
 }
 
 type ChecklistInput struct {

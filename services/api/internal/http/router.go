@@ -51,10 +51,6 @@ func NewRouter(cfg config.Config, logger *slog.Logger, pool *database.Pool) *gin
 	masterService := masterdata.NewService(masterRepo)
 	masterdata.Register(protected, authService, masterService)
 
-	jobRepo := jobs.NewRepository(pool)
-	jobService := jobs.NewService(jobRepo)
-	jobs.Register(protected, authService, jobService)
-
 	objectStore, err := objectstorage.NewMinIO(objectstorage.MinIOOptions{
 		Endpoint: cfg.S3Endpoint, AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey,
 		Region: cfg.S3Region, UseSSL: cfg.S3UseSSL,
@@ -63,6 +59,10 @@ func NewRouter(cfg config.Config, logger *slog.Logger, pool *database.Pool) *gin
 		logger.Error("object storage configuration failed", "error", err)
 		panic(err)
 	}
+	jobRepo := jobs.NewRepository(pool)
+	jobService := jobs.NewService(jobRepo, objectStore, cfg.S3Bucket, cfg.MaxUploadBytes, cfg.S3ObjectPrefix)
+	jobs.Register(protected, authService, jobService)
+
 	surveyorRepo := surveyor.NewRepository(pool)
 	surveyorService := surveyor.NewService(surveyorRepo, objectStore, cfg.S3Bucket, cfg.MaxUploadBytes, cfg.S3ObjectPrefix)
 	surveyor.Register(protected, authService, surveyorService)

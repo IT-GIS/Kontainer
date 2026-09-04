@@ -61,7 +61,7 @@ func (s *Service) PreviewImport(ctx context.Context, jobID uuid.UUID, reader io.
 		if input.CargoStatus != "" && input.CargoStatus != "empty" && input.CargoStatus != "laden" && input.CargoStatus != "unknown" {
 			row.Errors = append(row.Errors, "cargo_status tidak valid")
 		}
-		for _, weight := range []*float64{input.GrossWeight, input.TareWeight, input.Payload} {
+		for _, weight := range []*float64{input.GrossWeight, input.TareWeight, input.Payload, input.CubeCapacityM3, input.AllowableStackingWeight, input.RackingTestLoad} {
 			if weight != nil && *weight < 0 {
 				row.Errors = append(row.Errors, "weight/payload tidak boleh negatif")
 				break
@@ -205,7 +205,7 @@ func optionalString(value string) *string {
 }
 
 func BuildImportTemplate(format string) ([]byte, string, string, error) {
-	sample := []string{"MSKU1234565", "20GP", "22G1", "SEAL001", "empty", "30480", "2200", "28280", "2020-01-01", "valid", "B1234ABC", "Driver Name", "Sample", ""}
+	sample := []string{"MSKU1234565", "20GP", "22G1", "SEAL001", "empty", "30480", "2200", "28280", "2020-01-01", "available", "CSC-001", "CSC/ID/001", "2020-01-01", "2025-01-01", "ACEP", "B1234ABC", "Driver Name", "Sample", ""}
 	if format == "xlsx" {
 		workbook := excelize.NewFile()
 		defer workbook.Close()

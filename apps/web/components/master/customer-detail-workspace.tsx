@@ -14,6 +14,7 @@ import type { IsoCedexTab } from "@/components/master/iso-cedex-workspace";
 import { MasterDataPage } from "@/components/master/master-data-page";
 import { PersonnelLocationMapping } from "@/components/master/personnel-location-mapping";
 import { DataTable } from "@/components/ui/data-table";
+import { FormSection } from "@/components/ui/form-section";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { WorkspaceTabs } from "@/components/ui/workspace-tabs";
@@ -29,13 +30,16 @@ type CustomerRecord = {
   id: string;
   customer_code: string;
   customer_name: string;
+	entity_type: "business" | "individual";
   address?: string | null;
+	country?: string | null;
   npwp?: string | null;
   pic_name?: string | null;
   pic_phone?: string | null;
   pic_email?: string | null;
   billing_address?: string | null;
   payment_term_days?: number | null;
+	admin_notes?: string | null;
   status: string;
 };
 
@@ -139,8 +143,8 @@ function CustomerProfile({
 
   async function saveAndContinue() {
     if (!accessToken || !editable) return;
-    if (!form.customer_code.trim() || !form.customer_name.trim()) {
-      setMessage("Kode dan Nama Customer wajib diisi.");
+	if (!form.customer_code.trim() || !form.customer_name.trim() || !form.entity_type || !form.address.trim()) {
+	  setMessage("Kode, Nama, Bentuk Entitas, dan Alamat Utama Customer wajib diisi.");
       return;
     }
     setSaving(true);
@@ -168,18 +172,25 @@ function CustomerProfile({
       <div className="section-title-row"><div><h2 id="customer-profile-title">Profil Customer</h2><p className="muted-text">Informasi existing disimpan melalui endpoint Customer yang sama.</p></div><StatusBadge tone={customer.status === "active" ? "success" : "warning"}>{customer.status === "active" ? "Aktif" : "Tidak Aktif"}</StatusBadge></div>
       {!editable ? <div className="alert alert-warning">Mode baca-saja. Permission perubahan Customer tidak tersedia.</div> : null}
       {message ? <div className="alert alert-danger" role="alert">{message}</div> : null}
-      <div className="form-grid form-grid-wide">
-        <Field label="Kode Customer"><input disabled={!editable} value={form.customer_code} onChange={(event) => setForm((current) => ({ ...current, customer_code: event.target.value.toUpperCase() }))} /></Field>
-        <Field label="Nama Customer"><input disabled={!editable} value={form.customer_name} onChange={(event) => setForm((current) => ({ ...current, customer_name: event.target.value }))} /></Field>
-        <Field label="Status"><select disabled={!editable} value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}><option value="active">Aktif</option><option value="inactive">Tidak Aktif</option></select></Field>
-        <label className="field form-span-2"><span>Alamat</span><textarea disabled={!editable} rows={3} value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} /></label>
-        <Field label="NPWP"><input disabled={!editable} value={form.npwp} onChange={(event) => setForm((current) => ({ ...current, npwp: event.target.value }))} /></Field>
-        <Field label="Kontak Utama"><input disabled={!editable} value={form.pic_name} onChange={(event) => setForm((current) => ({ ...current, pic_name: event.target.value }))} /></Field>
-        <Field label="Telepon Kontak"><input disabled={!editable} type="tel" value={form.pic_phone} onChange={(event) => setForm((current) => ({ ...current, pic_phone: event.target.value }))} /></Field>
-        <Field label="Email Kontak"><input disabled={!editable} type="email" value={form.pic_email} onChange={(event) => setForm((current) => ({ ...current, pic_email: event.target.value }))} /></Field>
-        <label className="field form-span-2"><span>Alamat Penagihan</span><textarea disabled={!editable} rows={2} value={form.billing_address} onChange={(event) => setForm((current) => ({ ...current, billing_address: event.target.value }))} /></label>
-        <Field label="Termin Pembayaran (hari)"><input disabled={!editable} min="0" type="number" value={form.payment_term_days} onChange={(event) => setForm((current) => ({ ...current, payment_term_days: event.target.value }))} /></Field>
-      </div>
+	  <FormSection title="Identitas Customer" description="Customer adalah pihak pemohon; Pemilik Sah dipilih terpisah pada Permohonan/Job.">
+		<Field label="Kode Customer"><input disabled={!editable} value={form.customer_code} onChange={(event) => setForm((current) => ({ ...current, customer_code: event.target.value.toUpperCase() }))} /></Field>
+		<Field label="Nama Customer"><input disabled={!editable} value={form.customer_name} onChange={(event) => setForm((current) => ({ ...current, customer_name: event.target.value }))} /></Field>
+		<Field label="Bentuk Entitas"><select disabled={!editable} value={form.entity_type} onChange={(event) => setForm((current) => ({ ...current, entity_type: event.target.value as "business" | "individual" }))}><option value="business">Badan Usaha</option><option value="individual">Perorangan</option></select></Field>
+		<Field label="Status"><select disabled={!editable} value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}><option value="active">Aktif</option><option value="inactive">Tidak Aktif</option></select></Field>
+		<label className="field form-span-2"><span>Alamat Utama</span><textarea disabled={!editable} required rows={3} value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} /></label>
+		<Field label="Negara"><input disabled={!editable} value={form.country} onChange={(event) => setForm((current) => ({ ...current, country: event.target.value }))} /></Field>
+		<Field label="NPWP"><input disabled={!editable} value={form.npwp} onChange={(event) => setForm((current) => ({ ...current, npwp: event.target.value }))} /></Field>
+	  </FormSection>
+	  <FormSection title="Kontak Lama (Legacy, Opsional)" description="PIC operasional utama dikelola sesudah profil pada tahap Lokasi & PIC.">
+		<Field label="Nama Kontak"><input disabled={!editable} value={form.pic_name} onChange={(event) => setForm((current) => ({ ...current, pic_name: event.target.value }))} /></Field>
+		<Field label="Telepon Kontak"><input disabled={!editable} type="tel" value={form.pic_phone} onChange={(event) => setForm((current) => ({ ...current, pic_phone: event.target.value }))} /></Field>
+		<Field label="Email Kontak"><input disabled={!editable} type="email" value={form.pic_email} onChange={(event) => setForm((current) => ({ ...current, pic_email: event.target.value }))} /></Field>
+	  </FormSection>
+	  <FormSection title="Billing dan Administrasi">
+		<label className="field form-span-2"><span>Alamat Penagihan</span><textarea disabled={!editable} rows={2} value={form.billing_address} onChange={(event) => setForm((current) => ({ ...current, billing_address: event.target.value }))} /></label>
+		<Field label="Termin Pembayaran (hari)"><input disabled={!editable} min="0" type="number" value={form.payment_term_days} onChange={(event) => setForm((current) => ({ ...current, payment_term_days: event.target.value }))} /></Field>
+		<label className="field form-span-2"><span>Catatan Administratif</span><textarea disabled={!editable} rows={3} value={form.admin_notes} onChange={(event) => setForm((current) => ({ ...current, admin_notes: event.target.value }))} /></label>
+	  </FormSection>
       {editable ? <div className="job-actions"><button className="primary-button" disabled={saving} onClick={() => void saveAndContinue()} type="button">{saving ? "Menyimpan..." : "Simpan & Lanjut"}</button></div> : <Link className="primary-button" href={nextHref}>Lanjut ke Lokasi & PIC</Link>}
     </section>
     <CustomerJobHistory jobs={jobs} lastJob={lastJob} />
@@ -257,14 +268,17 @@ function CustomerJobHistory({ jobs, lastJob }: { jobs: JobSummary[]; lastJob: Jo
 function customerForm(customer: CustomerRecord) {
   return {
     customer_code: customer.customer_code,
-    customer_name: customer.customer_name,
-    address: customer.address ?? "",
+	customer_name: customer.customer_name,
+	entity_type: customer.entity_type ?? "business",
+	address: customer.address ?? "",
+	country: customer.country ?? "",
     npwp: customer.npwp ?? "",
     pic_name: customer.pic_name ?? "",
     pic_phone: customer.pic_phone ?? "",
     pic_email: customer.pic_email ?? "",
     billing_address: customer.billing_address ?? "",
-    payment_term_days: customer.payment_term_days == null ? "" : String(customer.payment_term_days),
+	payment_term_days: customer.payment_term_days == null ? "" : String(customer.payment_term_days),
+	admin_notes: customer.admin_notes ?? "",
     status: customer.status
   };
 }
@@ -276,7 +290,7 @@ function firstIncompleteTab(readiness: CustomerReadiness | null): CustomerSetupT
   if (missing.has("personnel") || missing.has("location") || missing.has("location_pic_mapping")) return "location-pic";
   if (missing.has("survey_type") || missing.has("container_type")) return "survey-sheet";
   if (missing.has("checklist_template") || missing.has("checklist_item")) return "checklist";
-  if (["cedex_location", "cedex_component", "cedex_damage", "cedex_action_repair", "cedex_material", "responsibility"].some((key) => missing.has(key))) return "cedex";
+	if (["cedex_location", "cedex_component", "cedex_damage", "cedex_action_repair", "cedex_material"].some((key) => missing.has(key))) return "cedex";
   if (missing.has("test_parameter_mapping") || missing.has("severity_mapping")) return "references";
   if (missing.has("photo_category_mapping")) return "photo-evidence";
   return "readiness";

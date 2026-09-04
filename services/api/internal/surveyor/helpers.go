@@ -27,12 +27,20 @@ func (r Repository) surveyorID(ctx context.Context, userID uuid.UUID) (uuid.UUID
 func (r Repository) assignedContainerTx(ctx context.Context, tx database.Tx, containerID uuid.UUID, surveyorID uuid.UUID) (map[string]any, error) {
 	item, err := scanRow(tx.QueryRow(ctx, `
 		SELECT jc.id, jc.job_order_id, jc.container_no, jc.container_type_id, jc.iso_type_code, jc.seal_no,
-		       jc.cargo_status, jc.gross_weight, jc.tare_weight, jc.payload, jc.manufacture_date,
+		       jc.cargo_status, jc.gross_weight, jc.tare_weight, jc.payload,
+		       DATE_FORMAT(jc.manufacture_date,'%Y-%m-%d') AS manufacture_date,
 		       jc.truck_no, jc.driver_name, jc.csc_plate_status, jc.csc_plate_number,
-		       jc.csc_approval_reference, jc.csc_manufacture_date, jc.csc_next_examination_date,
-		       jc.csc_program_type, jc.status,
+		       jc.csc_approval_reference,
+		       DATE_FORMAT(jc.csc_manufacture_date,'%Y-%m-%d') AS csc_manufacture_date,
+		       DATE_FORMAT(jc.csc_next_examination_date,'%Y-%m-%d') AS csc_next_examination_date,
+		       jc.csc_program_type, jc.check_digit_status, COALESCE(jc.check_digit_override_reason,''), jc.status,
 		       jo.job_order_no, jo.spk_no, jo.customer_id, jo.location_id, jo.survey_type_id,
-		       c.customer_name, l.location_name, st.name AS survey_type_name,
+		       c.customer_name, owner.customer_name AS owner_name, category.name AS approval_category_name,
+		       COALESCE(spec_manufacturer.manufacturer_name,job_manufacturer.manufacturer_name) AS manufacturer_name,
+		       specs.manufacturer_serial_no, specs.type_model, specs.cube_capacity_m3,
+		       specs.allowable_stacking_weight_kg, specs.racking_test_load_value_kg,
+		       maintenance.name AS maintenance_scheme_name,
+		       l.location_name, st.name AS survey_type_name,
 		       ct.code AS container_type_code, ct.type_name AS container_type_name, ct.size AS container_size,
 		       a.id AS assignment_id
 		FROM assignment_containers ac
@@ -40,6 +48,12 @@ func (r Repository) assignedContainerTx(ctx context.Context, tx database.Tx, con
 		JOIN job_containers jc ON jc.id=ac.job_container_id AND jc.deleted_at IS NULL
 		JOIN job_orders jo ON jo.id=jc.job_order_id AND jo.deleted_at IS NULL
 		JOIN customers c ON c.id=jo.customer_id
+		LEFT JOIN customers owner ON owner.id=jo.owner_id
+		LEFT JOIN fitness_approval_categories category ON category.id=jo.approval_category_id
+		LEFT JOIN container_manufacturers job_manufacturer ON job_manufacturer.id=jo.manufacturer_id
+		LEFT JOIN container_technical_specs specs ON specs.job_container_id=jc.id
+		LEFT JOIN container_manufacturers spec_manufacturer ON spec_manufacturer.id=specs.manufacturer_id
+		LEFT JOIN maintenance_schemes maintenance ON maintenance.id=specs.maintenance_scheme_id
 		JOIN locations l ON l.id=jo.location_id
 		JOIN survey_types st ON st.id=jo.survey_type_id
 		LEFT JOIN container_types ct ON ct.id=jc.container_type_id
@@ -51,9 +65,11 @@ func (r Repository) assignedContainerTx(ctx context.Context, tx database.Tx, con
 		"id", "job_order_id", "container_no", "container_type_id", "iso_type_code", "seal_no",
 		"cargo_status", "gross_weight", "tare_weight", "payload", "manufacture_date",
 		"truck_no", "driver_name", "csc_plate_status", "csc_plate_number", "csc_approval_reference",
-		"csc_manufacture_date", "csc_next_examination_date", "csc_program_type", "status",
+		"csc_manufacture_date", "csc_next_examination_date", "csc_program_type", "check_digit_status", "check_digit_override_reason", "status",
 		"job_order_no", "spk_no", "customer_id", "location_id", "survey_type_id",
-		"customer_name", "location_name", "survey_type_name", "container_type_code",
+		"customer_name", "owner_name", "approval_category_name", "manufacturer_name", "manufacturer_serial_no", "type_model",
+		"cube_capacity_m3", "allowable_stacking_weight_kg", "racking_test_load_kg", "maintenance_scheme_name",
+		"location_name", "survey_type_name", "container_type_code",
 		"container_type_name", "container_size", "assignment_id",
 	})
 	if err != nil {
@@ -118,7 +134,7 @@ func surveyBaseQuery() string {
 		       jo.customer_id, jo.location_id, jo.instruction AS job_instruction,
 		       jo.deadline AS job_deadline, sgi.container_no, sgi.container_type_id, sgi.iso_type_code,
 		       jc.owner_code, jc.serial_number, jc.check_digit, jc.check_digit_status,
-		       COALESCE(sgi.manufacture_date,jc.manufacture_date) AS manufacture_date,
+		       DATE_FORMAT(COALESCE(sgi.manufacture_date,jc.manufacture_date),'%Y-%m-%d') AS manufacture_date,
 		       COALESCE(sgi.gross_weight,jc.gross_weight) AS gross_weight,
 		       COALESCE(sgi.tare_weight,jc.tare_weight) AS tare_weight,
 		       COALESCE(sgi.payload,jc.payload) AS payload,
@@ -126,10 +142,26 @@ func surveyBaseQuery() string {
 		       COALESCE(sgi.csc_plate_status_initial,jc.csc_plate_status) AS csc_plate_status,
 		       COALESCE(sgi.csc_plate_status_initial,jc.csc_plate_status) AS csc_plate_status_initial,
 		       COALESCE(sgi.csc_plate_number,jc.csc_plate_number) AS csc_plate_number,
+		       COALESCE(sgi.csc_plate_number,jc.csc_plate_number) AS csc_plate_number_initial,
+		       sgi.csc_plate_number_verified,
 		       COALESCE(sgi.csc_approval_reference,jc.csc_approval_reference) AS csc_approval_reference,
-		       COALESCE(sgi.csc_manufacture_date,jc.csc_manufacture_date) AS csc_manufacture_date,
-		       COALESCE(sgi.csc_next_examination_date,jc.csc_next_examination_date) AS csc_next_examination_date,
+		       COALESCE(sgi.csc_approval_reference,jc.csc_approval_reference) AS csc_approval_reference_initial,
+		       sgi.csc_approval_reference_verified,
+		       DATE_FORMAT(COALESCE(sgi.csc_manufacture_date,jc.csc_manufacture_date),'%Y-%m-%d') AS csc_manufacture_date,
+		       DATE_FORMAT(COALESCE(sgi.csc_manufacture_date,jc.csc_manufacture_date),'%Y-%m-%d') AS csc_manufacture_date_initial,
+		       sgi.csc_manufacture_date_verified,
+		       DATE_FORMAT(COALESCE(sgi.csc_next_examination_date,jc.csc_next_examination_date),'%Y-%m-%d') AS csc_next_examination_date,
+		       DATE_FORMAT(COALESCE(sgi.csc_next_examination_date,jc.csc_next_examination_date),'%Y-%m-%d') AS csc_next_examination_date_initial,
+		       sgi.csc_next_examination_date_verified,
 		       COALESCE(sgi.csc_program_type,jc.csc_program_type) AS csc_program_type,
+		       COALESCE(sgi.csc_program_type,jc.csc_program_type) AS csc_program_type_initial,
+		       sgi.csc_program_type_verified,
+		       sgi.owner_name_snapshot AS owner_name, sgi.approval_category_name_snapshot AS approval_category_name,
+		       sgi.manufacturer_name_snapshot AS manufacturer_name, sgi.manufacturer_serial_no_snapshot AS manufacturer_serial_no,
+		       sgi.type_model_snapshot AS type_model, sgi.cube_capacity_m3_snapshot AS cube_capacity_m3,
+		       sgi.allowable_stacking_weight_kg_snapshot AS allowable_stacking_weight_kg,
+		       sgi.racking_test_load_kg_snapshot AS racking_test_load_kg,
+		       sgi.maintenance_scheme_snapshot AS maintenance_scheme_name,
 		       c.customer_code, COALESCE(sgi.customer_name_snapshot,c.customer_name) AS customer_name,
 		       l.location_code, COALESCE(sgi.location_name_snapshot,l.location_name) AS location_name,
 		       st.code AS survey_type_code, COALESCE(sgi.survey_type_name_snapshot,st.name) AS survey_type_name,
@@ -675,6 +707,31 @@ func verificationMismatch(initial any, verified string) bool {
 	initialValue := normalizedVerificationValue(fmt.Sprint(initial))
 	verifiedValue := normalizedVerificationValue(verified)
 	return initialValue != "" && verifiedValue != "" && initialValue != verifiedValue
+}
+
+func verificationDateMismatch(initial any, verified *string) bool {
+	if verified == nil || strings.TrimSpace(*verified) == "" {
+		return false
+	}
+	initialValue := strings.TrimSpace(fmt.Sprint(initial))
+	if initialValue == "" || initialValue == "<nil>" {
+		return false
+	}
+	if len(initialValue) >= 10 {
+		initialValue = initialValue[:10]
+	}
+	return initialValue != strings.TrimSpace(*verified)
+}
+
+func parseOptionalSurveyDate(value *string) (*time.Time, error) {
+	if value == nil || strings.TrimSpace(*value) == "" {
+		return nil, nil
+	}
+	parsed, err := time.Parse("2006-01-02", strings.TrimSpace(*value))
+	if err != nil {
+		return nil, err
+	}
+	return &parsed, nil
 }
 
 func normalizedVerificationValue(value string) string {

@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"errors"
+	"mime"
 	"net/http"
 	"strconv"
 
@@ -23,10 +24,14 @@ func Register(v1 *gin.RouterGroup, authService *auth.Service, service *Service) 
 	v1.POST("/jobs", middleware.RequirePermission(authService, "jobs.create.all"), h.CreateJob)
 	v1.GET("/jobs/:id", middleware.RequirePermission(authService, "jobs.view.all"), h.GetJob)
 	v1.PUT("/jobs/:id", middleware.RequirePermission(authService, "jobs.update.all"), h.UpdateJob)
+	v1.POST("/jobs/:id/spk-attachment", middleware.RequirePermission(authService, "jobs.update.all"), h.UploadSPKAttachment)
+	v1.GET("/jobs/:id/spk-attachment", middleware.RequirePermission(authService, "jobs.view.all"), h.DownloadSPKAttachment)
 	v1.POST("/jobs/:id/cancel", middleware.RequirePermission(authService, "jobs.cancel.all"), h.CancelJob)
 	v1.GET("/jobs/:id/timeline", middleware.RequirePermission(authService, "jobs.view.all"), h.Timeline)
 	v1.GET("/jobs/:id/containers", middleware.RequirePermission(authService, "job_containers.view.all"), h.ListContainers)
+	v1.GET("/jobs/:id/inspection-readiness", middleware.RequirePermission(authService, "job_containers.view.all"), h.InspectionReadiness)
 	v1.POST("/jobs/:id/containers", middleware.RequirePermission(authService, "job_containers.create.all"), h.AddContainer)
+	v1.PUT("/job-containers/:id", middleware.RequirePermission(authService, "job_containers.update.all"), h.UpdateContainer)
 	v1.POST("/jobs/:id/containers/import", middleware.RequirePermission(authService, "job_containers.import.all"), h.ImportContainers)
 	v1.POST("/jobs/:id/containers/import/preview", middleware.RequirePermission(authService, "job_containers.import.all"), h.PreviewImport)
 	v1.POST("/jobs/:id/containers/import/confirm", middleware.RequirePermission(authService, "job_containers.import.all"), h.ConfirmImport)
@@ -122,6 +127,46 @@ func (h Handler) GetJob(c *gin.Context) {
 	}
 	apphttp.OK(c, "Job order berhasil diambil.", item)
 }
+
+func (h Handler) UploadSPKAttachment(c *gin.Context) {
+	id, ok := parseID(c)
+	if !ok {
+		return
+	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, h.service.MaxUploadBytes()+1024*1024)
+	file, err := c.FormFile("file")
+	if err != nil || file.Size <= 0 || file.Size > h.service.MaxUploadBytes() {
+		apphttp.Fail(c, http.StatusUnprocessableEntity, "Lampiran SPK wajib diisi dan tidak boleh melebihi batas unggah.", "VALIDATION_ERROR", nil)
+		return
+	}
+	opened, err := file.Open()
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	defer opened.Close()
+	item, err := h.service.UploadSPKAttachment(c.Request.Context(), id, opened, file.Filename, actorFromContext(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Lampiran SPK berhasil disimpan.", item)
+}
+
+func (h Handler) DownloadSPKAttachment(c *gin.Context) {
+	id, ok := parseID(c)
+	if !ok {
+		return
+	}
+	content, err := h.service.SPKAttachment(c.Request.Context(), id)
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	defer content.Reader.Close()
+	disposition := mime.FormatMediaType("attachment", map[string]string{"filename": content.FileName})
+	c.DataFromReader(http.StatusOK, content.Size, content.ContentType, content.Reader, map[string]string{"Content-Disposition": disposition})
+}
 func (h Handler) Timeline(c *gin.Context) {
 	id, ok := parseID(c)
 	if !ok {
@@ -194,6 +239,19 @@ func (h Handler) ListContainers(c *gin.Context) {
 	apphttp.Paginated(c, "Container berhasil diambil.", result.Rows, apphttp.PaginationMeta{Page: result.Meta.Page, PerPage: result.Meta.PerPage, Total: result.Meta.Total, TotalPages: result.Meta.TotalPages, HasNext: result.Meta.HasNext, HasPrev: result.Meta.HasPrev})
 }
 
+func (h Handler) InspectionReadiness(c *gin.Context) {
+	id, ok := parseID(c)
+	if !ok {
+		return
+	}
+	result, err := h.service.InspectionReadiness(c.Request.Context(), id)
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Inspection Readiness berhasil dievaluasi.", result)
+}
+
 func (h Handler) AddContainer(c *gin.Context) {
 	id, ok := parseID(c)
 	if !ok {
@@ -209,6 +267,23 @@ func (h Handler) AddContainer(c *gin.Context) {
 		return
 	}
 	apphttp.Created(c, "Container berhasil ditambahkan.", item)
+}
+
+func (h Handler) UpdateContainer(c *gin.Context) {
+	id, ok := parseID(c)
+	if !ok {
+		return
+	}
+	var input ContainerInput
+	if !bindJSON(c, &input) {
+		return
+	}
+	item, err := h.service.UpdateContainer(c.Request.Context(), id, input, actorFromContext(c))
+	if err != nil {
+		h.writeError(c, err)
+		return
+	}
+	apphttp.OK(c, "Draft peti kemas berhasil diperbarui.", item)
 }
 
 func (h Handler) ImportContainers(c *gin.Context) {

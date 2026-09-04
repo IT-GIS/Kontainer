@@ -41,6 +41,8 @@ func surveyBaseQuery() string {
 		       COALESCE(sgi.job_order_no_snapshot,jo.job_order_no) AS job_order_no,
 		       jo.customer_id, COALESCE(sgi.container_no,jc.container_no) AS container_no,
 		       COALESCE(sgi.customer_name_snapshot,c.customer_name) AS customer_name,
+		       sgi.owner_name_snapshot AS owner_name, sgi.approval_category_name_snapshot AS approval_category_name,
+		       sgi.manufacturer_name_snapshot AS manufacturer_name,
 		       COALESCE(sgi.location_name_snapshot,l.location_name) AS location_name,
 		       COALESCE(sgi.survey_type_name_snapshot,st.name) AS survey_type_name,
 		       sgi.container_type_id,
@@ -48,9 +50,12 @@ func surveyBaseQuery() string {
 		       COALESCE(sgi.container_type_name_snapshot,ct.type_name) AS container_type_name,
 		       COALESCE(sgi.container_size_snapshot,ct.size) AS container_size,
 		       sgi.iso_type_code, sgi.manufacture_date, sgi.gross_weight, sgi.tare_weight, sgi.payload,
-		       sgi.cargo_status_initial, sgi.csc_plate_status_initial, sgi.csc_plate_number,
-		       sgi.csc_approval_reference, sgi.csc_manufacture_date,
-		       sgi.csc_next_examination_date, sgi.csc_program_type,
+		       sgi.cargo_status_initial, sgi.csc_plate_status_initial,
+		       sgi.csc_plate_number AS csc_plate_number_initial, sgi.csc_plate_number_verified,
+		       sgi.csc_approval_reference AS csc_approval_reference_initial, sgi.csc_approval_reference_verified,
+		       sgi.csc_manufacture_date AS csc_manufacture_date_initial, sgi.csc_manufacture_date_verified,
+		       sgi.csc_next_examination_date AS csc_next_examination_date_initial, sgi.csc_next_examination_date_verified,
+		       sgi.csc_program_type AS csc_program_type_initial, sgi.csc_program_type_verified,
 		       sp.full_name AS surveyor_name
 		FROM surveys s
 		JOIN job_orders jo ON jo.id=s.job_order_id

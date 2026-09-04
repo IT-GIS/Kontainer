@@ -24,7 +24,7 @@ type ReadinessGate struct {
 func EvaluateReadinessTx(ctx context.Context, tx database.Tx, customerID, surveyTypeID uuid.UUID) (ReadinessGate, error) {
 	var profile, personnel, location, locationPICMapping, surveyType, containerType int
 	var checklistTemplate, checklistItem, inspectionReference, photoCategory int
-	var cedexLocation, cedexComponent, cedexDamage, cedexRepair, cedexMaterial, responsibility int
+	var cedexLocation, cedexComponent, cedexDamage, cedexRepair, cedexMaterial int
 	var decisionRuleRequired, decisionRule int
 	query := fmt.Sprintf(`
 		SELECT
@@ -57,7 +57,6 @@ func EvaluateReadinessTx(ctx context.Context, tx database.Tx, customerID, survey
 		  %s,
 		  %s,
 		  %s,
-		  %s,
 		  (SELECT COUNT(*) FROM cedex_damage_decision_rules rule WHERE %s)
 	`,
 		effectiveMasterCountSQL("cedex_locations", "x", "$1"),
@@ -65,14 +64,13 @@ func EvaluateReadinessTx(ctx context.Context, tx database.Tx, customerID, survey
 		effectiveMasterCountSQL("cedex_damages", "x", "$1"),
 		effectiveMasterCountSQL("cedex_repairs", "x", "$1"),
 		effectiveMasterCountSQL("cedex_materials", "x", "$1"),
-		effectiveMasterCountSQL("responsibility_codes", "x", "$1"),
 		effectiveMasterCountSQL("cedex_damages", "x", "$1", "x.requires_dimension=1"),
 		EffectiveDecisionRuleScopeSQL("rule", "$1"),
 	)
 	err := tx.QueryRow(ctx, query, customerID, surveyTypeID).Scan(
 		&profile, &personnel, &location, &locationPICMapping, &surveyType, &containerType,
 		&checklistTemplate, &checklistItem, &inspectionReference, &photoCategory,
-		&cedexLocation, &cedexComponent, &cedexDamage, &cedexRepair, &cedexMaterial, &responsibility,
+		&cedexLocation, &cedexComponent, &cedexDamage, &cedexRepair, &cedexMaterial,
 		&decisionRuleRequired, &decisionRule,
 	)
 	if err != nil {
@@ -100,7 +98,6 @@ func EvaluateReadinessTx(ctx context.Context, tx database.Tx, customerID, survey
 	add(cedexDamage, "CEDEX_DAMAGE", "CEDEX Damage aktif belum tersedia")
 	add(cedexRepair, "CEDEX_ACTION_REPAIR", "CEDEX Action/Repair aktif belum tersedia")
 	add(cedexMaterial, "CEDEX_MATERIAL", "CEDEX Material aktif belum tersedia")
-	add(responsibility, "RESPONSIBILITY_CODE", "Responsibility Code aktif belum tersedia")
 	if decisionRuleRequired > 0 {
 		add(decisionRule, "DECISION_RULE", "Decision Rule aktif belum tersedia untuk damage berdimensi")
 	}

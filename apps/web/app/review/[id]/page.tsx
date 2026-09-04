@@ -175,6 +175,8 @@ function Summary({ review }: { review: ReviewDetail }) {
     ["Container", review.container_no],
     ["Surveyor", review.surveyor_name],
     ["Survey Type", review.survey_type_name],
+	["Kategori Persetujuan", review.approval_category_name ?? "Belum tersedia"],
+	["Pemilik Sah Peti Kemas", review.owner_name ?? "Belum tersedia"],
     ["Recommendation", review.survey_result_recommendation ?? "-"],
     ["Damage Count", review.damages?.length ?? 0],
     ["Photo Count", review.photos?.length ?? 0]
@@ -185,8 +187,17 @@ function Summary({ review }: { review: ReviewDetail }) {
 function SurveySheetHeader({ review }: { review: ReviewDetail }) {
   const general = review.general_info ?? {};
   const mismatches = verificationMismatches(review.cargo_status_initial, stringValue(general.cargo_status), review.csc_plate_status_initial, stringValue(general.csc_plate_status));
+	for (const [label, initial, verified] of [
+	  ["CSC Plate Number", review.csc_plate_number_initial, stringValue(general.csc_plate_number_verified)],
+	  ["CSC Approval Reference", review.csc_approval_reference_initial, stringValue(general.csc_approval_reference_verified)],
+	  ["CSC Manufacture Date", dateValue(review.csc_manufacture_date_initial), dateValue(stringValue(general.csc_manufacture_date_verified))],
+	  ["CSC Next Examination", dateValue(review.csc_next_examination_date_initial), dateValue(stringValue(general.csc_next_examination_date_verified))],
+	  ["CSC Program Type", review.csc_program_type_initial, stringValue(general.csc_program_type_verified)]
+	] as const) if (isKnownMismatch(initial, verified)) mismatches.push(label);
   const rows: Array<{ label: string; value: React.ReactNode; source: SurveySheetFieldSource }> = [
     { label: "Customer / Client", value: review.customer_name, source: "Customer" },
+	{ label: "Pemilik Sah Peti Kemas", value: displayValue(review.owner_name), source: "Job" },
+	{ label: "Kategori Persetujuan", value: displayValue(review.approval_category_name), source: "Job" },
     { label: "Container Nbrs", value: review.container_no, source: "Peti Kemas" },
     { label: "Type of Survey", value: review.survey_type_name || "Belum tersedia", source: "Job" },
     { label: "Size", value: review.container_size ? `${review.container_size} feet` : "Belum tersedia", source: "Peti Kemas" },
@@ -196,8 +207,16 @@ function SurveySheetHeader({ review }: { review: ReviewDetail }) {
     { label: "Type", value: [review.container_type_code, review.container_type_name].filter(Boolean).join(" - ") || "Belum tersedia", source: "Peti Kemas" },
     { label: "CSC Plate Status Awal", value: humanizeValue(review.csc_plate_status_initial), source: "Peti Kemas" },
     { label: "CSC Plate Status Verifikasi", value: humanizeValue(stringValue(general.csc_plate_status)), source: "Surveyor" },
-    { label: "CSC Plate Number", value: displayValue(review.csc_plate_number), source: "Peti Kemas" },
-    { label: "CSC Program Type", value: displayValue(review.csc_program_type), source: "Peti Kemas" },
+	{ label: "CSC Plate Number Awal", value: displayValue(review.csc_plate_number_initial ?? review.csc_plate_number), source: "Peti Kemas" },
+	{ label: "CSC Plate Number Verifikasi", value: displayValue(general.csc_plate_number_verified), source: "Surveyor" },
+	{ label: "CSC Approval Reference Awal", value: displayValue(review.csc_approval_reference_initial ?? review.csc_approval_reference), source: "Peti Kemas" },
+	{ label: "CSC Approval Reference Verifikasi", value: displayValue(general.csc_approval_reference_verified), source: "Surveyor" },
+	{ label: "CSC Manufacture Date Awal", value: displayValue(review.csc_manufacture_date_initial ?? review.csc_manufacture_date), source: "Peti Kemas" },
+	{ label: "CSC Manufacture Date Verifikasi", value: displayValue(general.csc_manufacture_date_verified), source: "Surveyor" },
+	{ label: "CSC Next Examination Awal", value: displayValue(review.csc_next_examination_date_initial ?? review.csc_next_examination_date), source: "Peti Kemas" },
+	{ label: "CSC Next Examination Verifikasi", value: displayValue(general.csc_next_examination_date_verified), source: "Surveyor" },
+	{ label: "CSC Program Type Awal", value: displayValue(review.csc_program_type_initial ?? review.csc_program_type), source: "Peti Kemas" },
+	{ label: "CSC Program Type Verifikasi", value: displayValue(general.csc_program_type_verified), source: "Surveyor" },
     { label: "Payload", value: formatWeight(review.payload), source: "Peti Kemas" },
     { label: "Survey Location", value: displayValue(review.location_name), source: "Job" },
     { label: "Tare", value: formatWeight(review.tare_weight), source: "Peti Kemas" },
@@ -222,6 +241,7 @@ function canonicalValue(value: unknown, allowed: string[]) { const normalized = 
 function formatDateTime(value?: string | null) { if (!value) return "Belum tersedia"; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(date); }
 function verificationMismatches(cargoInitial?: string | null, cargoVerified?: string | null, cscInitial?: string | null, cscVerified?: string | null) { const result: string[] = []; if (isKnownMismatch(cargoInitial, cargoVerified)) result.push("Cargo Status"); if (isKnownMismatch(cscInitial, cscVerified)) result.push("CSC Plate Status"); return result; }
 function isKnownMismatch(initial?: string | null, verified?: string | null) { const normalize = (value?: string | null) => { const normalized = value?.trim().toLowerCase() ?? ""; return ["", "unknown", "not_checked"].includes(normalized) ? "" : normalized; }; const initialValue = normalize(initial); const verifiedValue = normalize(verified); return Boolean(initialValue && verifiedValue && initialValue !== verifiedValue); }
+function dateValue(value?: string | null) { return value ? value.slice(0, 10) : null; }
 
 function ObjectPanel({ data }: { data: Record<string, unknown> }) {
   return <section className="workspace-panel detail-grid">{Object.entries(data).filter(([key]) => !key.endsWith("_id")).map(([key, value]) => <div key={key}><span>{key.replaceAll("_", " ")}</span><strong>{String(value ?? "-")}</strong></div>)}</section>;

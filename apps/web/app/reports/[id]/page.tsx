@@ -57,6 +57,8 @@ function ReportDetailContent() {
       <div><span>Nomor Survey</span><strong>{report.survey_no}</strong></div>
       <div><span>Nomor Pekerjaan</span><strong>{report.job_order_no}</strong></div>
       <div><span>Customer</span><strong>{report.customer_name}</strong></div>
+	  <div><span>Kategori Persetujuan</span><strong>{report.approval_category_name ?? "Belum tersedia"}</strong></div>
+	  <div><span>Pemilik Sah Peti Kemas</span><strong>{report.owner_name ?? "Belum tersedia"}</strong></div>
       <div><span>Peti Kemas</span><strong>{report.container_no}</strong></div>
       <div><span>Hasil Review</span><strong>{report.survey_result ? humanize(report.survey_result) : "Belum tersedia"}</strong></div>
       <div><span>Jenis Dokumen</span><strong>{humanize(report.report_type)}</strong></div>
@@ -123,8 +125,17 @@ function ReportDetailContent() {
 
 function SurveySheetReportHeader({ report }: { report: ReportDetail }) {
   const mismatches = verificationMismatches(report.cargo_status_initial, report.cargo_status_verified, report.csc_plate_status_initial, report.csc_plate_status_verified);
+	for (const [label, initial, verified] of [
+	  ["CSC Plate Number", report.csc_plate_number_initial, report.csc_plate_number_verified],
+	  ["CSC Approval Reference", report.csc_approval_reference_initial, report.csc_approval_reference_verified],
+	  ["CSC Manufacture Date", dateValue(report.csc_manufacture_date_initial), dateValue(report.csc_manufacture_date_verified)],
+	  ["CSC Next Examination", dateValue(report.csc_next_examination_date_initial), dateValue(report.csc_next_examination_date_verified)],
+	  ["CSC Program Type", report.csc_program_type_initial, report.csc_program_type_verified]
+	] as const) if (isKnownMismatch(initial, verified)) mismatches.push(label);
   const rows: Array<{ label: string; value: string; source: SurveySheetFieldSource }> = [
     { label: "Customer / Client", value: report.customer_name, source: "Customer" },
+	{ label: "Pemilik Sah Peti Kemas", value: displayValue(report.owner_name), source: "Job" },
+	{ label: "Kategori Persetujuan", value: displayValue(report.approval_category_name), source: "Job" },
     { label: "Container Nbrs", value: report.container_no, source: "Peti Kemas" },
     { label: "Type of Survey", value: displayValue(report.survey_type_name), source: "Job" },
     { label: "Size", value: report.container_size ? `${report.container_size} feet` : "Belum tersedia", source: "Peti Kemas" },
@@ -134,8 +145,16 @@ function SurveySheetReportHeader({ report }: { report: ReportDetail }) {
     { label: "Type", value: [report.container_type_code, report.container_type_name].filter(Boolean).join(" - ") || "Belum tersedia", source: "Peti Kemas" },
     { label: "CSC Plate Status Awal", value: humanizeValue(report.csc_plate_status_initial), source: "Peti Kemas" },
     { label: "CSC Plate Status Verifikasi", value: humanizeValue(report.csc_plate_status_verified), source: "Surveyor" },
-    { label: "CSC Plate Number", value: displayValue(report.csc_plate_number), source: "Peti Kemas" },
-    { label: "CSC Program Type", value: displayValue(report.csc_program_type), source: "Peti Kemas" },
+	{ label: "CSC Plate Number Awal", value: displayValue(report.csc_plate_number_initial ?? report.csc_plate_number), source: "Peti Kemas" },
+	{ label: "CSC Plate Number Verifikasi", value: displayValue(report.csc_plate_number_verified), source: "Surveyor" },
+	{ label: "CSC Approval Reference Awal", value: displayValue(report.csc_approval_reference_initial ?? report.csc_approval_reference), source: "Peti Kemas" },
+	{ label: "CSC Approval Reference Verifikasi", value: displayValue(report.csc_approval_reference_verified), source: "Surveyor" },
+	{ label: "CSC Manufacture Date Awal", value: displayValue(report.csc_manufacture_date_initial ?? report.csc_manufacture_date), source: "Peti Kemas" },
+	{ label: "CSC Manufacture Date Verifikasi", value: displayValue(report.csc_manufacture_date_verified), source: "Surveyor" },
+	{ label: "CSC Next Examination Awal", value: displayValue(report.csc_next_examination_date_initial ?? report.csc_next_examination_date), source: "Peti Kemas" },
+	{ label: "CSC Next Examination Verifikasi", value: displayValue(report.csc_next_examination_date_verified), source: "Surveyor" },
+	{ label: "CSC Program Type Awal", value: displayValue(report.csc_program_type_initial ?? report.csc_program_type), source: "Peti Kemas" },
+	{ label: "CSC Program Type Verifikasi", value: displayValue(report.csc_program_type_verified), source: "Surveyor" },
     { label: "Payload", value: formatWeight(report.payload), source: "Peti Kemas" },
     { label: "Survey Location", value: displayValue(report.location_name), source: "Job" },
     { label: "Tare", value: formatWeight(report.tare_weight), source: "Peti Kemas" },
@@ -157,6 +176,7 @@ function formatWeight(value?: number | null) { return value == null ? "Belum ter
 function humanizeValue(value?: string | null) { return value ? value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) : "Belum tersedia"; }
 function canonicalValue(value: unknown, allowed: string[]) { const normalized = typeof value === "string" ? value.toUpperCase() : ""; return normalized && allowed.includes(normalized) ? normalized : "Belum diisi"; }
 function humanize(value: string) { return value.replaceAll("_", " ").replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
+function dateValue(value?: string | null) { return value ? value.slice(0, 10) : null; }
 function checklistResult(row: Record<string, unknown>) { if (row.numeric_value != null) return `${String(row.numeric_value)}${row.unit ? ` ${String(row.unit)}` : ""}`; return String(row.value ?? "-").toUpperCase(); }
 function verificationMismatches(cargoInitial?: string | null, cargoVerified?: string | null, cscInitial?: string | null, cscVerified?: string | null) { const result: string[] = []; if (isKnownMismatch(cargoInitial, cargoVerified)) result.push("Cargo Status"); if (isKnownMismatch(cscInitial, cscVerified)) result.push("CSC Plate Status"); return result; }
 function isKnownMismatch(initial?: string | null, verified?: string | null) { const normalize = (value?: string | null) => { const normalized = value?.trim().toLowerCase() ?? ""; return ["", "unknown", "not_checked"].includes(normalized) ? "" : normalized; }; const initialValue = normalize(initial); const verifiedValue = normalize(verified); return Boolean(initialValue && verifiedValue && initialValue !== verifiedValue); }

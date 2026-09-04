@@ -559,6 +559,8 @@ function JobSummaryTab({ survey }: { survey: SurveyDetail }) {
   return <section className="workspace-panel"><div className="detail-grid">
     <div><span>Nomor Job/SPK</span><strong>{survey.job_order_no}{survey.spk_no ? ` / ${survey.spk_no}` : ""}</strong></div>
     <div><span>Customer</span><strong>{survey.customer_name}</strong></div>
+	<div><span>Kategori Persetujuan</span><strong>{survey.approval_category_name ?? "Belum tersedia"}</strong></div>
+	<div><span>Pemilik Sah Peti Kemas</span><strong>{survey.owner_name ?? "Belum tersedia"}</strong></div>
     <div><span>Lokasi pemeriksaan</span><strong>{survey.location_name}</strong></div>
     <div><span>PIC Customer</span><strong>{survey.pic_customer_name ?? "-"}{survey.pic_customer_phone ? ` / ${survey.pic_customer_phone}` : ""}</strong></div>
     <div><span>Tanggal / jadwal</span><strong>{survey.spk_date ?? survey.job_deadline ?? survey.assignment_due_at ?? "-"}</strong></div>
@@ -582,6 +584,8 @@ function SurveySheetSummary({ survey }: { survey: SurveyDetail }) {
     { label: "Type", value: [survey.container_type_code, survey.container_type_name].filter(Boolean).join(" - ") || "Belum tersedia", source: "Peti Kemas" },
     { label: "CSC Plate", value: formatCSCPlate(survey), source: "Peti Kemas" },
     { label: "CSC Program Type", value: survey.csc_program_type ?? "Belum tersedia", source: "Peti Kemas" },
+	{ label: "Manufacturer", value: survey.manufacturer_name ?? "Belum tersedia", source: "Peti Kemas" },
+	{ label: "Cube Capacity", value: survey.cube_capacity_m3 == null ? "Belum tersedia" : `${survey.cube_capacity_m3} m3`, source: "Peti Kemas" },
     { label: "Payload", value: formatWeight(survey.payload), source: "Peti Kemas" },
     { label: "Survey Location", value: survey.location_name || "Belum tersedia", source: "Job" },
     { label: "Tare", value: formatWeight(survey.tare_weight), source: "Peti Kemas" },
@@ -643,17 +647,21 @@ function IdentityTab({ survey, general, readonly, isSaving, onChange, onSave }: 
       <SurveySheetHeaderField label="Size" value={survey.container_size ? `${survey.container_size} feet` : "Belum tersedia"} source="Peti Kemas" />
       <SurveySheetHeaderField label="ISO Type" value={survey.iso_type_code ?? "Belum tersedia"} source="Peti Kemas" />
       <SurveySheetHeaderField label="Manufacture" value={survey.manufacture_date ?? "Belum tersedia"} source="Peti Kemas" />
-      <SurveySheetHeaderField label="Owner / Operator" value={survey.owner_code ?? "Belum tersedia"} source="Peti Kemas" />
+	  <SurveySheetHeaderField label="Pemilik Sah Peti Kemas" value={survey.owner_name ?? "Belum tersedia"} source="Job" />
+	  <SurveySheetHeaderField label="Owner Code / Prefix" value={survey.owner_code ?? "Belum tersedia"} source="Peti Kemas" />
+	  <SurveySheetHeaderField label="Manufacturer" value={survey.manufacturer_name ?? "Belum tersedia"} source="Peti Kemas" />
+	  <SurveySheetHeaderField label="Manufacturer Serial Number" value={survey.manufacturer_serial_no ?? "Belum tersedia"} source="Peti Kemas" />
+	  <SurveySheetHeaderField label="Type / Model" value={survey.type_model ?? "Belum tersedia"} source="Peti Kemas" />
       <SurveySheetHeaderField label="Cargo Status Awal" value={formatCargoStatus(survey.cargo_status_initial)} source="Peti Kemas" />
-      <SurveySheetHeaderField label="Gross Weight" value={formatWeight(survey.gross_weight)} source="Peti Kemas" />
+	  <SurveySheetHeaderField label="Maximum Operating Gross Mass (CSC)" value={formatWeight(survey.gross_weight)} source="Peti Kemas" />
       <SurveySheetHeaderField label="Tare" value={formatWeight(survey.tare_weight)} source="Peti Kemas" />
       <SurveySheetHeaderField label="Payload" value={formatWeight(survey.payload)} source="Peti Kemas" />
       <SurveySheetHeaderField label="CSC Plate Status Awal" value={humanizeSurveyValue(survey.csc_plate_status_initial)} source="Peti Kemas" />
-      <SurveySheetHeaderField label="CSC Plate Number" value={survey.csc_plate_number ?? "Belum tersedia"} source="Peti Kemas" />
-      <SurveySheetHeaderField label="CSC Approval Reference" value={survey.csc_approval_reference ?? "Belum tersedia"} source="Peti Kemas" />
-      <SurveySheetHeaderField label="CSC Manufacture Date" value={survey.csc_manufacture_date ?? "Belum tersedia"} source="Peti Kemas" />
-      <SurveySheetHeaderField label="CSC Next Examination" value={survey.csc_next_examination_date ?? "Belum tersedia"} source="Peti Kemas" />
-      <SurveySheetHeaderField label="CSC Program Type" value={survey.csc_program_type ?? "Belum tersedia"} source="Peti Kemas" />
+	  <SurveySheetHeaderField label="CSC Plate Number Awal" value={survey.csc_plate_number_initial ?? survey.csc_plate_number ?? "Belum tersedia"} source="Peti Kemas" />
+	  <SurveySheetHeaderField label="CSC Approval Reference Awal" value={survey.csc_approval_reference_initial ?? survey.csc_approval_reference ?? "Belum tersedia"} source="Peti Kemas" />
+	  <SurveySheetHeaderField label="CSC Manufacture Date Awal" value={survey.csc_manufacture_date_initial ?? survey.csc_manufacture_date ?? "Belum tersedia"} source="Peti Kemas" />
+	  <SurveySheetHeaderField label="CSC Next Examination Awal" value={survey.csc_next_examination_date_initial ?? survey.csc_next_examination_date ?? "Belum tersedia"} source="Peti Kemas" />
+	  <SurveySheetHeaderField label="CSC Program Type Awal" value={survey.csc_program_type_initial ?? survey.csc_program_type ?? "Belum tersedia"} source="Peti Kemas" />
       <SurveySheetHeaderField label="Container Type" value={[survey.container_type_code, survey.container_type_name].filter(Boolean).join(" - ") || "Belum tersedia"} source="Peti Kemas" />
       <SurveySheetHeaderField label="Date of Survey" value={formatSurveyDate(survey.started_at)} source="Sistem" />
     </div>
@@ -667,6 +675,11 @@ function IdentityTab({ survey, general, readonly, isSaving, onChange, onSave }: 
     <Field label="Driver Name"><input disabled={readonly} value={general.driver_name ?? ""} onChange={(e) => onChange({ ...general, driver_name: e.target.value })} /></Field>
     <Field label="Chassis No"><input disabled={readonly} value={general.chassis_no ?? ""} onChange={(e) => onChange({ ...general, chassis_no: e.target.value })} /></Field>
     <Field label="CSC Plate Status Verifikasi"><select disabled={readonly} value={general.csc_plate_status ?? ""} onChange={(e) => onChange({ ...general, csc_plate_status: e.target.value })}><option value="">Pilih hasil verifikasi</option><option value="available">Available</option><option value="missing">Missing</option><option value="damaged">Damaged</option><option value="not_checked">Not Checked</option></select></Field>
+	<Field label="CSC Plate Number Verifikasi"><input disabled={readonly} value={general.csc_plate_number_verified ?? ""} onChange={(e) => onChange({ ...general, csc_plate_number_verified: e.target.value })} /></Field>
+	<Field label="CSC Approval Reference Verifikasi"><input disabled={readonly} value={general.csc_approval_reference_verified ?? ""} onChange={(e) => onChange({ ...general, csc_approval_reference_verified: e.target.value })} /></Field>
+	<Field label="CSC Manufacture Date Verifikasi"><input disabled={readonly} type="date" value={dateInputValue(general.csc_manufacture_date_verified)} onChange={(e) => onChange({ ...general, csc_manufacture_date_verified: e.target.value || null })} /></Field>
+	<Field label="CSC Next Examination Verifikasi"><input disabled={readonly} min={dateInputValue(general.csc_manufacture_date_verified) || undefined} type="date" value={dateInputValue(general.csc_next_examination_date_verified)} onChange={(e) => onChange({ ...general, csc_next_examination_date_verified: e.target.value || null })} /></Field>
+	<Field label="CSC Program Type Verifikasi"><input disabled={readonly} value={general.csc_program_type_verified ?? ""} onChange={(e) => onChange({ ...general, csc_program_type_verified: e.target.value })} /></Field>
     <Field label="Door Status"><input disabled={readonly} value={general.door_status ?? ""} onChange={(e) => onChange({ ...general, door_status: e.target.value })} /></Field>
     <Field label="Condition (DMG / AVL / AR)"><select disabled={readonly} value={general.general_condition ?? ""} onChange={(e) => onChange({ ...general, general_condition: e.target.value })}><option value="">Pilih Condition</option><option value="DMG">DMG</option><option value="AVL">AVL</option><option value="AR">AR</option>{general.general_condition && !["DMG", "AVL", "AR"].includes(general.general_condition.toUpperCase()) ? <option value={general.general_condition}>Legacy: {general.general_condition}</option> : null}</select></Field>
     <Field label="Cleanliness (DTY / CTM)"><select disabled={readonly} value={general.cleanliness ?? ""} onChange={(e) => onChange({ ...general, cleanliness: e.target.value })}><option value="">Pilih Cleanliness</option><option value="DTY">DTY</option><option value="CTM">CTM</option></select></Field>
@@ -712,7 +725,16 @@ function verificationMismatches(survey: SurveyDetail, general: SurveyGeneralInfo
   const mismatches: string[] = [];
   if (isKnownMismatch(survey.cargo_status_initial, general.cargo_status)) mismatches.push("Cargo Status");
   if (isKnownMismatch(survey.csc_plate_status_initial, general.csc_plate_status)) mismatches.push("CSC Plate Status");
+	if (isKnownMismatch(survey.csc_plate_number_initial ?? survey.csc_plate_number, general.csc_plate_number_verified)) mismatches.push("CSC Plate Number");
+	if (isKnownMismatch(survey.csc_approval_reference_initial ?? survey.csc_approval_reference, general.csc_approval_reference_verified)) mismatches.push("CSC Approval Reference");
+	if (isKnownMismatch(dateInputValue(survey.csc_manufacture_date_initial ?? survey.csc_manufacture_date), dateInputValue(general.csc_manufacture_date_verified))) mismatches.push("CSC Manufacture Date");
+	if (isKnownMismatch(dateInputValue(survey.csc_next_examination_date_initial ?? survey.csc_next_examination_date), dateInputValue(general.csc_next_examination_date_verified))) mismatches.push("CSC Next Examination");
+	if (isKnownMismatch(survey.csc_program_type_initial ?? survey.csc_program_type, general.csc_program_type_verified)) mismatches.push("CSC Program Type");
   return mismatches;
+}
+
+function dateInputValue(value?: string | null) {
+	return value ? value.slice(0, 10) : "";
 }
 
 function isKnownMismatch(initial?: string | null, verified?: string | null) {

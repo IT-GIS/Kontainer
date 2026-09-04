@@ -27,6 +27,13 @@ export type JobDetail = JobSummary & {
   pic_customer_phone?: string | null;
   pic_customer_email?: string | null;
   reference_no?: string | null;
+	approval_category_id?: string | null;
+	approval_category_name?: string | null;
+	owner_id?: string | null;
+	owner_name?: string | null;
+	applicant_owner_relationship?: string | null;
+	manufacturer_id?: string | null;
+	manufacturer_name?: string | null;
   spk_no?: string | null;
   spk_date?: string | null;
   spk_file_id?: string | null;
@@ -38,6 +45,21 @@ export type JobDetail = JobSummary & {
   voyage?: string | null;
   trucking_company?: string | null;
   deadline?: string | null;
+	planned_inspection_date?: string | null;
+	special_notes?: string | null;
+	spk_file_name?: string | null;
+	spk_mime_type?: string | null;
+	spk_file_size?: number | null;
+};
+
+export type InspectionReadinessCheck = { code: string; label: string; ready: boolean };
+export type InspectionReadiness = {
+	job_id: string;
+	container_id: string;
+	container_no: string;
+	status: "BLOCKED" | "READY_WITH_WARNINGS" | "READY";
+	blockers: InspectionReadinessCheck[];
+	warnings: InspectionReadinessCheck[];
 };
 
 export type JobContainer = {
@@ -46,6 +68,7 @@ export type JobContainer = {
   check_digit_status: string;
   container_type_id?: string | null;
   container_type_code?: string | null;
+	container_size?: string | null;
   iso_type_code?: string | null;
   seal_no?: string | null;
   cargo_status: string;
@@ -62,6 +85,15 @@ export type JobContainer = {
 	csc_manufacture_date?: string | null;
 	csc_next_examination_date?: string | null;
 	csc_program_type?: string | null;
+	manufacturer_id?: string | null;
+	manufacturer_name?: string | null;
+	manufacturer_serial_no?: string | null;
+	type_model?: string | null;
+	cube_capacity_m3?: number | null;
+	allowable_stacking_weight_kg?: number | null;
+	racking_test_load_kg?: number | null;
+	maintenance_scheme_id?: string | null;
+	maintenance_scheme_name?: string | null;
 	container_number_input?: string | null;
 	container_check_digit_calculated?: string | null;
 	container_check_digit_valid?: boolean | null;
@@ -69,6 +101,7 @@ export type JobContainer = {
 	check_digit_override_at?: string | null;
   remark?: string | null;
   status: string;
+	inspection_readiness: InspectionReadiness;
 };
 
 export type AssignmentSummary = {

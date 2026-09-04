@@ -413,6 +413,8 @@ func (r Repository) ReportDetail(ctx context.Context, reportID uuid.UUID) (map[s
 		       s.id AS survey_id, s.survey_no, s.started_at, s.survey_result,
 		       COALESCE(sgi.container_no,jc.container_no) AS container_no,
 		       COALESCE(sgi.customer_name_snapshot,c.customer_name) AS customer_name,
+		       sgi.owner_name_snapshot AS owner_name, sgi.approval_category_name_snapshot AS approval_category_name,
+		       sgi.manufacturer_name_snapshot AS manufacturer_name,
 		       COALESCE(sgi.location_name_snapshot,l.location_name) AS location_name,
 		       COALESCE(sgi.survey_type_name_snapshot,st.name) AS survey_type_name,
 		       COALESCE(sgi.container_type_code_snapshot,ct.code) AS container_type_code,
@@ -421,8 +423,11 @@ func (r Repository) ReportDetail(ctx context.Context, reportID uuid.UUID) (map[s
 		       sgi.iso_type_code, sgi.manufacture_date, sgi.gross_weight, sgi.tare_weight, sgi.payload,
 		       sgi.cargo_status_initial, sgi.cargo_status AS cargo_status_verified,
 		       sgi.csc_plate_status_initial, sgi.csc_plate_status AS csc_plate_status_verified,
-		       sgi.csc_plate_number, sgi.csc_approval_reference, sgi.csc_manufacture_date,
-		       sgi.csc_next_examination_date, sgi.csc_program_type,
+		       sgi.csc_plate_number AS csc_plate_number_initial, sgi.csc_plate_number_verified,
+		       sgi.csc_approval_reference AS csc_approval_reference_initial, sgi.csc_approval_reference_verified,
+		       sgi.csc_manufacture_date AS csc_manufacture_date_initial, sgi.csc_manufacture_date_verified,
+		       sgi.csc_next_examination_date AS csc_next_examination_date_initial, sgi.csc_next_examination_date_verified,
+		       sgi.csc_program_type AS csc_program_type_initial, sgi.csc_program_type_verified,
 		       sgi.general_condition, sgi.cleanliness, sgi.general_remark
 		FROM reports r
 		JOIN surveys s ON s.id=r.survey_id

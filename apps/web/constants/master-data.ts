@@ -17,6 +17,7 @@ export type MasterField = {
   pattern?: string;
   maxLength?: number;
   uppercase?: boolean;
+	createHidden?: boolean;
 };
 
 export type MasterColumn = {
@@ -64,21 +65,24 @@ export const masterResources: Record<string, MasterResource> = {
     columns: [
       { key: "customer_code", label: "Code" },
       { key: "customer_name", label: "Customer" },
-      { key: "pic_name", label: "PIC" },
-      { key: "pic_phone", label: "Phone" },
+	  { key: "entity_type", label: "Bentuk Entitas" },
+	  { key: "country", label: "Negara" },
       { key: "status", label: "Status", type: "status" }
     ],
     fields: [
       { name: "customer_code", label: "Customer Code", required: true },
       { name: "customer_name", label: "Customer Name", required: true },
-      { name: "address", label: "Address", type: "textarea", nullable: true },
+	  { name: "entity_type", label: "Bentuk Entitas", type: "select", required: true, defaultValue: "business", options: [{ label: "Badan Usaha", value: "business" }, { label: "Perorangan", value: "individual" }] },
+	  { name: "address", label: "Alamat Utama", type: "textarea", required: true },
+	  { name: "country", label: "Negara", nullable: true },
       { name: "npwp", label: "NPWP", nullable: true },
-      { name: "pic_name", label: "PIC Name", nullable: true },
-      { name: "pic_phone", label: "PIC Phone", type: "tel", nullable: true, maxLength: 50 },
-      { name: "pic_email", label: "PIC Email", type: "email", nullable: true },
+	  { name: "pic_name", label: "Kontak Lama (Legacy, Opsional)", nullable: true, helpText: "PIC operasional utama dikelola pada tahap Lokasi & PIC." },
+	  { name: "pic_phone", label: "Telepon Kontak Lama", type: "tel", nullable: true, maxLength: 50 },
+	  { name: "pic_email", label: "Email Kontak Lama", type: "email", nullable: true },
       { name: "billing_address", label: "Billing Address", type: "textarea", nullable: true },
       { name: "payment_term_days", label: "Payment Term Days", type: "number", min: 0, step: 1, nullable: true },
-      statusField
+	  { name: "admin_notes", label: "Catatan Administratif", type: "textarea", nullable: true },
+	  { ...statusField, createHidden: true }
     ]
   },
   locations: {

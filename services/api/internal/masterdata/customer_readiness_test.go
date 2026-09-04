@@ -19,6 +19,16 @@ func TestCustomerReadinessRequiresActiveLocationPICMapping(t *testing.T) {
 	}
 }
 
+func TestCustomerReadinessRequiresAddress(t *testing.T) {
+	counts := completeCustomerReadinessCounts()
+	counts.address = ""
+
+	readiness := buildCustomerReadiness(counts)
+	if readinessCheckByKey(t, readiness, "profile").Ready || readiness.OverallReady {
+		t.Fatal("customer without an address must not be ready")
+	}
+}
+
 func TestCustomerReadinessExposesEffectiveCEDEXSource(t *testing.T) {
 	counts := completeCustomerReadinessCounts()
 	if source := buildCustomerReadiness(counts).CEDEXSource; source != "global" {
@@ -30,12 +40,24 @@ func TestCustomerReadinessExposesEffectiveCEDEXSource(t *testing.T) {
 	}
 }
 
+func TestCustomerReadinessDoesNotRequireLegacyResponsibilityCode(t *testing.T) {
+	readiness := buildCustomerReadiness(completeCustomerReadinessCounts())
+	for _, check := range readiness.Checks {
+		if check.Key == "responsibility" {
+			t.Fatal("legacy Responsibility Code must not be part of new-workflow readiness")
+		}
+	}
+	if !readiness.OverallReady {
+		t.Fatal("complete new-workflow configuration must be ready without Responsibility Code")
+	}
+}
+
 func completeCustomerReadinessCounts() customerReadinessCounts {
 	return customerReadinessCounts{
 		id: "customer-1", code: "CUST", name: "Customer", status: "active", address: "Jakarta",
 		personnel: 1, location: 1, locationPICMapping: 1, surveyType: 1, containerType: 1,
 		checklistTemplate: 1, checklistItem: 1, severityMapping: 1, testMapping: 1, photoMapping: 1,
-		cedexLocation: 1, cedexComponent: 1, cedexDamage: 1, cedexRepair: 1, cedexMaterial: 1, responsibility: 1,
+		cedexLocation: 1, cedexComponent: 1, cedexDamage: 1, cedexRepair: 1, cedexMaterial: 1,
 	}
 }
 

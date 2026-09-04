@@ -1,4 +1,4 @@
-import { PackagePlus, Send, Upload, UserRoundCheck } from "lucide-react";
+import { PackagePlus, Pencil, Send, Upload, UserRoundCheck } from "lucide-react";
 import Link from "next/link";
 import { PhotoEvidence } from "@/components/surveys/photo-evidence";
 import { DataTable } from "@/components/ui/data-table";
@@ -15,17 +15,23 @@ export function JobSummaryTab({ job, support }: { job: JobDetail; support: JobDe
   const rows: Array<[string, React.ReactNode]> = [
     ["Nomor Pekerjaan", job.job_order_no],
     ["Customer", job.customer?.customer_name ?? job.customer_name],
+	["Kategori Persetujuan", job.approval_category_name ?? "Belum tersedia"],
+	["Pemilik Sah Peti Kemas", job.owner_name ?? "Belum tersedia"],
+	["Hubungan Pemohon - Pemilik", humanizeStatus(job.applicant_owner_relationship ?? "belum tersedia")],
+	["Manufacturer Permohonan", job.manufacturer_name ?? "Belum tersedia"],
     ["Personel/PIC Customer", job.pic_customer_name ?? "Belum tersedia"],
     ["Location Pemeriksaan", job.location?.location_name ?? job.location_name],
     ["Survey Type", job.survey_type?.name ?? job.survey_type_name],
     ["Tanggal", formatDate(job.job_date)],
     ["Deadline", formatDateTime(job.deadline)],
+	["Rencana Tanggal Inspeksi", formatDate(job.planned_inspection_date)],
     ["Nomor SPK", job.spk_no ?? "Belum tersedia"],
     ["Tanggal SPK", formatDate(job.spk_date)],
-    ["Lampiran SPK", job.spk_file_id ? "Metadata file tersedia" : "Belum tersedia - penyimpanan objek belum diverifikasi"],
+	["Lampiran SPK", job.spk_file_id ? `${job.spk_file_name ?? "File tersedia"} (${formatBytes(job.spk_file_size)})` : "Belum tersedia"],
     ["Keterangan SPK", job.spk_notes ?? "Belum tersedia"],
     ["Prioritas", humanizeStatus(job.priority)],
     ["Instruksi", job.instruction ?? "Belum tersedia"],
+	["Catatan Khusus", job.special_notes ?? "Belum tersedia"],
     ["Status Pekerjaan", <StatusBadge key="status" tone={job.status === "cancelled" ? "danger" : "success"}>{jobStatusLabel(job.status)}</StatusBadge>],
     ["Progress Keseluruhan", `${progress}% (${completed}/${total} peti kemas selesai)`],
     ["Pembaruan Terakhir", formatDateTime(latestSupportUpdate(job, support))]
@@ -38,20 +44,24 @@ export function JobContainersTab({
   containers,
   selected,
   canAdd,
+	canUpdate,
   canImport,
   canAssign,
   onSelected,
   onAdd,
+	onEdit,
   onAssign
 }: {
   jobID: string;
   containers: JobContainer[];
   selected: string[];
   canAdd: boolean;
+	canUpdate: boolean;
   canImport: boolean;
   canAssign: boolean;
   onSelected: (ids: string[]) => void;
   onAdd: () => void;
+	onEdit: (container: JobContainer) => void;
   onAssign: () => void;
 }) {
   return <section className="workspace-panel job-tab-stack">
@@ -61,15 +71,17 @@ export function JobContainersTab({
       {canAssign && selected.length > 0 ? <button className="primary-button" onClick={onAssign} type="button"><Send size={17} /><span>Tugaskan {selected.length} Peti Kemas</span></button> : null}
     </div></div>
     <DataTable rows={containers} emptyText="Belum ada peti kemas pada pekerjaan ini." columns={[
-      { key: "select", header: "Pilih", render: (row) => <input aria-label={`Pilih peti kemas ${row.container_no}`} type="checkbox" checked={selected.includes(row.id)} onChange={(event) => onSelected(event.target.checked ? [...selected, row.id] : selected.filter((id) => id !== row.id))} /> },
+	  { key: "select", header: "Pilih", render: (row) => <input aria-label={`Pilih peti kemas ${row.container_no}`} disabled={row.inspection_readiness?.status === "BLOCKED"} title={row.inspection_readiness?.status === "BLOCKED" ? "Lengkapi blocker Inspection Readiness sebelum assignment" : "Pilih untuk assignment"} type="checkbox" checked={selected.includes(row.id)} onChange={(event) => onSelected(event.target.checked ? [...selected, row.id] : selected.filter((id) => id !== row.id))} /> },
       { key: "container_no", header: "Nomor Peti Kemas", render: (row) => row.container_no },
       { key: "type", header: "Container / ISO Type", render: (row) => `${row.container_type_code ?? "-"} / ${row.iso_type_code ?? "-"}` },
       { key: "identity", header: "Seal / Cargo", render: (row) => `${row.seal_no ?? "-"} / ${humanizeStatus(row.cargo_status)}` },
-      { key: "weight", header: "Gross / Tare / Payload", render: (row) => `${row.gross_weight ?? "-"} / ${row.tare_weight ?? "-"} / ${row.payload ?? "-"}` },
+	  { key: "weight", header: "Max Gross CSC / Tare / Payload", render: (row) => `${row.gross_weight ?? "-"} / ${row.tare_weight ?? "-"} / ${row.payload ?? "-"}` },
       { key: "manufacture", header: "Pembuatan / CSC Plate", render: (row) => `${formatDate(row.manufacture_date)} / ${humanizeStatus(row.csc_plate_status ?? "belum tersedia")}` },
       { key: "vehicle", header: "Truck / Driver", render: (row) => `${row.truck_no ?? "-"} / ${row.driver_name ?? "-"}` },
-      { key: "remark", header: "Remark", render: (row) => row.remark ?? "-" },
-      { key: "status", header: "Status", render: (row) => <StatusBadge tone={containerTone(row.status)}>{surveyStatusLabel(row.status)}</StatusBadge> }
+	  { key: "readiness", header: "Inspection Readiness", render: (row) => <div className="page-stack"><StatusBadge tone={row.inspection_readiness?.status === "READY" ? "success" : row.inspection_readiness?.status === "READY_WITH_WARNINGS" ? "warning" : "danger"}>{humanizeStatus(row.inspection_readiness?.status ?? "blocked")}</StatusBadge>{row.inspection_readiness?.blockers?.length ? <small>{row.inspection_readiness.blockers.map((item) => item.label).join("; ")}</small> : row.inspection_readiness?.warnings?.length ? <small>Warning: {row.inspection_readiness.warnings.map((item) => item.label).join("; ")}</small> : null}</div> },
+	  { key: "remark", header: "Remark", render: (row) => row.remark ?? "-" },
+	  { key: "status", header: "Status", render: (row) => <StatusBadge tone={containerTone(row.status)}>{surveyStatusLabel(row.status)}</StatusBadge> },
+	  { key: "action", header: "Aksi", render: (row) => canUpdate && ["draft", "not_started", "unassigned"].includes(row.status) ? <button className="secondary-button table-action" onClick={() => onEdit(row)} type="button"><Pencil size={15} /><span>Lengkapi</span></button> : "-" }
     ]} />
   </section>;
 }
@@ -239,4 +251,10 @@ function formatDateTime(value?: string | null) {
 
 function humanize(value: string) {
   return value.replaceAll("_", " ").replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatBytes(value?: number | null) {
+	if (!value) return "ukuran belum tersedia";
+	if (value < 1024) return `${value} B`;
+	return `${(value / 1024 / 1024).toFixed(2)} MB`;
 }

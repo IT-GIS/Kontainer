@@ -4,10 +4,13 @@ var Resources = map[string]Resource{
 	"customers": {
 		Name: "customers", Table: "customers", CodeField: "customer_code", SoftDelete: true,
 		Fields: []Field{
-			{Name: "customer_code", Required: true}, {Name: "customer_name", Required: true}, {Name: "address", Nullable: true}, {Name: "npwp", Nullable: true},
-			{Name: "pic_name", Nullable: true}, {Name: "pic_phone", Nullable: true}, {Name: "pic_email", Type: "email", Nullable: true}, {Name: "billing_address", Nullable: true}, {Name: "payment_term_days", Nullable: true}, {Name: "status"},
+			{Name: "customer_code", Required: true}, {Name: "customer_name", Required: true},
+			{Name: "entity_type", Required: true, AllowedValues: []string{"business", "individual"}},
+			{Name: "address", Required: true}, {Name: "country", Nullable: true}, {Name: "npwp", Nullable: true},
+			{Name: "pic_name", Nullable: true}, {Name: "pic_phone", Nullable: true}, {Name: "pic_email", Type: "email", Nullable: true},
+			{Name: "billing_address", Nullable: true}, {Name: "payment_term_days", Nullable: true}, {Name: "admin_notes", Nullable: true}, {Name: "status"},
 		},
-		SearchColumns: []string{"customer_code", "customer_name", "pic_name", "pic_phone", "pic_email"},
+		SearchColumns: []string{"customer_code", "customer_name", "country", "pic_name", "pic_phone", "pic_email"},
 		Filters:       map[string]string{"status": "status"},
 		DefaultSort:   "customer_name",
 	},

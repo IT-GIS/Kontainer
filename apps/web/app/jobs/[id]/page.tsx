@@ -17,15 +17,16 @@ import {
 import { JobCreationStepper, type JobCreationStep } from "@/components/jobs/job-creation-stepper";
 import { AppShell } from "@/components/layout/app-shell";
 import { FormDialog } from "@/components/ui/form-dialog";
+import { FormSection } from "@/components/ui/form-section";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { NextActionCard } from "@/components/workflow/next-action-card";
 import { useAuth } from "@/hooks/use-auth";
-import { apiData, apiPaginated, buildQuery } from "@/lib/api-client";
+import { apiBlob, apiData, apiPaginated, buildQuery } from "@/lib/api-client";
 import { loadOptions } from "@/lib/options";
 import { can } from "@/lib/permissions";
 import type { ContainerTypeOption, JobDetailSupportingData } from "@/types/job-detail-workspace";
-import type { JobDetail, OptionItem } from "@/types/jobs";
+import type { JobContainer, JobDetail, OptionItem } from "@/types/jobs";
 import type { ReportSummary, ReportVersion, ReviewDetail } from "@/types/reviews";
 import type { SurveyListItem } from "@/types/surveys";
 
@@ -60,6 +61,13 @@ type ContainerForm = {
 	csc_manufacture_date: string;
 	csc_next_examination_date: string;
 	csc_program_type: string;
+	manufacturer_id: string;
+	manufacturer_serial_no: string;
+	type_model: string;
+	cube_capacity_m3: string;
+	allowable_stacking_weight_kg: string;
+	racking_test_load_kg: string;
+	maintenance_scheme_id: string;
   remark: string;
 };
 type ContainerCheck = { is_format_valid: boolean; is_check_digit_valid: boolean };
@@ -70,7 +78,8 @@ const emptyContainer: ContainerForm = {
   gross_weight: "", tare_weight: "", payload: "", manufacture_date: "", check_digit_override_reason: "",
 	truck_no: "", driver_name: "", csc_plate_status: "not_checked", csc_plate_number: "",
 	csc_approval_reference: "", csc_manufacture_date: "", csc_next_examination_date: "",
-	csc_program_type: "", remark: ""
+	csc_program_type: "", manufacturer_id: "", manufacturer_serial_no: "", type_model: "",
+	cube_capacity_m3: "", allowable_stacking_weight_kg: "", racking_test_load_kg: "", maintenance_scheme_id: "", remark: ""
 };
 const emptySupport: JobDetailSupportingData = { surveys: [], reviews: [], documents: [], versions: {} };
 
@@ -91,6 +100,7 @@ function JobDetailContent() {
 	const [readiness, setReadiness] = useState<CustomerReadiness | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [containerDialog, setContainerDialog] = useState(false);
+	const [editingContainerID, setEditingContainerID] = useState<string | null>(null);
   const [assignDialog, setAssignDialog] = useState(false);
   const [reassignDialog, setReassignDialog] = useState(false);
   const [containerForm, setContainerForm] = useState<ContainerForm>(emptyContainer);
@@ -104,17 +114,22 @@ function JobDetailContent() {
   const [containerTypes, setContainerTypes] = useState<ContainerTypeOption[]>([]);
   const [containerTypeSize, setContainerTypeSize] = useState("");
   const [surveyors, setSurveyors] = useState<OptionItem[]>([]);
+	const [manufacturers, setManufacturers] = useState<OptionItem[]>([]);
+	const [maintenanceSchemes, setMaintenanceSchemes] = useState<OptionItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+	const [spkFile, setSPKFile] = useState<File | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const assignmentOpened = useRef(false);
 
   const canAddContainer = can(user, "job_containers.create.all");
+	const canUpdateContainer = can(user, "job_containers.update.all");
   const canImport = can(user, "job_containers.import.all");
 	const canAssignPermission = can(user, "assignments.assign.all");
 	const canAssign = canAssignPermission && readiness?.overall_ready === true;
   const canReassign = can(user, "job_containers.reassign.all");
   const canViewReviews = can(user, "reviews.view.all");
   const canViewReports = can(user, "reports.view.all");
+	const canUpdateJob = can(user, "jobs.update.all");
 
   const loadSupportingData = useCallback(async (item: JobDetail) => {
     if (!accessToken) return;
@@ -175,6 +190,17 @@ function JobDetailContent() {
       .catch(() => setSupportWarning("Pilihan Surveyor GIFT tidak dapat dimuat."));
   }, [accessToken]);
 
+	useEffect(() => {
+	  if (!accessToken) return;
+	  Promise.all([
+		loadOptions(accessToken, "/fitness/master-data/manufacturers", "manufacturer_name", "manufacturer_code"),
+		loadOptions(accessToken, "/fitness/master-data/maintenance-schemes", "name", "code")
+	  ]).then(([manufacturerItems, maintenanceItems]) => {
+		setManufacturers(manufacturerItems);
+		setMaintenanceSchemes(maintenanceItems);
+	  }).catch(() => setSupportWarning("Pilihan Manufacturer atau Maintenance Scheme tidak dapat dimuat."));
+	}, [accessToken]);
+
   useEffect(() => {
     if (!accessToken || !job?.customer_id) return;
     apiPaginated<Record<string, unknown>>(
@@ -217,7 +243,7 @@ function JobDetailContent() {
     setError(null);
     try {
       if (!containerForm.container_no.trim()) throw new Error("Nomor peti kemas wajib diisi.");
-      for (const [label, value] of [["Gross Weight", containerForm.gross_weight], ["Tare Weight", containerForm.tare_weight], ["Payload", containerForm.payload]]) {
+	  for (const [label, value] of [["Maximum Operating Gross Mass (CSC)", containerForm.gross_weight], ["Tare Weight", containerForm.tare_weight], ["Payload", containerForm.payload], ["Cube Capacity", containerForm.cube_capacity_m3], ["Allowable Stacking Weight", containerForm.allowable_stacking_weight_kg], ["Racking Test Load", containerForm.racking_test_load_kg]]) {
         if (value !== "" && (!Number.isFinite(Number(value)) || Number(value) < 0)) throw new Error(`${label} tidak boleh negatif.`);
       }
       if (containerForm.manufacture_date && containerForm.manufacture_date > new Date().toISOString().slice(0, 10)) throw new Error("Tanggal pembuatan tidak boleh di masa depan.");
@@ -226,8 +252,9 @@ function JobDetailContent() {
       const validation = await apiData<ContainerCheck>("/job-containers/validate-container-no", { method: "POST", accessToken, body: JSON.stringify({ container_no: containerForm.container_no }) });
       if (!validation.is_format_valid) throw new Error("Format nomor peti kemas tidak valid.");
       if (!validation.is_check_digit_valid && !containerForm.check_digit_override_reason.trim()) throw new Error("Alasan override wajib diisi untuk check digit yang tidak valid.");
-      await apiData(`/jobs/${jobID}/containers`, { method: "POST", accessToken, body: JSON.stringify(containerPayload(containerForm)) });
+	  await apiData(editingContainerID ? `/job-containers/${editingContainerID}` : `/jobs/${jobID}/containers`, { method: editingContainerID ? "PUT" : "POST", accessToken, body: JSON.stringify(containerPayload(containerForm)) });
       setContainerDialog(false);
+	  setEditingContainerID(null);
       setContainerForm(emptyContainer);
       setContainerTypeSize("");
       await loadJob();
@@ -293,11 +320,71 @@ function JobDetailContent() {
     }
   }
 
+	async function uploadSPK() {
+	  if (!accessToken || !spkFile) return;
+	  setIsSubmitting(true);
+	  setError(null);
+	  try {
+		const data = new FormData();
+		data.append("file", spkFile);
+		await apiData(`/jobs/${jobID}/spk-attachment`, { method: "POST", accessToken, body: data });
+		setSPKFile(null);
+		await loadJob();
+	  } catch (cause) {
+		setError(cause instanceof Error ? cause.message : "Lampiran SPK gagal diunggah.");
+	  } finally {
+		setIsSubmitting(false);
+	  }
+	}
+
+	async function downloadSPK() {
+	  if (!accessToken || !job?.spk_file_id) return;
+	  try {
+		const blob = await apiBlob(`/jobs/${jobID}/spk-attachment`, { accessToken });
+		const url = URL.createObjectURL(blob);
+		const anchor = document.createElement("a");
+		anchor.href = url;
+		anchor.download = job.spk_file_name ?? "lampiran-spk";
+		anchor.click();
+		URL.revokeObjectURL(url);
+	  } catch (cause) {
+		setError(cause instanceof Error ? cause.message : "Lampiran SPK gagal diunduh.");
+	  }
+	}
+
   function selectContainerType(value: string) {
     const selected = containerTypes.find((item) => item.id === value);
     setContainerForm((current) => ({ ...current, container_type_id: value, iso_type_code: selected?.isoCode ?? "" }));
     setContainerTypeSize(selected?.size ?? "");
   }
+
+	function openContainerDialog() {
+	  setEditingContainerID(null);
+	  setContainerForm({ ...emptyContainer, manufacturer_id: job?.manufacturer_id || "" });
+	  setContainerTypeSize("");
+	  setContainerDialog(true);
+	}
+
+	function editContainer(container: JobContainer) {
+	  setEditingContainerID(container.id);
+	  setContainerTypeSize(container.container_size ?? "");
+	  setContainerForm({
+		container_no: container.container_number_input ?? container.container_no,
+		container_type_id: container.container_type_id ?? "", iso_type_code: container.iso_type_code ?? "",
+		seal_no: container.seal_no ?? "", cargo_status: container.cargo_status ?? "unknown",
+		gross_weight: numberInput(container.gross_weight), tare_weight: numberInput(container.tare_weight), payload: numberInput(container.payload),
+		manufacture_date: dateInput(container.manufacture_date), check_digit_override_reason: container.check_digit_override_reason ?? "",
+		truck_no: container.truck_no ?? "", driver_name: container.driver_name ?? "", csc_plate_status: container.csc_plate_status ?? "not_checked",
+		csc_plate_number: container.csc_plate_number ?? "", csc_approval_reference: container.csc_approval_reference ?? "",
+		csc_manufacture_date: dateInput(container.csc_manufacture_date), csc_next_examination_date: dateInput(container.csc_next_examination_date),
+		csc_program_type: container.csc_program_type ?? "", manufacturer_id: container.manufacturer_id ?? job?.manufacturer_id ?? "",
+		manufacturer_serial_no: container.manufacturer_serial_no ?? "", type_model: container.type_model ?? "",
+		cube_capacity_m3: numberInput(container.cube_capacity_m3), allowable_stacking_weight_kg: numberInput(container.allowable_stacking_weight_kg),
+		racking_test_load_kg: numberInput(container.racking_test_load_kg), maintenance_scheme_id: container.maintenance_scheme_id ?? "",
+		remark: container.remark ?? ""
+	  });
+	  setContainerDialog(true);
+	}
 
   if (isLoading && !job) return <div className="center-screen">Memuat detail pekerjaan...</div>;
   if (!job) return <div className="page-stack"><div className="alert alert-danger">{error ?? "Pekerjaan tidak ditemukan."}</div></div>;
@@ -335,15 +422,16 @@ function JobDetailContent() {
       <JobProgressSummary job={job} support={support} />
       {error ? <div className="alert alert-danger">{error}</div> : null}
       {supportWarning ? <div className="alert alert-warning">{supportWarning}</div> : null}
+	  {searchParams.get("spk") === "retry" ? <div className="alert alert-warning">Job sudah tersimpan, tetapi lampiran SPK belum berhasil diunggah. Pilih file kembali pada Ringkasan tanpa membuat Job baru.</div> : null}
 	  {readiness?.overall_ready === false ? <div className="alert alert-danger"><div><strong>Assignment diblokir: Customer belum siap.</strong><p>Lengkapi: {readiness.checks.filter((item) => !item.ready).map((item) => item.label).join(", ")}.</p><Link className="secondary-button" href={`/master/customers/customer/${job.customer_id}?tab=readiness`}>Lengkapi Customer</Link></div></div> : null}
       {showConfirmation ? <JobConfirmationPanel job={job} readinessReady={readiness?.overall_ready === true} onFinish={() => { setShowConfirmation(false); setActiveTab("progress"); }} /> : null}
-      {!showConfirmation && containers.length === 0 ? <NextActionCard title="Job tersimpan" description="Tambahkan peti kemas pada Job yang sama. Sistem tidak membuat Job kedua." actionLabel="Tambah Peti Kemas" onClick={() => { setActiveTab("peti-kemas"); setContainerDialog(true); }} /> : null}
+	  {!showConfirmation && containers.length === 0 ? <NextActionCard title="Job tersimpan" description="Tambahkan peti kemas pada Job yang sama. Sistem tidak membuat Job kedua." actionLabel="Tambah Peti Kemas" onClick={() => { setActiveTab("peti-kemas"); openContainerDialog(); }} /> : null}
       {!showConfirmation && containers.length > 0 && assignments.length === 0 ? <NextActionCard title="Peti kemas tersedia" description="Pilih peti kemas pada tab Peti Kemas; tombol assignment akan langsung muncul." actionLabel="Pilih & Tugaskan Surveyor" onClick={() => setActiveTab("peti-kemas")} /> : null}
       {!showConfirmation && assignments.length > 0 ? <NextActionCard title="Assignment sukses" description="Pantau tiap peti kemas tanpa mengubah hasil teknis Surveyor." actionLabel="Lihat Progress" onClick={() => setActiveTab("progress")} /> : null}
       <div aria-label="Tab detail pekerjaan" className="tab-list" role="tablist">{tabs.map((tab) => <button aria-controls={`panel-${tab.id}`} aria-selected={activeTab === tab.id} className={activeTab === tab.id ? "tab-active" : ""} id={`tab-${tab.id}`} key={tab.id} onClick={() => setActiveTab(tab.id)} role="tab" type="button">{tab.label}</button>)}</div>
 
-      <TabPanel active={activeTab === "ringkasan"} id="ringkasan"><JobSummaryTab job={job} support={support} /></TabPanel>
-      <TabPanel active={activeTab === "peti-kemas"} id="peti-kemas"><JobContainersTab jobID={jobID} containers={containers} selected={selectedContainers} canAdd={canAddContainer} canImport={canImport} canAssign={canAssign} onSelected={setSelectedContainers} onAdd={() => setContainerDialog(true)} onAssign={() => setAssignDialog(true)} /></TabPanel>
+	  <TabPanel active={activeTab === "ringkasan"} id="ringkasan"><div className="page-stack"><JobSummaryTab job={job} support={support} /><section className="workspace-panel"><div className="section-title-row"><div><h2>Lampiran SPK</h2><p className="muted-text">PDF/JPG/PNG administrasi; bukan bukti inspeksi.</p></div>{job.spk_file_id ? <button className="secondary-button" onClick={() => void downloadSPK()} type="button">Unduh Lampiran</button> : null}</div>{canUpdateJob ? <div className="job-actions"><input accept="application/pdf,image/jpeg,image/png" aria-label="Pilih lampiran SPK" type="file" onChange={(event) => setSPKFile(event.target.files?.[0] ?? null)} /><button className="primary-button" disabled={!spkFile || isSubmitting} onClick={() => void uploadSPK()} type="button">{job.spk_file_id ? "Ganti Lampiran" : "Unggah Lampiran"}</button></div> : null}</section></div></TabPanel>
+	  <TabPanel active={activeTab === "peti-kemas"} id="peti-kemas"><JobContainersTab jobID={jobID} containers={containers} selected={selectedContainers} canAdd={canAddContainer} canUpdate={canUpdateContainer} canImport={canImport} canAssign={canAssign} onSelected={setSelectedContainers} onAdd={openContainerDialog} onEdit={editContainer} onAssign={() => setAssignDialog(true)} /></TabPanel>
       <TabPanel active={activeTab === "penugasan"} id="penugasan"><JobAssignmentTab assignments={job.assignments ?? []} selectedCount={selectedContainers.length} canAssign={canAssign} canReassign={canReassign} onAssign={() => setAssignDialog(true)} onReassign={() => setReassignDialog(true)} /></TabPanel>
       <TabPanel active={activeTab === "progress"} id="progress"><JobProgressTab containers={job.containers ?? []} support={support} /></TabPanel>
       <TabPanel active={activeTab === "hasil-survey"} id="hasil-survey"><JobSurveyResultsTab support={support} /></TabPanel>
@@ -351,29 +439,46 @@ function JobDetailContent() {
       <TabPanel active={activeTab === "dokumen"} id="dokumen"><JobDocumentsTab support={support} /></TabPanel>
       <TabPanel active={activeTab === "riwayat"} id="riwayat"><JobHistoryTab rows={job.timeline ?? []} /></TabPanel>
 
-      <FormDialog title="Tambah Peti Kemas" open={containerDialog} onClose={() => setContainerDialog(false)} onSubmit={addContainer} isSubmitting={isSubmitting} submitLabel="Tambah">
-        <div className="form-grid">
-          <Field label="Nomor Peti Kemas"><input value={containerForm.container_no} onChange={(event) => updateContainer(setContainerForm, "container_no", event.target.value.toUpperCase())} /></Field>
-          <Field label="Container Type"><select value={containerForm.container_type_id} onChange={(event) => selectContainerType(event.target.value)}><option value="">Pilih Container Type</option>{containerTypes.map((item) => <option key={item.id} value={item.id}>{item.code} - {item.label}</option>)}</select></Field>
-          <Field label="ISO Type"><input readOnly value={containerForm.iso_type_code} placeholder="Otomatis dari Container Type" /></Field>
-          <Field label="Size"><input readOnly value={containerTypeSize} placeholder="Otomatis dari Container Type" /></Field>
-          <Field label="Seal Number"><input value={containerForm.seal_no} onChange={(event) => updateContainer(setContainerForm, "seal_no", event.target.value)} /></Field>
-          <Field label="Cargo Status"><select value={containerForm.cargo_status} onChange={(event) => updateContainer(setContainerForm, "cargo_status", event.target.value)}><option value="unknown">Unknown</option><option value="empty">Empty</option><option value="laden">Laden</option></select></Field>
-          <Field label="Gross Weight"><input min="0" step="0.01" type="number" value={containerForm.gross_weight} onChange={(event) => updateContainer(setContainerForm, "gross_weight", event.target.value)} /></Field>
-          <Field label="Tare Weight"><input min="0" step="0.01" type="number" value={containerForm.tare_weight} onChange={(event) => updateContainer(setContainerForm, "tare_weight", event.target.value)} /></Field>
-          <Field label="Payload"><input min="0" step="0.01" type="number" value={containerForm.payload} onChange={(event) => updateContainer(setContainerForm, "payload", event.target.value)} /></Field>
-          <Field label="Tanggal Pembuatan"><input type="date" value={containerForm.manufacture_date} onChange={(event) => updateContainer(setContainerForm, "manufacture_date", event.target.value)} /></Field>
-          <Field label="CSC Plate Status"><select value={containerForm.csc_plate_status} onChange={(event) => updateContainer(setContainerForm, "csc_plate_status", event.target.value)}><option value="not_checked">Not Checked</option><option value="available">Available</option><option value="missing">Missing</option><option value="damaged">Damaged</option></select></Field>
+	  <FormDialog title={editingContainerID ? "Lengkapi Draft Peti Kemas" : "Tambah Peti Kemas"} description="Draft dapat disimpan dengan nomor saja; readiness teknis harus terpenuhi sebelum assignment." open={containerDialog} onClose={() => { setContainerDialog(false); setEditingContainerID(null); }} onSubmit={addContainer} isSubmitting={isSubmitting} submitLabel={editingContainerID ? "Simpan Perubahan" : "Simpan Draft Peti Kemas"} size="large">
+		<div className="page-stack">
+		<FormSection title="Identitas Peti Kemas" description="Nomor peti kemas adalah satu-satunya data minimum untuk menyimpan draft.">
+		  <Field label="Nomor Peti Kemas"><input value={containerForm.container_no} onChange={(event) => updateContainer(setContainerForm, "container_no", event.target.value.toUpperCase())} /></Field>
+		  <Field label="Container Type"><select value={containerForm.container_type_id} onChange={(event) => selectContainerType(event.target.value)}><option value="">Belum dipilih (memblokir assignment)</option>{containerTypes.map((item) => <option key={item.id} value={item.id}>{item.code} - {item.label}</option>)}</select></Field>
+		  <Field label="ISO Type"><input readOnly value={containerForm.iso_type_code} placeholder="Otomatis dari Container Type" /></Field>
+		  <Field label="Size"><input readOnly value={containerTypeSize} placeholder="Otomatis dari Container Type" /></Field>
+		  <Field label="Seal Number"><input value={containerForm.seal_no} onChange={(event) => updateContainer(setContainerForm, "seal_no", event.target.value)} /></Field>
+		  <Field label="Cargo Status"><select value={containerForm.cargo_status} onChange={(event) => updateContainer(setContainerForm, "cargo_status", event.target.value)}><option value="unknown">Unknown</option><option value="empty">Empty</option><option value="laden">Laden</option></select></Field>
+		  <label className="field form-span-2"><span>Alasan Override Check Digit</span><textarea rows={2} value={containerForm.check_digit_override_reason} onChange={(event) => updateContainer(setContainerForm, "check_digit_override_reason", event.target.value)} /></label>
+		</FormSection>
+		<FormSection title="Data CSC Plate">
+		  <Field label="CSC Plate Status"><select value={containerForm.csc_plate_status} onChange={(event) => updateContainer(setContainerForm, "csc_plate_status", event.target.value)}><option value="not_checked">Not Checked</option><option value="available">Available</option><option value="missing">Missing</option><option value="damaged">Damaged</option></select></Field>
 		  <Field label="CSC Plate Number"><input value={containerForm.csc_plate_number} onChange={(event) => updateContainer(setContainerForm, "csc_plate_number", event.target.value)} /></Field>
 		  <Field label="CSC Approval Reference"><input value={containerForm.csc_approval_reference} onChange={(event) => updateContainer(setContainerForm, "csc_approval_reference", event.target.value)} /></Field>
 		  <Field label="CSC Manufacture Date"><input type="date" value={containerForm.csc_manufacture_date} onChange={(event) => updateContainer(setContainerForm, "csc_manufacture_date", event.target.value)} /></Field>
 		  <Field label="CSC Next Examination"><input min={containerForm.csc_manufacture_date || undefined} type="date" value={containerForm.csc_next_examination_date} onChange={(event) => updateContainer(setContainerForm, "csc_next_examination_date", event.target.value)} /></Field>
 		  <Field label="CSC Program Type"><input value={containerForm.csc_program_type} onChange={(event) => updateContainer(setContainerForm, "csc_program_type", event.target.value)} placeholder="Masukkan program CSC yang tertera" /></Field>
-          <Field label="Truck Number"><input value={containerForm.truck_no} onChange={(event) => updateContainer(setContainerForm, "truck_no", event.target.value)} /></Field>
-          <Field label="Driver"><input value={containerForm.driver_name} onChange={(event) => updateContainer(setContainerForm, "driver_name", event.target.value)} /></Field>
-          <label className="field form-span-2"><span>Alasan Override Check Digit</span><textarea rows={2} value={containerForm.check_digit_override_reason} onChange={(event) => updateContainer(setContainerForm, "check_digit_override_reason", event.target.value)} /></label>
-          <label className="field form-span-2"><span>Remark</span><textarea rows={3} value={containerForm.remark} onChange={(event) => updateContainer(setContainerForm, "remark", event.target.value)} /></label>
-        </div>
+		</FormSection>
+		<FormSection title="Berat dan Kapasitas">
+		  <Field label="Maximum Operating Gross Mass (CSC)"><input min="0" step="0.01" type="number" value={containerForm.gross_weight} onChange={(event) => updateContainer(setContainerForm, "gross_weight", event.target.value)} /></Field>
+		  <Field label="Tare Weight"><input min="0" step="0.01" type="number" value={containerForm.tare_weight} onChange={(event) => updateContainer(setContainerForm, "tare_weight", event.target.value)} /></Field>
+		  <Field label="Payload"><input min="0" step="0.01" type="number" value={containerForm.payload} onChange={(event) => updateContainer(setContainerForm, "payload", event.target.value)} /></Field>
+		  <Field label="Cube Capacity (m3)"><input min="0" step="0.001" type="number" value={containerForm.cube_capacity_m3} onChange={(event) => updateContainer(setContainerForm, "cube_capacity_m3", event.target.value)} /></Field>
+		  <Field label="Allowable Stacking Weight (kg)"><input min="0" step="0.01" type="number" value={containerForm.allowable_stacking_weight_kg} onChange={(event) => updateContainer(setContainerForm, "allowable_stacking_weight_kg", event.target.value)} /></Field>
+		  <Field label="Racking Test Load (kg)"><input min="0" step="0.01" type="number" value={containerForm.racking_test_load_kg} onChange={(event) => updateContainer(setContainerForm, "racking_test_load_kg", event.target.value)} /></Field>
+		</FormSection>
+		<FormSection title="Manufacturer dan Maintenance">
+		  <Field label="Tanggal Pembuatan"><input type="date" value={containerForm.manufacture_date} onChange={(event) => updateContainer(setContainerForm, "manufacture_date", event.target.value)} /></Field>
+		  <Field label="Manufacturer"><OptionSelect value={containerForm.manufacturer_id} options={manufacturers} onChange={(value) => updateContainer(setContainerForm, "manufacturer_id", value)} /></Field>
+		  <Field label="Manufacturer Serial Number"><input value={containerForm.manufacturer_serial_no} onChange={(event) => updateContainer(setContainerForm, "manufacturer_serial_no", event.target.value)} /></Field>
+		  <Field label="Type / Model"><input value={containerForm.type_model} onChange={(event) => updateContainer(setContainerForm, "type_model", event.target.value)} /></Field>
+		  <Field label="Maintenance Scheme"><OptionSelect value={containerForm.maintenance_scheme_id} options={maintenanceSchemes} onChange={(value) => updateContainer(setContainerForm, "maintenance_scheme_id", value)} /></Field>
+		</FormSection>
+		<FormSection title="Logistik dan Catatan">
+		  <Field label="Truck Number"><input value={containerForm.truck_no} onChange={(event) => updateContainer(setContainerForm, "truck_no", event.target.value)} /></Field>
+		  <Field label="Driver"><input value={containerForm.driver_name} onChange={(event) => updateContainer(setContainerForm, "driver_name", event.target.value)} /></Field>
+		  <label className="field form-span-2"><span>Remark</span><textarea rows={3} value={containerForm.remark} onChange={(event) => updateContainer(setContainerForm, "remark", event.target.value)} /></label>
+		</FormSection>
+		</div>
       </FormDialog>
 
       <FormDialog title="Tugaskan Surveyor GIFT" open={assignDialog} onClose={() => setAssignDialog(false)} onSubmit={assignSurveyor} isSubmitting={isSubmitting} submitLabel="Tugaskan">
@@ -455,9 +560,12 @@ function updateContainer(setter: React.Dispatch<React.SetStateAction<ContainerFo
 
 function containerPayload(values: ContainerForm) {
   const payload: Record<string, string | number> = { ...values };
-  for (const key of ["gross_weight", "tare_weight", "payload"] as const) {
+	for (const key of ["gross_weight", "tare_weight", "payload", "cube_capacity_m3", "allowable_stacking_weight_kg", "racking_test_load_kg"] as const) {
     if (values[key] === "") delete payload[key];
     else payload[key] = Number(values[key]);
   }
   return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== ""));
 }
+
+function numberInput(value?: number | null) { return value == null ? "" : String(value); }
+function dateInput(value?: string | null) { return value ? value.slice(0, 10) : ""; }

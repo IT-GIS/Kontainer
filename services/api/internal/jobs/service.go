@@ -5,12 +5,25 @@ import (
 	"io"
 	"strings"
 
+	"container-survey/services/api/internal/objectstorage"
 	"github.com/google/uuid"
 )
 
-type Service struct{ repo Repository }
+type Service struct {
+	repo           Repository
+	store          objectstorage.Store
+	bucket         string
+	objectPrefix   string
+	maxUploadBytes int64
+}
 
-func NewService(repo Repository) *Service { return &Service{repo: repo} }
+func NewService(repo Repository, store objectstorage.Store, bucket string, maxUploadBytes int64, objectPrefix ...string) *Service {
+	prefix := ""
+	if len(objectPrefix) > 0 {
+		prefix = strings.Trim(strings.TrimSpace(objectPrefix[0]), "/")
+	}
+	return &Service{repo: repo, store: store, bucket: bucket, maxUploadBytes: maxUploadBytes, objectPrefix: prefix}
+}
 
 func (s *Service) ListJobs(ctx context.Context, params ListParams) (ListResult, error) {
 	return s.repo.ListJobs(ctx, params)
@@ -36,6 +49,9 @@ func (s *Service) Timeline(ctx context.Context, jobID uuid.UUID) ([]map[string]a
 func (s *Service) ListAssignments(ctx context.Context, jobID uuid.UUID) ([]map[string]any, error) {
 	return s.repo.ListAssignments(ctx, jobID)
 }
+func (s *Service) InspectionReadiness(ctx context.Context, jobID uuid.UUID) (JobInspectionReadiness, error) {
+	return s.repo.InspectionReadiness(ctx, jobID)
+}
 
 func (s *Service) CreateJob(ctx context.Context, input JobInput, actor Actor) (map[string]any, error) {
 	if err := validateJobInput(input); err != nil {
@@ -49,6 +65,13 @@ func (s *Service) AddContainer(ctx context.Context, jobID uuid.UUID, input Conta
 		return nil, err
 	}
 	return s.repo.AddContainer(ctx, jobID, input, actor)
+}
+
+func (s *Service) UpdateContainer(ctx context.Context, containerID uuid.UUID, input ContainerInput, actor Actor) (map[string]any, error) {
+	if err := validateContainerInput(input); err != nil {
+		return nil, err
+	}
+	return s.repo.UpdateContainer(ctx, containerID, input, actor)
 }
 
 func (s *Service) ImportContainers(ctx context.Context, jobID uuid.UUID, reader io.Reader, actor Actor) (ImportResult, error) {
@@ -74,7 +97,7 @@ func validateContainerInput(input ContainerInput) error {
 	if input.CargoStatus != "" && input.CargoStatus != "empty" && input.CargoStatus != "laden" && input.CargoStatus != "unknown" {
 		return ErrInvalidInput
 	}
-	for _, weight := range []*float64{input.GrossWeight, input.TareWeight, input.Payload} {
+	for _, weight := range []*float64{input.GrossWeight, input.TareWeight, input.Payload, input.CubeCapacityM3, input.AllowableStackingWeight, input.RackingTestLoad} {
 		if weight != nil && *weight < 0 {
 			return ErrInvalidInput
 		}
@@ -90,9 +113,6 @@ func validateContainerInput(input ContainerInput) error {
 	}
 	if !validation.IsCheckDigitValid && strings.TrimSpace(input.CheckDigitOverrideReason) == "" {
 		return ErrInvalidInput
-	}
-	if (input.ContainerTypeID == nil || strings.TrimSpace(*input.ContainerTypeID) == "") && strings.TrimSpace(input.ContainerTypeCode) == "" {
-		return FieldValidationError{Fields: map[string]string{"container_type_id": "Container Type Customer wajib dipilih."}}
 	}
 	return nil
 }
@@ -123,11 +143,26 @@ func (s *Service) Reassign(ctx context.Context, containerID uuid.UUID, input Rea
 }
 
 func validateJobInput(input JobInput) error {
-	if strings.TrimSpace(input.JobDate) == "" || strings.TrimSpace(input.CustomerID) == "" || strings.TrimSpace(input.SurveyTypeID) == "" || strings.TrimSpace(input.LocationID) == "" || strings.TrimSpace(input.PICCustomerPersonnelID) == "" {
+	if strings.TrimSpace(input.JobDate) == "" || strings.TrimSpace(input.CustomerID) == "" || strings.TrimSpace(input.ApprovalCategoryID) == "" || strings.TrimSpace(input.OwnerID) == "" || strings.TrimSpace(input.ApplicantOwnerRelation) == "" || strings.TrimSpace(input.SurveyTypeID) == "" || strings.TrimSpace(input.LocationID) == "" || strings.TrimSpace(input.PICCustomerPersonnelID) == "" {
 		return ErrInvalidInput
+	}
+	if !validApplicantOwnerRelation(input.ApplicantOwnerRelation) {
+		return FieldValidationError{Fields: map[string]string{"applicant_owner_relationship": "Hubungan Pemohon terhadap Pemilik tidak valid."}}
 	}
 	if input.Priority != "" && input.Priority != "normal" && input.Priority != "urgent" {
 		return ErrInvalidInput
 	}
+	if _, err := parseOptionalDate(input.PlannedInspectionDate); err != nil {
+		return ErrInvalidInput
+	}
 	return nil
+}
+
+func validApplicantOwnerRelation(value string) bool {
+	switch strings.TrimSpace(value) {
+	case "owner", "owner_representative", "lessee", "contracting_party", "other":
+		return true
+	default:
+		return false
+	}
 }

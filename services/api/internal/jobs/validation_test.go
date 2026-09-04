@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"container-survey/services/api/internal/masterdata"
 )
 
 func TestValidateContainerNumber(t *testing.T) {
@@ -59,6 +61,12 @@ func TestValidateContainerInputRequiresOverrideReason(t *testing.T) {
 	}
 }
 
+func TestValidateContainerInputAllowsDraftWithoutContainerType(t *testing.T) {
+	if err := validateContainerInput(ContainerInput{ContainerNo: "MSKU1234565"}); err != nil {
+		t.Fatalf("expected draft with only a valid container number to be accepted: %v", err)
+	}
+}
+
 func TestValidateContainerInputRejectsNegativeWeightAndInvalidDate(t *testing.T) {
 	negative := -1.0
 	if err := validateContainerInput(ContainerInput{ContainerNo: "MSKU1234565", GrossWeight: &negative}); !errors.Is(err, ErrInvalidInput) {
@@ -81,4 +89,61 @@ func TestValidateAssignInputDateOrder(t *testing.T) {
 	if err := validateAssignInput(input); err != nil {
 		t.Fatalf("expected valid assignment period: %v", err)
 	}
+}
+
+func TestInspectionReadinessBlocksMissingTypeAndSize(t *testing.T) {
+	result := buildInspectionReadiness(inspectionReadinessFacts{
+		JobID: "job", ContainerID: "container", ContainerNo: "MSKU1234565",
+		JobValid: true, LocationValid: true, SurveyTypeValid: true, CheckDigitStatus: "valid",
+	}, masterdata.ReadinessGate{Status: "READY"})
+	if result.Status != "BLOCKED" || !hasReadinessCode(result.Blockers, "CONTAINER_TYPE") || !hasReadinessCode(result.Blockers, "CONTAINER_SIZE") {
+		t.Fatalf("expected type and size blockers, got %+v", result)
+	}
+}
+
+func TestInspectionReadinessAcceptsAuditedCheckDigitOverride(t *testing.T) {
+	result := buildInspectionReadiness(inspectionReadinessFacts{
+		JobID: "job", ContainerID: "container", ContainerNo: "MSKU1234560",
+		JobValid: true, LocationValid: true, SurveyTypeValid: true, ContainerTypeValid: true, ContainerSize: "20",
+		CheckDigitStatus: "override", CheckDigitOverride: "Diverifikasi pada fisik peti kemas",
+	}, masterdata.ReadinessGate{Status: "READY"})
+	if hasReadinessCode(result.Blockers, "CHECK_DIGIT") || result.Status == "BLOCKED" {
+		t.Fatalf("expected audited override to pass hard readiness, got %+v", result)
+	}
+}
+
+func TestInspectionReadinessTreatsNotCheckedCSCAsWarning(t *testing.T) {
+	result := buildInspectionReadiness(inspectionReadinessFacts{
+		JobID: "job", ContainerID: "container", ContainerNo: "MSKU1234565",
+		JobValid: true, LocationValid: true, SurveyTypeValid: true, ContainerTypeValid: true, ContainerSize: "20",
+		CheckDigitStatus: "valid", CSCPlateStatus: "not_checked",
+	}, masterdata.ReadinessGate{Status: "READY"})
+	if result.Status != "READY_WITH_WARNINGS" || !hasReadinessCode(result.Warnings, "CSC_PLATE_STATUS") {
+		t.Fatalf("expected not-checked CSC to remain a warning, got %+v", result)
+	}
+}
+
+func TestReadJobAttachmentValidatesMIMEAndSize(t *testing.T) {
+	data, contentType, extension, err := readJobAttachment(strings.NewReader("%PDF-1.4\n1 0 obj\n"), 1024)
+	if err != nil || len(data) == 0 || contentType != "application/pdf" || extension != ".pdf" {
+		t.Fatalf("expected PDF to pass MIME validation: %s %s %v", contentType, extension, err)
+	}
+	if _, _, _, err := readJobAttachment(strings.NewReader("plain text"), 1024); err == nil {
+		t.Fatal("expected unsupported MIME to fail")
+	}
+	if _, _, _, err := readJobAttachment(strings.NewReader("%PDF-1.4\n"), 4); err == nil {
+		t.Fatal("expected oversized attachment to fail")
+	}
+	if got := safeAttachmentName("../surat<script>.pdf", ".pdf"); strings.ContainsAny(got, "<>/") {
+		t.Fatalf("expected safe file name, got %q", got)
+	}
+}
+
+func hasReadinessCode(checks []InspectionReadinessCheck, code string) bool {
+	for _, check := range checks {
+		if check.Code == code {
+			return true
+		}
+	}
+	return false
 }
