@@ -110,7 +110,7 @@ export function CustomerDetailWorkspace({
       <CustomerSetupStepper activeTab={activeTab} customerId={customerId} readiness={readiness} />
 
       {activeTab === "profile" ? <CustomerProfile customer={customer} jobs={jobs} lastJob={lastJob} onSaved={setCustomer} nextHref={`${baseHref}?tab=location-pic`} /> : null}
-      {activeTab === "location-pic" ? <LocationAndPic customer={customer} customerId={customerId} /> : null}
+      {activeTab === "location-pic" ? <LocationAndPic customer={customer} customerId={customerId} onReadinessRefresh={refreshReadiness} readiness={readiness} /> : null}
       {activeTab === "survey-sheet" ? <SurveySheetConfiguration customer={customer} customerId={customerId} readiness={readiness} section={surveySheetSection} /> : null}
       {activeTab === "checklist" ? <ChecklistReferenceTab baseHref={`${baseHref}?tab=checklist`} customerId={customerId} /> : null}
       {activeTab === "cedex" ? <CustomerCedexSetup baseHref={baseHref} customerId={customerId} readiness={readiness} section={cedexSection} /> : null}
@@ -119,6 +119,16 @@ export function CustomerDetailWorkspace({
       {activeTab === "readiness" ? <ReadinessStep baseHref={baseHref} customer={customer} customerId={customerId} readiness={readiness} /> : null}
     </div>
   );
+
+  async function refreshReadiness() {
+    if (!accessToken) return;
+    try {
+      setReadiness(await apiData<CustomerReadiness>(`/customers/${customerId}/readiness`, { accessToken }));
+      setError(null);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Kesiapan Customer gagal diperbarui.");
+    }
+  }
 }
 
 function CustomerProfile({
@@ -197,13 +207,52 @@ function CustomerProfile({
   </div>;
 }
 
-function LocationAndPic({ customer, customerId }: { customer: CustomerRecord; customerId: string }) {
+function LocationAndPic({
+  customer,
+  customerId,
+  readiness,
+  onReadinessRefresh
+}: {
+  customer: CustomerRecord;
+  customerId: string;
+  readiness: CustomerReadiness | null;
+  onReadinessRefresh: () => Promise<void>;
+}) {
   const readOnly = customer.status !== "active";
+  const [mappingRefreshKey, setMappingRefreshKey] = useState(0);
+  const checks = new Map(readiness?.checks.map((check) => [check.key, check]) ?? []);
+  const minimum = [
+    { key: "location", label: "Location tersedia" },
+    { key: "personnel", label: "Personel/PIC tersedia" },
+    { key: "location_pic_mapping", label: "Mapping tersedia" }
+  ];
+  const missing = minimum.filter((item) => !checks.get(item.key)?.ready).map((item) => item.label);
+  const ready = readiness !== null && missing.length === 0;
+
+  function refreshLocationAndPic() {
+    setMappingRefreshKey((current) => current + 1);
+    void onReadinessRefresh();
+  }
+
   return <div className="page-stack">
     <PageHeader title="Lokasi & PIC" description="Location, Personel/PIC, dan mapping aktif terlihat dalam satu tahap." />
-    <MasterDataPage endpointOverride={`/customers/${customerId}/locations`} fixedValues={{ customer_id: customerId }} resourceId="locations" readOnly={readOnly} readOnlyMessage="Customer tidak aktif. Location hanya dapat dilihat." />
-    <MasterDataPage endpointOverride={`/customers/${customerId}/personnel`} fixedValues={{ customer_id: customerId }} resourceId="customer-personnel" readOnly={readOnly} readOnlyMessage="Customer tidak aktif. Personel/PIC hanya dapat dilihat." />
-    <PersonnelLocationMapping customerId={customerId} readOnly={readOnly} />
+    <MasterDataPage endpointOverride={`/customers/${customerId}/locations`} fixedValues={{ customer_id: customerId }} resourceId="locations" readOnly={readOnly} readOnlyMessage="Customer tidak aktif. Location hanya dapat dilihat." onSaved={refreshLocationAndPic} />
+    <MasterDataPage endpointOverride={`/customers/${customerId}/personnel`} fixedValues={{ customer_id: customerId }} resourceId="customer-personnel" readOnly={readOnly} readOnlyMessage="Customer tidak aktif. Personel/PIC hanya dapat dilihat." onSaved={refreshLocationAndPic} />
+    <PersonnelLocationMapping customerId={customerId} readOnly={readOnly} refreshKey={mappingRefreshKey} onSaved={onReadinessRefresh} />
+    <section className="workspace-panel page-stack" aria-labelledby="location-pic-readiness-title">
+      <div className="section-title-row"><div><h2 id="location-pic-readiness-title">Kesiapan Lokasi & PIC</h2><p className="muted-text">Status ini diperbarui dari Customer Readiness backend setelah setiap penyimpanan.</p></div></div>
+      <div className="detail-grid">{minimum.map((item) => {
+        const check = checks.get(item.key);
+        return <div key={item.key}><span>{item.label}</span><strong><StatusBadge tone={check?.ready ? "success" : "warning"}>{check?.ready ? `Tersedia (${check.count})` : "Belum tersedia"}</StatusBadge></strong></div>;
+      })}</div>
+    </section>
+    <NextActionCard
+      title={ready ? "Lokasi & PIC siap" : "Lengkapi Lokasi & PIC"}
+      description={ready ? "Minimum Location, Personel/PIC, dan mapping sudah tersedia." : readiness ? `Belum dapat melanjutkan: ${missing.join(", ")}.` : "Status kesiapan sedang dimuat."}
+      actionLabel="Lanjut ke Konfigurasi Survey Sheet"
+      href={`/master/customers/customer/${customerId}?tab=survey-sheet`}
+      disabled={!ready}
+    />
   </div>;
 }
 

@@ -46,7 +46,7 @@ function stepReady(step: CustomerSetupTab, readiness: CustomerReadiness | null) 
   if (step === "location-pic") return all("location", "personnel", "location_pic_mapping");
   if (step === "survey-sheet") return all("survey_type", "container_type", "location");
   if (step === "checklist") return all("checklist_template", "checklist_item");
-  if (step === "cedex") return all("cedex_location", "cedex_component", "cedex_damage", "cedex_action_repair", "cedex_material", "responsibility");
+  if (step === "cedex") return all("cedex_location", "cedex_component", "cedex_damage", "cedex_action_repair", "cedex_material");
   if (step === "references") return all("test_parameter_mapping", "severity_mapping");
   if (step === "photo-evidence") return all("photo_category_mapping");
   return readiness.overall_ready;

@@ -28,6 +28,7 @@ function containerNumber(): string {
 
 test.describe.serial("@final-customer-sheet onboarding dan provenance", () => {
   test("Customer baru langsung masuk onboarding terpadu", async ({ page }) => {
+    test.setTimeout(120_000);
     await login(page, "E2E_ADMIN_EMAIL", "E2E_ADMIN_PASSWORD");
     await page.goto("/master/customers/create");
     const dialog = page.getByRole("dialog", { name: "Profil Customer" });
@@ -35,11 +36,65 @@ test.describe.serial("@final-customer-sheet onboarding dan provenance", () => {
     const suffix = String(Date.now()).slice(-9);
     await dialog.getByLabel("Customer Code").fill(`FNL${suffix}`);
     await dialog.getByLabel("Customer Name").fill(`Customer UAT Final ${suffix}`);
-    await dialog.getByLabel("Address", { exact: true }).fill("Alamat sintetis khusus database UAT");
+    await dialog.getByLabel("Alamat Utama").fill("Alamat sintetis khusus database UAT");
     await dialog.getByRole("button", { name: "Simpan & Lanjut" }).click();
     await expect(page).toHaveURL(/\/master\/customers\/customer\/[0-9a-f-]+\?tab=location-pic/i, { timeout: 20_000 });
-    await expect(page.getByRole("heading", { name: "Lokasi & PIC" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Lokasi & PIC", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /Kebutuhan Foto \/ Evidence/ })).toBeVisible();
+
+    const locationCode = `LOC${suffix}`;
+    const locationName = `Location UAT ${suffix}`;
+    await page.getByRole("heading", { name: "Master Location" }).locator("xpath=../..").getByRole("button", { name: "Tambah" }).click();
+    const locationDialog = page.getByRole("dialog", { name: "Tambah Master Location" });
+    await locationDialog.getByLabel("Location Code").fill(locationCode);
+    await locationDialog.getByLabel("Location Name").fill(locationName);
+    await locationDialog.getByLabel("Location Type").selectOption("depot");
+    await locationDialog.getByRole("button", { name: "Simpan", exact: true }).click();
+    await expect(locationDialog).toBeHidden({ timeout: 20_000 });
+    await expect(page.getByText("Location tersedia").locator("..").getByText(/Tersedia \(1\)/)).toBeVisible();
+
+    const personnelCode = `PIC${suffix}`;
+    const personnelName = `PIC UAT ${suffix}`;
+    await page.getByRole("heading", { name: "Personel/PIC Customer" }).locator("xpath=../..").getByRole("button", { name: "Tambah" }).click();
+    const personnelDialog = page.getByRole("dialog", { name: "Tambah Personel/PIC Customer" });
+    await personnelDialog.getByLabel("Kode Personnel").fill(personnelCode);
+    await personnelDialog.getByLabel("Nama Lengkap").fill(personnelName);
+    await personnelDialog.getByLabel("Tipe Personnel").selectOption("pic");
+    await personnelDialog.getByRole("button", { name: "Simpan", exact: true }).click();
+    await expect(personnelDialog).toBeHidden({ timeout: 20_000 });
+
+    const mappingPersonnel = page.getByRole("combobox", { name: "Personel/PIC Customer" }).last();
+    await expect(mappingPersonnel.getByRole("option", { name: `${personnelCode} - ${personnelName}` })).toBeAttached({ timeout: 20_000 });
+    await expect(page.getByLabel(`${locationCode} - ${locationName}`)).toBeVisible();
+
+    const updatedLocationName = `${locationName} Updated`;
+    await page.getByRole("button", { name: `Edit ${locationCode}` }).click();
+    const editLocationDialog = page.getByRole("dialog", { name: "Edit Master Location" });
+    await editLocationDialog.getByLabel("Location Name").fill(updatedLocationName);
+    await editLocationDialog.getByRole("button", { name: "Update", exact: true }).click();
+    await expect(editLocationDialog).toBeHidden({ timeout: 20_000 });
+    await expect(page.getByLabel(`${locationCode} - ${updatedLocationName}`)).toBeVisible({ timeout: 20_000 });
+
+    const updatedPersonnelName = `${personnelName} Updated`;
+    await page.getByRole("button", { name: `Edit ${personnelCode}` }).click();
+    const editPersonnelDialog = page.getByRole("dialog", { name: "Edit Personel/PIC Customer" });
+    await editPersonnelDialog.getByLabel("Nama Lengkap").fill(updatedPersonnelName);
+    await editPersonnelDialog.getByRole("button", { name: "Update", exact: true }).click();
+    await expect(editPersonnelDialog).toBeHidden({ timeout: 20_000 });
+    await expect(mappingPersonnel.getByRole("option", { name: `${personnelCode} - ${updatedPersonnelName}` })).toBeAttached({ timeout: 20_000 });
+
+    await mappingPersonnel.selectOption({ label: `${personnelCode} - ${updatedPersonnelName}` });
+    await page.getByLabel(`${locationCode} - ${updatedLocationName}`).check();
+    await page.getByRole("button", { name: "Simpan Mapping" }).click();
+    await expect(page.getByText("Mapping Location Personel/PIC berhasil disimpan.")).toBeVisible();
+    await expect(page.getByText("Personel/PIC tersedia").locator("..").getByText(/Tersedia \(1\)/)).toBeVisible();
+    await expect(page.getByText("Mapping tersedia").locator("..").getByText(/Tersedia \(1\)/)).toBeVisible();
+
+    const continueButton = page.getByRole("link", { name: "Lanjut ke Konfigurasi Survey Sheet" });
+    await expect(continueButton).toBeEnabled();
+    await continueButton.click();
+    await expect(page).toHaveURL(/\?tab=survey-sheet$/);
+    await expect(page.getByRole("heading", { name: "Konfigurasi Survey Sheet" })).toBeVisible();
   });
 
   test("Customer siap menampilkan seluruh konfigurasi dan menghasilkan Job, Peti Kemas, serta Assignment", async ({ page }) => {

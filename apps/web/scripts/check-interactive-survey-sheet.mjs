@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import ts from "typescript";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const [source, component, route, styles, dataTable, navigation, repository, surveyorHandler, surveyorHelpers, reviewRepository, migration, workflowMigration, adminConfiguration, reviewRoute, reportRoute, readinessGate, snapshotMigration, createCustomerRoute, masterDataPage, customerSetupTabsSource, jobCreateRoute] = await Promise.all([
+const [source, component, route, styles, dataTable, navigation, repository, surveyorHandler, surveyorHelpers, reviewRepository, migration, workflowMigration, adminConfiguration, reviewRoute, reportRoute, readinessGate, snapshotMigration, createCustomerRoute, masterDataPage, customerSetupTabsSource, jobCreateRoute, customerSetupStepper, customerDetailWorkspace, personnelLocationMapping] = await Promise.all([
   read("../lib/survey-sheet.ts"),
   read("../components/surveys/interactive-survey-sheet.tsx"),
   read("../app/surveyor/surveys/[id]/page.tsx"),
@@ -24,7 +24,10 @@ const [source, component, route, styles, dataTable, navigation, repository, surv
   read("../app/master/customers/create/page.tsx"),
   read("../components/master/master-data-page.tsx"),
   read("../components/master/customer-setup-tabs.ts"),
-  read("../app/jobs/create/page.tsx")
+  read("../app/jobs/create/page.tsx"),
+  read("../components/master/customer-setup-stepper.tsx"),
+  read("../components/master/customer-detail-workspace.tsx"),
+  read("../components/master/personnel-location-mapping.tsx")
 ]);
 
 const output = ts.transpileModule(source, {
@@ -211,4 +214,10 @@ assert.match(createCustomerRoute, /submitLabelOverride="Simpan & Lanjut"/);
 assert.match(masterDataPage, /submitLabelOverride/);
 assert.match(customerSetupTabsSource, /Kebutuhan Foto \/ Evidence/);
 assert.match(jobCreateRoute, /Lengkapi Customer/);
+assert.doesNotMatch(customerSetupStepper, /"responsibility"/);
+assert.equal((customerDetailWorkspace.match(/onSaved=\{refreshLocationAndPic\}/g) ?? []).length, 2);
+assert.match(customerDetailWorkspace, /actionLabel="Lanjut ke Konfigurasi Survey Sheet"/);
+assert.match(personnelLocationMapping, /\[accessToken, customerId, refreshKey\]/);
+assert.match(personnelLocationMapping, /\[accessToken, customerId, personnelId, refreshKey\]/);
+assert.match(personnelLocationMapping, /await onSaved\(\)/);
 console.log("Interactive Survey Sheet contract checks passed.");

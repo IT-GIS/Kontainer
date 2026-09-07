@@ -147,7 +147,7 @@ export const masterResources: Record<string, MasterResource> = {
     permissionModule: "customers",
     columns: [
       { key: "personnel_code", label: "Kode" },
-      { key: "full_name", label: "Nama" },
+      { key: "name", label: "Nama" },
       { key: "position_title", label: "Jabatan" },
       { key: "personnel_type", label: "Tipe" },
       { key: "phone", label: "Telepon" },
@@ -155,7 +155,7 @@ export const masterResources: Record<string, MasterResource> = {
     ],
     fields: [
       { name: "personnel_code", label: "Kode Personnel", required: true },
-      { name: "full_name", label: "Nama Lengkap", required: true },
+      { name: "name", label: "Nama Lengkap", required: true },
       { name: "position_title", label: "Jabatan", nullable: true },
       {
         name: "personnel_type",
